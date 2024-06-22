@@ -1,0 +1,17 @@
+{
+  "name": "com.unigame.metaservice",
+  "author": "UniGame",
+  "displayName": "Game Meta Service",
+  "description": "Backend meta service",
+  "unity": "2022.2",
+  "version": "2024.0.0",
+  "keywords": [
+    "meta",
+    "backend",
+    "service",
+    "server",
+    "nakama"
+  ],
+  "dependencies": {
+  }
+}
