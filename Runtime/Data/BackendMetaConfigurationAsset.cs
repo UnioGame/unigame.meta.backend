@@ -1,11 +1,11 @@
 namespace MetaService.Runtime.Data
 {
+    using System;
     using Shared.Data;
     using Sirenix.OdinInspector;
-    using UnityEngine;
 
-    [CreateAssetMenu(menuName = "Game/Services/Meta Backend/Backend Meta Settings", fileName = "Backend Meta Settings")]
-    public class BackendMetaConfigurationAsset : ScriptableObject
+    [Serializable]
+    public class BackendMetaConfiguration
     {
         [InlineProperty]
         [HideLabel]

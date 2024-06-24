@@ -5,10 +5,10 @@
     [Serializable]
     public class NakamaConnectionData
     {
-        public string scheme;
+        public string scheme = "http";
         public string host;
         public int port;
-        public string serverKey;
+        public string serverKey = "defaultkey";
         public int tokenExpireSec = 60 * 60 * 24;
         public string langTag = "en";
         

@@ -2,12 +2,11 @@
 {
     using Cysharp.Threading.Tasks;
     using Data;
-    using MetaService.Shared;
-    using UniGame.AddressableTools.Runtime;
+    using Shared;
+    using Sirenix.OdinInspector;
     using UniGame.Core.Runtime;
     using UniGame.GameFlow.Runtime.Services;
     using UnityEngine;
-    using UnityEngine.AddressableAssets;
 
     /// <summary>
     /// Represents a class that provides backend meta data for the game.
@@ -15,14 +14,14 @@
     [CreateAssetMenu(menuName = "Game/Services/Meta Backend/Backend Meta Source", fileName = "Backend Meta Source")]
     public class BackendMetaSource : DataSourceAsset<IBackendMetaService>
     {
-        public AssetReferenceT<BackendMetaConfigurationAsset> backendMetaConfiguration;
+        [InlineProperty]
+        [HideLabel]
+        public BackendMetaConfiguration backendMetaConfiguration = new();
         
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
         {
-            var configAsset = await backendMetaConfiguration
-                .LoadAssetInstanceTaskAsync(context.LifeTime,true);
-            var settings = configAsset.settings;
-            var data = configAsset.data;
+            var settings = backendMetaConfiguration.settings;
+            var data = backendMetaConfiguration.data;
 
             var backendMetaType = settings.backendType;
             IBackendMetaService metaService = null;
