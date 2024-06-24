@@ -34,6 +34,7 @@
 
         public NakamaMetaService(NakamaConnectionData connectionData)
         {
+            _lifeTime = new LifeTimeDefinition();
             _connectionData = connectionData;
             _connectionState = ConnectionState.Disconnected;
             
