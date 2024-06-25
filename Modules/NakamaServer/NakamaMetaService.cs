@@ -10,6 +10,7 @@
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime;
     using UniModules.UniCore.Runtime.DataFlow;
+    using UniModules.UniGame.Core.Runtime.Rx;
     using UniRx;
     using UnityEngine;
 
@@ -22,7 +23,7 @@
         private ISession _session;
         private IApiAccount _account;
 
-        private ConnectionState _connectionState;
+        private ReactiveValue<ConnectionState> _connectionState;
         private LifeTimeDefinition _lifeTime;
         private RetryConfiguration _retryConfiguration;
         private IApiAccount _apiAccount;
@@ -36,7 +37,8 @@
         {
             _lifeTime = new LifeTimeDefinition();
             _connectionData = connectionData;
-            _connectionState = ConnectionState.Disconnected;
+            _connectionState = new ReactiveValue<ConnectionState>(ConnectionState.Disconnected)
+                .AddTo(_lifeTime);
             
             _retryConfiguration = new RetryConfiguration(
                 _connectionData.retryDelayMs,
@@ -62,6 +64,11 @@
                 .FromEvent<ISession>(handler => _client.ReceivedSessionUpdated += handler,
                         handler => _client.ReceivedSessionUpdated -= handler);
 
+#if UNITY_EDITOR
+            _connectionState.Subscribe(LogConnectionState)
+                .AddTo(_lifeTime);
+#endif
+            
             _socketConnected = Observable
                 .FromEvent(handler => _socket.Connected += handler,
                     handler => _socket.Connected -= handler);
@@ -80,7 +87,7 @@
                 .AddTo(_lifeTime);
         }
         
-        public ConnectionState State => _connectionState;
+        public IReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
         
         public ILifeTime LifeTime => _lifeTime;
         
@@ -89,7 +96,9 @@
             if(_lifeTime.IsTerminated)
                 return NakamaMessages.NamakaClosedResult;
             
-            switch (_connectionState)
+            var state = _connectionState.Value;
+            
+            switch (state)
             {
                 case ConnectionState.Connecting:
                     return NakamaMessages.ConnectingResult;
@@ -136,6 +145,11 @@
             await _socket.CloseAsync();
         }
 
+        private void LogConnectionState(ConnectionState state)
+        {
+            GameLog.Log($"Nakama Connection State: {state}",Color.green);
+        }
+        
         private async UniTask ReconnectAsync()
         {
             if(_isReconnecting) return;
@@ -143,8 +157,8 @@
             _isReconnecting = true;
             
             await UniTask.Yield();
-            
-            while (_lifeTime.IsTerminated == false && _connectionState == ConnectionState.Disconnected)
+
+            while (_lifeTime.IsTerminated == false && _connectionState.Value == ConnectionState.Disconnected)
             {
                 await UniTask.Delay(TimeSpan.FromMilliseconds(_connectionData.retryDelayMs));
                 
@@ -286,8 +300,8 @@
         
         private async UniTask<ISession> RefreshSessionAsync(ISession currentSession)
         {
-            var expiredTime = DateTime.UtcNow.AddSeconds(_connectionData.tokenExpireSec);
-            var hasExpired = currentSession.HasExpired(expiredTime);
+            var hasExpired = currentSession.IsExpired || 
+                             currentSession.HasExpired(DateTime.UtcNow.AddDays(1));
             if (!hasExpired) return null;
 
             try
@@ -304,7 +318,7 @@
         private void SetState(ConnectionState newState)
         {
             if(_lifeTime.IsTerminated)
-                _connectionState = ConnectionState.Closed;
+                _connectionState.Value = ConnectionState.Closed;
             
             GameLog.Log("Backend state changed to: " + newState);
 
@@ -320,7 +334,7 @@
                     break;
             }
             
-            _connectionState = newState;
+            _connectionState.Value = newState;
         }
 
         public void Dispose()
