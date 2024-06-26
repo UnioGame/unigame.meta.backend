@@ -1,11 +1,13 @@
 ﻿namespace Game.Runtime.Services.Backend.Nakama.Data
 {
     using System;
+    using System.Diagnostics;
     using Backend.Data;
     using Cysharp.Threading.Tasks;
     using global::Nakama;
     using MetaService.Shared;
     using MetaService.Shared.Data;
+    using Modules.ModelMapping;
     using Newtonsoft.Json;
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime;
@@ -13,10 +15,12 @@
     using UniModules.UniGame.Core.Runtime.Rx;
     using UniRx;
     using UnityEngine;
+    using Debug = UnityEngine.Debug;
 
     [Serializable]
     public class NakamaMetaService : IBackendMetaService
     {
+        private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private NakamaConnectionData _connectionData;
         private IClient _client;
         private ISocket _socket;
@@ -33,9 +37,12 @@
         private NakamaSessionData _nakamaSessionData;
         private bool _isReconnecting;
 
-        public NakamaMetaService(NakamaConnectionData connectionData)
+        public NakamaMetaService(
+            IRemoteMetaDataConfiguration metaDataConfiguration,
+            NakamaConnectionData connectionData)
         {
             _lifeTime = new LifeTimeDefinition();
+            _metaDataConfiguration = metaDataConfiguration;
             _connectionData = connectionData;
             _connectionState = new ReactiveValue<ConnectionState>(ConnectionState.Disconnected)
                 .AddTo(_lifeTime);
@@ -64,8 +71,9 @@
                 .FromEvent<ISession>(handler => _client.ReceivedSessionUpdated += handler,
                         handler => _client.ReceivedSessionUpdated -= handler);
 
-#if UNITY_EDITOR
-            _connectionState.Subscribe(LogConnectionState)
+#if GAME_DEBUG
+            _connectionState
+                .Subscribe(x => LogConnectionState(x))
                 .AddTo(_lifeTime);
 #endif
             
@@ -90,6 +98,74 @@
         public IReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
         
         public ILifeTime LifeTime => _lifeTime;
+        
+        public async UniTask<MetaDataResult<TModel>> InvokeRpcAsync<TModel>(string method, string data)
+        {
+            var result = new MetaDataResult<TModel>();
+            result.Id = string.Empty;
+            
+            if(State.Value != ConnectionState.Connected)
+            {
+                result.Data = default;
+                result.Error = NakamaMessages.NotValidSessionState;
+                result.Success = false;
+                return result;
+            }
+            
+            try
+            {
+                var response = await _client.RpcAsync(_session, method, data);
+                
+                LogApiRpc(response);
+
+                result.Id = response.Id;
+                result.Data = response.Payload;
+                result.Success = true;
+                result.Error = string.Empty;
+                result.Model = JsonConvert.DeserializeObject<TModel>(response.Payload);
+                return result;
+            }
+            catch (ApiResponseException ex)
+            {
+                result.Data = default;
+                result.Error = $"Nakama ApiResponseException {ex.StatusCode} : {ex.Message} Inner Data: {ex.InnerException}";
+                result.Success = false;
+                return result;
+            }
+        }
+
+        public async UniTask<MetaDataResult> GetDataAsync(string method, string data)
+        {
+            var result = new MetaDataResult();
+            result.Id = method;
+            result.Data = string.Empty;
+            result.Success = false;
+            
+            if(State.Value != ConnectionState.Connected)
+            {
+                result.Error = NakamaMessages.NotValidSessionState;
+                return result;
+            }
+            
+            try
+            {
+                var response = await _client.RpcAsync(_session, method, data);
+                
+                LogApiRpc(response);
+
+                result.Id = response.Id;
+                result.Data = response.Payload;
+                result.Success = true;
+                result.Error = string.Empty;
+                return result;
+            }
+            catch (ApiResponseException ex)
+            {
+                result.Error = $"Nakama ApiResponseException {ex.StatusCode} : {ex.Message} Inner Data: {ex.InnerException}";
+                result.Success = false;
+                return result;
+            }
+        }
         
         public async UniTask<MetaConnectionResult> ConnectAsync(string deviceId)
         {
@@ -145,9 +221,16 @@
             await _socket.CloseAsync();
         }
 
+        [Conditional("GAME_DEBUG")]
         private void LogConnectionState(ConnectionState state)
         {
             GameLog.Log($"Nakama Connection State: {state}",Color.green);
+        }
+
+        [Conditional("GAME_DEBUG")]
+        private void LogApiRpc(IApiRpc rpc)
+        {
+            GameLog.Log($"Nakama Rpc: {rpc.Id} {rpc.Payload} {rpc.HttpKey}",Color.green);
         }
         
         private async UniTask ReconnectAsync()
@@ -343,5 +426,6 @@
             SetState(ConnectionState.Closed);
             DisconnectAsync().Forget();
         }
+
     }
 }

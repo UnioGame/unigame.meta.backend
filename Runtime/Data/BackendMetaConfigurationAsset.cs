@@ -11,6 +11,8 @@ namespace MetaService.Runtime.Data
         [HideLabel]
         public BackendMetaSettings settings = new();
 
+        public RemoteMetaDataConfiguration
+        
         [InlineEditor]
         public BackendTypeDataAsset data;
     }

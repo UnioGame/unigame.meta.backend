@@ -1,5 +1,5 @@
 {
-    "name": "game.runtime.services.metabackend",
+    "name": "unigame.metabackend.runtime",
     "rootNamespace": "",
     "references": [
         "GUID:2796129a6c23eb84a8181f62bf7332f1",

@@ -49,6 +49,16 @@
             return UniTask.FromResult(result);
         }
 
+        public async UniTask<MetaDataResult> GetDataAsync(string method, string data)
+        {
+            return new MetaDataResult()
+            {
+                Id = method,
+                Data = default,
+                Error = string.Empty,
+                Success = false,
+            };
+        }
 
         public ConnectionState GetConnectionState()
         {

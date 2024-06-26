@@ -10,6 +10,7 @@
         public const string ConnectionInProgress = "Connection in progress";
         public const string NakamaServiceClosed = "Nakama service closed";
         public const string NakamaSessionError = "Nakama session error";
+        public const string NotValidSessionState = "Nakama not valid session state";
 
         public static MetaConnectionResult NamakaSessionError = new()
         {
