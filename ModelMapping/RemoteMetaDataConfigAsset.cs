@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Reflection;
     using System.Text;
     using Sirenix.OdinInspector;
     using UniModules.Editor;
@@ -40,7 +39,7 @@
         {
             var remoteItems = LoadRemoteMetaData();
             var sourceItems = configuration.remoteMetaData.ToList();
-            var resultItems = new List<MetaRemoteItem>(sourceItems);
+            var resultItems = new List<RemoteMetaData>(sourceItems);
 
             foreach (var item in remoteItems)
             {
@@ -57,24 +56,33 @@
             GenerateProperties();
         }
         
-        public List<MetaRemoteItem> LoadRemoteMetaData()
+        public List<RemoteMetaData> LoadRemoteMetaData()
         {
-            var remoteModels = new List<MetaRemoteItem>();
+            var remoteModels = new List<RemoteMetaData>();
             var counter = 0;
             
-            foreach (var typeItem in MetaRemoteItem.GetModelTypes())
+            foreach (var typeItem in RemoteMetaData.GetModelTypes())
             {
                 var type = (Type)typeItem;
                 if (type == null) continue;
                 var typeName = type.Name;
 
-                var remoteItem = new MetaRemoteItem()
+                var methodTemplate = typeName
+                    .Contains(RemoteMetaConstants.RemoteCommandTemplate, StringComparison.OrdinalIgnoreCase)
+                    ? configuration.postMethodTemplate
+                    : configuration.getMethodTemplate;
+                
+                methodTemplate = string.IsNullOrEmpty(methodTemplate)
+                    ? RemoteMetaConstants.DefaultMethodTemplate
+                    : methodTemplate;
+                
+                var remoteItem = new RemoteMetaData()
                 {
+                    name = typeName,
                     id = counter++,
-                    type = typeItem,
+                    result = typeItem,
                     overriderDataConverter = false,
-                    getMethod = string.Format(configuration.getMethodTemplate, typeName),
-                    postMethod = string.Format(configuration.postMethodTemplate, typeName),
+                    method = string.Format(methodTemplate, typeName),
                     converter = new JsonRemoteDataConverter(),
                 };
                 
@@ -93,6 +101,7 @@
         public static void GenerateStaticProperties(RemoteMetaDataConfigAsset dataAsset)
         {
             var idType = typeof(RemoteMetaId);
+            var typeName = nameof(RemoteMetaId);
             var scriptPath = AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(dataAsset));
             var directoryPath = Path.GetDirectoryName(scriptPath);
             var outputPath = Path.Combine(directoryPath, "Generated");
@@ -110,15 +119,19 @@
             {
                 writer.WriteLine($"namespace {namespaceName}");
                 writer.WriteLine("{");
-                writer.WriteLine("    public partial struct RemoteMetaId");
+                writer.WriteLine($"    public partial struct {typeName}");
                 writer.WriteLine("    {");
-                dataAsset
-                var types = (List<BackendType>)typesField.GetValue(dataAsset);
-                foreach (var type in types)
+
+                var items = dataAsset.configuration.remoteMetaData;
+                    
+                foreach (var item in items)
                 {
+                    var type = (Type)item.result;
+                    if(type == null) continue;
+                    
                     var propertyName = type.Name.Replace(" ", "");
                     writer.WriteLine(
-                        $"        public static BackendTypeId {propertyName} => new BackendTypeId {{ value = {type.Id} }};");
+                        $"        public static {typeName} {propertyName} = new {typeName} {{ value = {item.id} }};");
                 }
 
                 writer.WriteLine("    }");

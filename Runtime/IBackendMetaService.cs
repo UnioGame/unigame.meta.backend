@@ -3,19 +3,17 @@
     using System;
     using Cysharp.Threading.Tasks;
     using Data;
+    using Game.Modules.ModelMapping;
     using UniGame.Core.Runtime;
 
     public interface IBackendMetaService : 
         IMetaConnection,
-        IDisposable,
         ILifeTimeContext
     {
+        IRemoteMetaDataConfiguration MetaDataConfiguration { get; }
         
         IObservable<MetaDataResult> DataStream { get; }
         
-        UniTask<MetaDataResult> GetDataAsync(Type type);
-        
-        UniTask PostDataAsync(Type method, object data = null);
-        
+        UniTask<MetaDataResult> InvokeAsync(object payload);
     }
 }

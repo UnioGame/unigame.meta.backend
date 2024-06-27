@@ -5,6 +5,6 @@
 
     public interface IBackendMetaSource
     {
-        UniTask<IBackendMetaService> CreateAsync(IContext context);
+        UniTask<IRemoteMetaProvider> CreateAsync(IContext context);
     }
 }

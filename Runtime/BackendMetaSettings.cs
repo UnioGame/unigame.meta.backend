@@ -1,4 +1,4 @@
-namespace MetaService.Runtime.Data
+namespace MetaService.Runtime
 {
     using System;
     using Shared.Data;

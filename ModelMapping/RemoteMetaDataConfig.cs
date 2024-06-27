@@ -17,11 +17,11 @@
         public string postMethodTemplate = "Post{0}";
         
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
-        public MetaRemoteItem[] remoteMetaData = Array.Empty<MetaRemoteItem>();
+        public RemoteMetaData[] remoteMetaData = Array.Empty<RemoteMetaData>();
 
         public IRemoteDataConverter Converter => defaultConverter;
         public string GetMethodTemplate => getMethodTemplate;
-        public string PostMethodTemplate => postMethodTemplate;
-        public MetaRemoteItem[] RemoteMetaData => remoteMetaData;
+        public string CommandMethodTemplate => postMethodTemplate;
+        public RemoteMetaData[] RemoteMetaData => remoteMetaData;
     }
 }

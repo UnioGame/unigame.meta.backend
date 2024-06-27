@@ -51,7 +51,7 @@
             {
                 yield return new ValueDropdownItem<RemoteMetaId>()
                 {
-                    Text = remoteItem.type.TypeName,
+                    Text = remoteItem.result.TypeName,
                     Value = (RemoteMetaId)remoteItem.id,
                 };
             }

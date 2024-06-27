@@ -23,5 +23,8 @@
         public bool useSocketMainThread = true;
         public int socketConnectTimeoutSec = 60;
         public bool appearOnline = true;
+        
+        //debug settings
+        public float initTimeoutSec = 10;
     }
 }

@@ -1,6 +1,7 @@
 ﻿namespace Game.Runtime.Services.Backend.Mock.Data
 {
     using System;
+    using System.Linq;
     using Cysharp.Threading.Tasks;
     using MetaService.Shared;
     using MetaService.Shared.Data;
@@ -10,13 +11,15 @@
     using UniRx;
 
     [Serializable]
-    public class MockBackendService : IBackendMetaService
+    public class MockBackendService : IRemoteMetaProvider
     {
+        private MockBackendDataConfig _config;
         private ReactiveValue<ConnectionState> _connectionState;
         private LifeTimeDefinition _lifeTime;
 
-        public MockBackendService()
+        public MockBackendService(MockBackendDataConfig config)
         {
+            _config = config;
             _connectionState = new ReactiveValue<ConnectionState>(ConnectionState.Disconnected);
             _lifeTime = new LifeTimeDefinition();
         }
@@ -27,13 +30,17 @@
         
         public UniTask<MetaConnectionResult> ConnectAsync(string deviceId)
         {
-            _connectionState.Value = ConnectionState.Connected;
+            _connectionState.Value = _config.allowConnect 
+                    ? ConnectionState.Connected
+                    : ConnectionState.Disconnected;
+            
             var result = new MetaConnectionResult
             {
-                Success = true,
+                Success = _config.allowConnect,
                 Error = string.Empty,
                 State = _connectionState.Value
             };
+            
             return UniTask.FromResult(result);
         }
 
@@ -49,14 +56,23 @@
             return UniTask.FromResult(result);
         }
 
-        public async UniTask<MetaDataResult> GetDataAsync(string method, string data)
+        public async UniTask<RemoteMetaResult> CallRemoteAsync(string method, string data)
         {
-            return new MetaDataResult()
+            var result = _config
+                .mockBackendData
+                .FirstOrDefault(x => 
+                    x.Method.Equals(method, StringComparison.OrdinalIgnoreCase));
+
+            var success = result is { Success: true };
+            var resultData = result == null ? string.Empty : result.Result;
+            var error = result == null ? string.Empty : result.Error;
+            
+            return new RemoteMetaResult()
             {
                 Id = method,
-                Data = default,
-                Error = string.Empty,
-                Success = false,
+                Error = error,
+                Success = success,
+                Data = resultData,
             };
         }
 
@@ -70,7 +86,5 @@
             _lifeTime.Terminate();
             _connectionState.Value = ConnectionState.Closed;
         }
-
-        
     }
 }

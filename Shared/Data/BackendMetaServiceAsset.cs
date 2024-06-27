@@ -6,6 +6,6 @@
 
     public abstract class BackendMetaServiceAsset : ScriptableObject,IBackendMetaSource
     {
-        public abstract UniTask<IBackendMetaService> CreateAsync(IContext context);
+        public abstract UniTask<IRemoteMetaProvider> CreateAsync(IContext context);
     }
 }
