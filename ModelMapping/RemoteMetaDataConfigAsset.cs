@@ -5,8 +5,10 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using MetaService.Shared;
     using Sirenix.OdinInspector;
     using UniModules.Editor;
+    using UniModules.UniCore.Runtime.Utils;
     using UnityEditor;
     using UnityEngine;
 
@@ -21,90 +23,93 @@
         #region IdGenerator
 
 #if UNITY_EDITOR
-
-        [Button("Fill Remote Meta Data")]
+        
+        [PropertyOrder(-1)]
+        [Button(icon: SdfIconType.Hammer,"Remake Remote Meta Data")]
         public void FillRemoteMetaData()
         {
             var remoteItems = LoadRemoteMetaData();
-            configuration.remoteMetaData = remoteItems.ToArray();
+            configuration.remoteMetaData = remoteItems
+                .Values.ToArray();
             
             this.MarkDirty();
             
             AssetDatabase.SaveAssets();
-            GenerateProperties();
         }
         
-        [Button("Update Remote Meta Data")]
+        [Button(icon: SdfIconType.ArrowClockwise,"Update Remote Meta Data")]
+        [PropertyOrder(-1)]
         public void UpdateRemoteMetaData()
         {
             var remoteItems = LoadRemoteMetaData();
-            var sourceItems = configuration.remoteMetaData.ToList();
-            var resultItems = new List<RemoteMetaData>(sourceItems);
+            var sourceItems = configuration
+                .remoteMetaData
+                .ToDictionary(x => x.id);
 
             foreach (var item in remoteItems)
             {
-                var sourceItem = sourceItems.FirstOrDefault(x => x.id == item.id);
-                if(sourceItem!=null) continue;
-                resultItems.Add(item);
+                if(sourceItems.ContainsKey(item.Key)) continue;
+                sourceItems[item.Key] = item.Value;
             }
             
-            configuration.remoteMetaData = resultItems.ToArray();
+            configuration.remoteMetaData = sourceItems.Values.ToArray();
             
             this.MarkDirty();
             
             AssetDatabase.SaveAssets();
-            GenerateProperties();
         }
         
-        public List<RemoteMetaData> LoadRemoteMetaData()
+        public Dictionary<int,RemoteMetaCallData> LoadRemoteMetaData()
         {
-            var remoteModels = new List<RemoteMetaData>();
-            var counter = 0;
+            var remoteCallContractType = typeof(IRemoteCallContract);
+            var contractTypes = TypeCache.GetTypesDerivedFrom(remoteCallContractType);
+            var remoteModels = new Dictionary<int,RemoteMetaCallData>();
             
-            foreach (var typeItem in RemoteMetaData.GetModelTypes())
+            foreach (var typeItem in contractTypes)
             {
-                var type = (Type)typeItem;
-                if (type == null) continue;
-                var typeName = type.Name;
+                if(!ValidateType(typeItem)) continue;
 
-                var methodTemplate = typeName
-                    .Contains(RemoteMetaConstants.RemoteCommandTemplate, StringComparison.OrdinalIgnoreCase)
-                    ? configuration.postMethodTemplate
-                    : configuration.getMethodTemplate;
+                var contract = typeItem.CreateWithDefaultConstructor() as IRemoteCallContract;
+                if(contract == null) continue;
                 
-                methodTemplate = string.IsNullOrEmpty(methodTemplate)
-                    ? RemoteMetaConstants.DefaultMethodTemplate
-                    : methodTemplate;
+                var contractName = configuration.GetContractName(contract);
+                var method = configuration.GetRemoteMethodName(contract);
+                var id = configuration.CalculateMetaId(contractName, contract);
                 
-                var remoteItem = new RemoteMetaData()
+                var remoteItem = new RemoteMetaCallData()
                 {
-                    name = typeName,
-                    id = counter++,
-                    result = typeItem,
+                    id = id,
+                    name = contractName,
+                    method = method,
+                    contract = contract,
                     overriderDataConverter = false,
-                    method = string.Format(methodTemplate, typeName),
-                    converter = new JsonRemoteDataConverter(),
+                    converter = configuration.defaultConverter,
                 };
-                
-                remoteModels.Add(remoteItem);
+
+                remoteModels[id] = remoteItem;
             }
 
             return remoteModels;
         }
-        
-        [Button("Generate Static Properties")]
-        public void GenerateProperties()
-        {
-            GenerateStaticProperties(this);
-        }
 
+        public bool ValidateType(Type type)
+        {
+            if(type == null) return false;
+            if(type.IsAbstract || type.IsInterface) return false;
+            if(type.IsGenericType)  return false;
+            if(type.HasDefaultConstructor() == false)  return false;
+            
+            return true;
+        }
+        
         public static void GenerateStaticProperties(RemoteMetaDataConfigAsset dataAsset)
         {
             var idType = typeof(RemoteMetaId);
             var typeName = nameof(RemoteMetaId);
-            var scriptPath = AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(dataAsset));
-            var directoryPath = Path.GetDirectoryName(scriptPath);
-            var outputPath = Path.Combine(directoryPath, "Generated");
+            var outputPath = $"/UniGame.Generated/{typeName}/"
+                .FixUnityPath()
+                .ToProjectPath();
+            
             var outputFileName = "RemoteMetaId.Generated.cs";
 
             if (!Directory.Exists(outputPath))
@@ -114,7 +119,8 @@
 
             var namespaceName = idType.Namespace;
 
-            var filePath = Path.Combine(outputPath, outputFileName);
+            var filePath = outputPath.CombinePath(outputFileName);
+            
             using (var writer = new StreamWriter(filePath, false, Encoding.UTF8))
             {
                 writer.WriteLine($"namespace {namespaceName}");
@@ -126,10 +132,10 @@
                     
                 foreach (var item in items)
                 {
-                    var type = (Type)item.result;
-                    if(type == null) continue;
+                    var name = item.name;
+                    if(name == null) continue;
                     
-                    var propertyName = type.Name.Replace(" ", "");
+                    var propertyName = name.Replace(" ", "");
                     writer.WriteLine(
                         $"        public static {typeName} {propertyName} = new {typeName} {{ value = {item.id} }};");
                 }

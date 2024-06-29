@@ -6,9 +6,9 @@
     [Serializable]
     public class JsonRemoteDataConverter : IRemoteDataConverter
     {
-        public TModel Convert<TModel>(string id, string method, string data)
+        public Object Convert(Type type,string data)
         {
-            return JsonConvert.DeserializeObject<TModel>(data);
+            return JsonConvert.DeserializeObject(data,type);
         }
     }
 }

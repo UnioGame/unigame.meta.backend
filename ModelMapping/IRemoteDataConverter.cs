@@ -1,7 +1,9 @@
 ﻿namespace Game.Modules.ModelMapping
 {
+    using System;
+
     public interface IRemoteDataConverter
     {
-        public TModel Convert<TModel>(string id, string method,string data);
+        public Object Convert(Type type, string data);
     }
 }

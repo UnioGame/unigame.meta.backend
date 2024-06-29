@@ -1,6 +1,6 @@
 ﻿namespace MetaService.Shared
 {
-    public interface IRemoteMetaParameter
+    public interface IRemoteMetaResult
     {
         
     }

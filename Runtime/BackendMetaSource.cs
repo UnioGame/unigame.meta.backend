@@ -30,25 +30,25 @@
             context.Publish<IRemoteMetaDataConfiguration>(remoteMeta);
             
             var backendMetaType = settings.backendType;
-            IRemoteMetaProvider metaService = null;
+            IRemoteMetaProvider remoteMetaProvider = null;
 
             foreach (var backendType in data.Types)
             {
                 if (backendType.Id != backendMetaType) continue;
                 var provider = Instantiate(backendType.Provider);
-                metaService = await provider.CreateAsync(context);
+                remoteMetaProvider = await provider.CreateAsync(context);
                 break;
             }
 
-            if (metaService == null)
+            if (remoteMetaProvider == null)
             {
                  Debug.LogError($"Backend provider for type {backendMetaType} not found.");
                  return null;
             }
 
-            context.Publish<IRemoteMetaProvider>(metaService);
+            context.Publish<IRemoteMetaProvider>(remoteMetaProvider);
             
-            var service = new BackendMetaService(remoteMeta,metaService);
+            var service = new BackendMetaService(remoteMeta,remoteMetaProvider);
             return service;
         }
 
