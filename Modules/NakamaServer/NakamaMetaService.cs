@@ -316,9 +316,13 @@
             catch (ApiResponseException ex)
             {
                 GameLog.LogError($"Error connect to socket: {ex.StatusCode} : {ex.Message}");
+                return false;
             }
-
-            return false;
+            catch (Exception ex)
+            {
+                GameLog.LogError($"Error connect to socket: {ex.Message}");
+                return false;
+            }
         }
 
         private async UniTask<IApiAccount> GetAccountAsync()
