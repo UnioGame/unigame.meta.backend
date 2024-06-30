@@ -5,7 +5,7 @@
     [Serializable]
     public class NakamaConnectionData
     {
-        public string scheme = "http";
+        public string scheme = "https";
         public string host;
         public int port;
         public string serverKey = "defaultkey";

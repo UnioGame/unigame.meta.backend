@@ -3,6 +3,7 @@
     using System;
     using Cysharp.Threading.Tasks;
     using Data;
+    using DefaultNamespace;
     using Game.Modules.ModelMapping;
     using UniGame.Core.Runtime;
 
@@ -15,8 +16,10 @@
         IObservable<MetaDataResult> DataStream { get; }
         
         UniTask<MetaDataResult> InvokeAsync(object payload);
+        UniTask<MetaDataResult> InvokeAsync<TContract>(TContract payload)
+            where TContract : IRemoteMetaCall;
 
-        UniTask<MetaDataResult> InvokeAsync(RemoteMetaId remoteId, object payload);
+        UniTask<MetaDataResult> InvokeAsync(int remoteId, object payload);
         
         UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload);
         

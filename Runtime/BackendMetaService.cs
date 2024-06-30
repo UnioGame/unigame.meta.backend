@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
+    using DefaultNamespace;
     using Game.Modules.ModelMapping;
     using Newtonsoft.Json;
     using Shared;
@@ -67,6 +68,15 @@
             return result;
         }
 
+        public async UniTask<MetaDataResult> InvokeAsync<TContract>(TContract contract)
+            where TContract : IRemoteMetaCall
+        {
+            var meta = FindMetaData(contract);
+            if (meta == RemoteMetaCallData.Empty)
+                return MetaDataResult.Empty;
+            return await InvokeAsync(meta.id,contract.Payload);
+        }
+
         public async UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload)
         {
             try
@@ -94,7 +104,7 @@
             
         }
         
-        public async UniTask<MetaDataResult> InvokeAsync(RemoteMetaId remoteId,object payload)
+        public async UniTask<MetaDataResult> InvokeAsync(int remoteId,object payload)
         {
             var metaData = FindMetaData(remoteId);
             if (metaData == RemoteMetaCallData.Empty)
@@ -201,13 +211,26 @@
             return FindMetaData(type);
         }
         
-        public RemoteMetaCallData FindMetaData(Type type)
+        public RemoteMetaCallData FindMetaData<TContract>(TContract contract)
+            where TContract : IRemoteMetaCall
         {
-            return _resultTypeCache.TryGetValue(type, out var metaData) 
+            foreach (var meta in _metaDataConfiguration.RemoteMetaData)
+            {
+                if(meta.contract.OutputType == contract.Output && 
+                   meta.contract.InputType == contract.Input)
+                    return meta;
+            }
+            
+            return RemoteMetaCallData.Empty;
+        }
+        
+        public RemoteMetaCallData FindMetaData(Type resultType)
+        {
+            return _resultTypeCache.TryGetValue(resultType, out var metaData) 
                 ? metaData : RemoteMetaCallData.Empty;
         }
         
-        public RemoteMetaCallData FindMetaData(RemoteMetaId metaId)
+        public RemoteMetaCallData FindMetaData(int metaId)
         {
             if (_metaIdCache.TryGetValue(metaId, out var metaData))
                 return metaData;

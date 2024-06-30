@@ -359,7 +359,7 @@
                 return new NakamaSessionResult() {Success = false};
             
             var hasExpired = currentSession.IsExpired || 
-                             currentSession.HasExpired(DateTime.UtcNow.AddDays(1));
+                             currentSession.HasExpired(DateTime.UtcNow.AddSeconds(_connectionData.tokenExpireSec));
             
             if (!hasExpired) 
             {
