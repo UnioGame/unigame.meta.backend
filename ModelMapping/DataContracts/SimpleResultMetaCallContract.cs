@@ -4,12 +4,12 @@
     using UniGame.Core.Runtime.SerializableType;
 
     [Serializable]
-    public class SimpleResultMetaCallContract<TInput> : SimpleMetaCallContract<TInput, string>
+    public class SimpleResultMetaCallContract<TOutput> : SimpleMetaCallContract<string, TOutput>
     {
     }
     
     [Serializable]
-    public class SimpleMetaCallContract<TOutput> : SimpleMetaCallContract<string, TOutput>
+    public class SimpleMetaCallContract<TInput> : SimpleMetaCallContract<TInput, string>
     {
     }
     

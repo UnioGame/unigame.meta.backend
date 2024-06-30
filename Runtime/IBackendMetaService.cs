@@ -15,5 +15,11 @@
         IObservable<MetaDataResult> DataStream { get; }
         
         UniTask<MetaDataResult> InvokeAsync(object payload);
+
+        UniTask<MetaDataResult> InvokeAsync(RemoteMetaId remoteId, object payload);
+        
+        UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload);
+        
+        UniTask<MetaDataResult> InvokeAsync(Type resultType, object payload);
     }
 }

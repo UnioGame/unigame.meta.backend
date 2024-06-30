@@ -161,6 +161,9 @@
             }
             
             var connected = await SocketConnectAsync(_socket);
+            
+            GameLog.Log($"Nakama Socket connected {connected}");
+            
             if (!connected)
             {
                 SetState(ConnectionState.Disconnected);
@@ -218,8 +221,8 @@
         
         private async UniTask<ISession> CreateSessionAsync(NakamaSessionData sessionData)
         {
-            var session = await RestoreSessionAsync(sessionData);
-            if(session != null) return session;
+            var sessionResult = await RestoreSessionAsync(sessionData);
+            if(sessionResult.Success) return sessionResult.Session;
             
             var newSession = await CreateSessionAsync(sessionData.ConnectionId);
             return newSession;
@@ -280,6 +283,8 @@
         {
             try
             {
+                GameLog.Log($"nakama Try to Authenticate with auth {authId}");
+                
                 var authResult = await _client.AuthenticateCustomAsync(authId,canceller:_lifeTime.Token);
                 return authResult;
             }
@@ -298,8 +303,7 @@
             {
                 if (socket.IsConnected) return true;
                 
-                await socket
-                    .ConnectAsync(
+                await socket.ConnectAsync(
                         session:_session,
                         appearOnline: _connectionData.appearOnline,
                         connectTimeout: _connectionData.socketConnectTimeoutSec,
@@ -333,32 +337,53 @@
             return null;
         }
 
-        private async UniTask<ISession> RestoreSessionAsync(NakamaSessionData sessionData)
+        private async UniTask<NakamaSessionResult> RestoreSessionAsync(NakamaSessionData sessionData)
         {
             var isAuthToken = !string.IsNullOrEmpty(sessionData.AuthToken);
-            if (!isAuthToken) return null;
+            if (!isAuthToken) return new NakamaSessionResult() {Success = false};
             
             var session = Session.Restore(_nakamaSessionData.AuthToken, _nakamaSessionData.RefreshToken);
-            if(session == null) return null;
+            if(session == null) return new NakamaSessionResult() {Success = false};
             
-            session = await RefreshSessionAsync(session);
-            return session;
+            var sessionResult = await RefreshSessionAsync(session);
+            return sessionResult;
         }
         
-        private async UniTask<ISession> RefreshSessionAsync(ISession currentSession)
+        private async UniTask<NakamaSessionResult> RefreshSessionAsync(ISession currentSession)
         {
+            if(_client == null) 
+                return new NakamaSessionResult() {Success = false};
+            
             var hasExpired = currentSession.IsExpired || 
                              currentSession.HasExpired(DateTime.UtcNow.AddDays(1));
-            if (!hasExpired) return null;
+            
+            if (!hasExpired) 
+            {
+                return new NakamaSessionResult()
+                {
+                    Success = true, 
+                    Session = currentSession
+                };
+            }
 
             try
             {
-                var session = await _client.SessionRefreshAsync(_session, canceller: _lifeTime.Token);
-                return session;
+                GameLog.Log("Nakama Refresh Session");
+                
+                var session = await _client.SessionRefreshAsync(currentSession, canceller: _lifeTime.Token);
+                return new NakamaSessionResult()
+                {
+                    Success = session.IsExpired == false, 
+                    Session = session
+                };
             }
-            catch (ApiResponseException)
+            catch (ApiResponseException ex)
             {
-                return null;
+                return new NakamaSessionResult()
+                {
+                    Success = false,
+                    Error = ex.Message,
+                };
             }
         }
 
@@ -367,7 +392,7 @@
             if(_lifeTime.IsTerminated)
                 _connectionState.Value = ConnectionState.Closed;
             
-            GameLog.Log("Backend state changed to: " + newState);
+            GameLog.Log("Nakama Backend state changed to: " + newState);
 
             switch (newState)
             {

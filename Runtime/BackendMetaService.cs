@@ -12,6 +12,7 @@
     using UniModules.UniCore.Runtime.Utils;
     using UniRx;
     using UnityEngine;
+    using Object = System.Object;
 
     [Serializable]
     public class BackendMetaService : GameService,IBackendMetaService
@@ -58,13 +59,13 @@
         {
             await _remoteMetaProvider.DisconnectAsync();
         }
-
         
-        public UniTask<MetaDataResult> InvokeAsync(object payload)
+        public async UniTask<MetaDataResult> InvokeAsync(object payload)
         {
-            throw new NotImplementedException();
+            var type = payload.GetType();
+            var result = await InvokeAsync(type,payload);
+            return result;
         }
-
 
         public async UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload)
         {
@@ -92,7 +93,27 @@
             }
             
         }
-
+        
+        public async UniTask<MetaDataResult> InvokeAsync(RemoteMetaId remoteId,object payload)
+        {
+            var metaData = FindMetaData(remoteId);
+            if (metaData == RemoteMetaCallData.Empty)
+                return new MetaDataResult();
+            
+            var result = await InvokeAsync(metaData, payload);
+            return result;
+        }
+        
+        public async UniTask<MetaDataResult> InvokeAsync(Type resultType,object payload)
+        {
+            var metaData = FindMetaData(resultType);
+            if (metaData == RemoteMetaCallData.Empty)
+                return new MetaDataResult();
+            
+            var result = await InvokeAsync(metaData, payload);
+            return result;
+        }
+        
         public MetaDataResult RegisterRemoteResult(
             string remoteId,
             string payload,
@@ -116,11 +137,29 @@
                 ? typeof(string)
                 : outputType;
             
-            var resultObject = outputType == typeof(string)
-                ? responceData
-                : _metaDataConfiguration
-                    .Converter
-                    .Convert(contract.OutputType,payload);
+            object resultObject = null;
+            
+            switch (outputType)
+            {
+                case not null when outputType == typeof(string):
+                    resultObject = responceData;
+                    break;
+                case not null when outputType == typeof(VoidRemoteData):
+                    resultObject = VoidRemoteData.Empty;
+                    break;
+                default:
+                    var converter = metaData.overriderDataConverter 
+                        ? metaData.converter 
+                        : _metaDataConfiguration.Converter;
+                    if (converter == null)
+                    {
+                        Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {payload} | error: converter is null");
+                        return MetaDataResult.Empty;
+                    }
+                    
+                    resultObject = converter.Convert(contract.OutputType,responceData);
+                    break;
+            }
             
             var result = new MetaDataResult()
             {
@@ -128,7 +167,7 @@
                 Payload = payload,
                 ResultType = outputType,
                 Model = resultObject,
-                Result = response.Data,
+                Result = responceData,
                 Success = response.Success,
                 Hash = responceData.GetHashCode(),
                 Error = response.Error,
@@ -143,31 +182,14 @@
             return result;
         }
         
-        public async UniTask<MetaDataResult> InvokeAsync(RemoteMetaId remoteId,object payload)
-        {
-            var metaData = FindMetaData(remoteId);
-            if (metaData == RemoteMetaCallData.Empty)
-                return new MetaDataResult();
-            
-            var result = await InvokeAsync(metaData, payload);
-            return result;
-        }
-        
-        public async UniTask<MetaDataResult> InvokeAsync(Type resultType,object payload)
-        {
-            var metaData = FindMetaData(resultType);
-            if (metaData == RemoteMetaCallData.Empty)
-                return new MetaDataResult();
-            
-            var result = await InvokeAsync(metaData, payload);
-            return result;
-        }
-        
         private async UniTask<MetaDataResult> InvokeAsync(RemoteMetaCallData metaCallData,object payload)
         {
-            var parameter = payload == null
-                ? string.Empty : payload is string s
-                    ? s : JsonConvert.SerializeObject(payload);
+            var parameter = payload switch
+            {
+                null => string.Empty,
+                string s => s,
+                _ => JsonConvert.SerializeObject(payload)
+            };
             
             var remoteResult = await InvokeAsync(metaCallData.method, parameter);
             return remoteResult;
