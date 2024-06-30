@@ -9,8 +9,8 @@
     using UniGame.Core.Runtime;
     using UnityEngine;
 
-    [CreateAssetMenu(menuName = "Game/Services/Meta Backend/Mock Backend Provider", fileName = "Mock Backend Provider")]
-    public class MockBackendServiceSource : BackendMetaServiceAsset
+    [CreateAssetMenu(menuName = "UniGame/Meta Backend/Mock Backend Provider", fileName = "Mock Backend Provider")]
+    public class MockBackendProviderAsset : BackendMetaServiceAsset
     {
 
         public MockBackendDataConfig configuration = new();

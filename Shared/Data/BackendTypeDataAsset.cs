@@ -8,7 +8,7 @@
     using UnityEditor;
     using UnityEngine;
 
-    [CreateAssetMenu(menuName = "Game/Services/Meta Backend/BackendType Data Asset", fileName = "BackendType  Data Asset")]
+    [CreateAssetMenu(menuName = "UniGame/Meta Backend/BackendType Data Asset", fileName = "BackendType  Data Asset")]
     public class BackendTypeDataAsset : ScriptableObject
     {
         [InlineProperty]
