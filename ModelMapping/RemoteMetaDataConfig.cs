@@ -12,7 +12,7 @@
         public IRemoteDataConverter defaultConverter = new JsonRemoteDataConverter();
 
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
-        [ListDrawerSettings(ListElementLabelName = "name")]
+        [ListDrawerSettings(ListElementLabelName = "method",DefaultExpandedState = false)]
         public RemoteMetaCallData[] remoteMetaData = Array.Empty<RemoteMetaCallData>();
 
         public IRemoteDataConverter Converter => defaultConverter;

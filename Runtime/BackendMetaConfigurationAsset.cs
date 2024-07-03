@@ -8,15 +8,10 @@ namespace MetaService.Runtime
     [Serializable]
     public class BackendMetaConfiguration
     {
-        [BoxGroup("Settings")]
-        [InlineProperty]
-        [HideLabel]
-        public BackendMetaSettings settings = new();
-
         [BoxGroup("Meta Data")]
         [HideLabel]
         [InlineEditor]
-        public RemoteMetaDataConfigAsset metaDataAsset;
+        public RemoteMetaDataConfigAsset meta;
         
         [BoxGroup("Backend Type")]
         [InlineEditor]

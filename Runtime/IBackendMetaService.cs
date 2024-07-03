@@ -16,6 +16,7 @@
         IObservable<MetaDataResult> DataStream { get; }
         
         UniTask<MetaDataResult> InvokeAsync(object payload);
+        
         UniTask<MetaDataResult> InvokeAsync<TContract>(TContract payload)
             where TContract : IRemoteMetaCall;
 

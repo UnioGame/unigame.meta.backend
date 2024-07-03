@@ -1,8 +1,8 @@
 ﻿namespace MetaService.Runtime
 {
+    using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
     using Game.Modules.ModelMapping;
-    using Runtime;
     using Shared;
     using Sirenix.OdinInspector;
     using UniGame.Core.Runtime;
@@ -21,34 +21,37 @@
 
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
         {
-            
-            var settings = backendMetaConfiguration.settings;
+            var meta = backendMetaConfiguration.meta;
+            var backend = meta.settings;
             var data = backendMetaConfiguration.backend;
-            var remoteMetaAsset = Instantiate(backendMetaConfiguration.metaDataAsset);
+            var remoteMetaAsset = Instantiate(backendMetaConfiguration.meta);
             var remoteMeta = remoteMetaAsset.configuration;
 
             context.Publish<IRemoteMetaDataConfiguration>(remoteMeta);
             
-            var backendMetaType = settings.backendType;
-            IRemoteMetaProvider remoteMetaProvider = null;
+            var backendMetaType = backend.backendType;
+            IRemoteMetaProvider defaultProvider = null;
+            var providers = new Dictionary<int,IRemoteMetaProvider>();
 
             foreach (var backendType in data.Types)
             {
-                if (backendType.Id != backendMetaType) continue;
-                var provider = Instantiate(backendType.Provider);
-                remoteMetaProvider = await provider.CreateAsync(context);
+                var providerSource = Instantiate(backendType.Provider);
+                var metaProvider = await providerSource.CreateAsync(context);
+                providers[backendType.Id] = metaProvider;
+                if (backendType.Id == backendMetaType)
+                    defaultProvider = metaProvider;
+                
                 break;
             }
 
-            if (remoteMetaProvider == null)
+            if (defaultProvider == null)
             {
                  Debug.LogError($"Backend provider for type {backendMetaType} not found.");
                  return null;
             }
 
-            context.Publish<IRemoteMetaProvider>(remoteMetaProvider);
-            
-            var service = new BackendMetaService(remoteMeta,remoteMetaProvider);
+            context.Publish<IRemoteMetaProvider>(defaultProvider);
+            var service = new BackendMetaService(defaultProvider,providers,remoteMeta);
             return service;
         }
 

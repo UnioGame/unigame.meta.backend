@@ -19,46 +19,55 @@
     public class BackendMetaService : GameService,IBackendMetaService
     {
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
-        private IRemoteMetaProvider _remoteMetaProvider;
+        private IRemoteMetaProvider _defaultMetaProvider;
+        private readonly IDictionary<int, IRemoteMetaProvider> _metaProviders;
         private Dictionary<int,MetaDataResult> _responceCache;
         private Dictionary<int,RemoteMetaCallData> _metaIdCache;
         private Dictionary<string,RemoteMetaCallData> _metaMethodCache;
         private Dictionary<Type,RemoteMetaCallData> _resultTypeCache;
         private Subject<MetaDataResult> _dataStream;
 
-        public BackendMetaService(IRemoteMetaDataConfiguration metaDataConfiguration,IRemoteMetaProvider remoteMetaProvider)
+        public BackendMetaService(IRemoteMetaProvider defaultMetaProvider,
+            IDictionary<int,IRemoteMetaProvider> metaProviders,
+            IRemoteMetaDataConfiguration metaDataConfiguration)
         {
             _responceCache = new Dictionary<int, MetaDataResult>();
             _metaIdCache = new Dictionary<int, RemoteMetaCallData>();
             _resultTypeCache = new Dictionary<Type, RemoteMetaCallData>();
             _metaMethodCache = new Dictionary<string, RemoteMetaCallData>();
-            _dataStream = new Subject<MetaDataResult>()
-                .AddTo(LifeTime);
+            _dataStream = new Subject<MetaDataResult>().AddTo(LifeTime);
             
             _metaDataConfiguration = metaDataConfiguration;
-            _remoteMetaProvider = remoteMetaProvider;
-            
+            _defaultMetaProvider = defaultMetaProvider;
+            _metaProviders = metaProviders;
+
             InitializeCache();
         }
 
         public IObservable<MetaDataResult> DataStream => _dataStream;
 
-        public IReadOnlyReactiveProperty<ConnectionState> State => _remoteMetaProvider.State;
+        public IReadOnlyReactiveProperty<ConnectionState> State => _defaultMetaProvider.State;
         
         public IRemoteMetaDataConfiguration MetaDataConfiguration => _metaDataConfiguration;
         
-                
+        public IRemoteMetaProvider GetProvider(int providerId)
+        {
+            if (_metaProviders.TryGetValue(providerId, out var provider))
+                return provider;
+            return _defaultMetaProvider;
+        }        
+        
         public async UniTask<MetaConnectionResult> ConnectAsync(string deviceId)
         {
 #if UNITY_EDITOR
             Debug.Log($"BackendMetaService ConnectAsync with deviceId: {deviceId}");
 #endif
-            return await _remoteMetaProvider.ConnectAsync(deviceId);
+            return await _defaultMetaProvider.ConnectAsync(deviceId);
         }
 
         public async UniTask DisconnectAsync()
         {
-            await _remoteMetaProvider.DisconnectAsync();
+            await _defaultMetaProvider.DisconnectAsync();
         }
         
         public async UniTask<MetaDataResult> InvokeAsync(object payload)
@@ -77,13 +86,13 @@
             return await InvokeAsync(meta.id,contract.Payload);
         }
 
-        public async UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload)
+        public async UniTask<MetaDataResult> InvokeAsync(IRemoteMetaProvider provider,string remoteId, string payload)
         {
             try
             {
                 payload = string.IsNullOrEmpty(payload) ? string.Empty : payload;
                 
-                var remoteResult = await _remoteMetaProvider.CallRemoteAsync(remoteId,payload);
+                var remoteResult = await provider.CallRemoteAsync(remoteId,payload);
 
                 var result = RegisterRemoteResult(remoteId,payload,remoteResult);
 
@@ -101,7 +110,11 @@
                 Debug.LogException(e);
                 return MetaDataResult.Empty;
             }
-            
+        }
+        
+        public async UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload)
+        {
+            return await InvokeAsync(_defaultMetaProvider,remoteId, payload);
         }
         
         public async UniTask<MetaDataResult> InvokeAsync(int remoteId,object payload)
@@ -200,8 +213,9 @@
                 string s => s,
                 _ => JsonConvert.SerializeObject(payload)
             };
+            var provider = GetProvider(metaCallData.provider);
             
-            var remoteResult = await InvokeAsync(metaCallData.method, parameter);
+            var remoteResult = await InvokeAsync(provider,metaCallData.method, parameter);
             return remoteResult;
         }
         
@@ -256,7 +270,6 @@
                 id = id,
                 method = methodName,
                 contract = contract,
-                name = methodName,
             };
         }
 

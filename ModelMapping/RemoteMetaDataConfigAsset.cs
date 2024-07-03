@@ -5,7 +5,9 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using MetaService.Runtime;
     using MetaService.Shared;
+    using MetaService.Shared.Data;
     using Sirenix.OdinInspector;
     using UniModules.Editor;
     using UniModules.UniCore.Runtime.Utils;
@@ -16,6 +18,13 @@
         fileName = "RemoteMetaDataConfiguration")]
     public class RemoteMetaDataConfigAsset : ScriptableObject
     {
+        [PropertyOrder(-1)]
+        [BoxGroup(nameof(settings))]
+        [InlineProperty]
+        [HideLabel]
+        public BackendMetaSettings settings = new();
+        
+        [BoxGroup(nameof(settings))]
         [HideLabel]
         [InlineProperty]
         public RemoteMetaDataConfig configuration = new();
@@ -23,6 +32,17 @@
         #region IdGenerator
 
 #if UNITY_EDITOR
+
+        [PropertyOrder(-1)]
+        [Button(icon: SdfIconType.ImageFill,"Set Remote For All")]
+        [LabelText("Set Remote For All")]
+        public void SetRemoteForAll()
+        {
+            foreach (var metaCallData in configuration.remoteMetaData)
+            {
+                metaCallData.provider = settings.backendType;
+            }
+        }
         
         [PropertyOrder(-1)]
         [Button(icon: SdfIconType.Hammer,"Remake Remote Meta Data")]
@@ -79,9 +99,9 @@
                 var remoteItem = new RemoteMetaCallData()
                 {
                     id = id,
-                    name = contractName,
                     method = method,
                     contract = contract,
+                    provider = settings.backendType,
                     overriderDataConverter = false,
                     converter = configuration.defaultConverter,
                 };
@@ -132,7 +152,7 @@
                     
                 foreach (var item in items)
                 {
-                    var name = item.name;
+                    var name = item.method;
                     if(name == null) continue;
                     
                     var propertyName = name.Replace(" ", "");
