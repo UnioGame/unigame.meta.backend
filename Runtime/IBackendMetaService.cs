@@ -28,4 +28,5 @@
         
         UniTask<MetaDataResult> InvokeAsync(Type resultType, object payload);
     }
+
 }

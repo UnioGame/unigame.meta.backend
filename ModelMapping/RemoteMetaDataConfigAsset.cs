@@ -52,6 +52,8 @@
             configuration.remoteMetaData = remoteItems
                 .Values.ToArray();
             
+            UpdateRemoteMetas();
+            
             this.MarkDirty();
             
             AssetDatabase.SaveAssets();
@@ -73,10 +75,22 @@
             }
             
             configuration.remoteMetaData = sourceItems.Values.ToArray();
+
+            UpdateRemoteMetas();
             
             this.MarkDirty();
             
             AssetDatabase.SaveAssets();
+        }
+
+        public void UpdateRemoteMetas()
+        {
+            foreach (var metaCallData in configuration.remoteMetaData)
+            {
+                var method =  metaCallData.contract.MethodName;
+                if(string.IsNullOrEmpty(method))continue;
+                metaCallData.method = metaCallData.contract.MethodName;
+            }
         }
         
         public Dictionary<int,RemoteMetaCallData> LoadRemoteMetaData()
@@ -92,9 +106,8 @@
                 var contract = typeItem.CreateWithDefaultConstructor() as IRemoteCallContract;
                 if(contract == null) continue;
                 
-                var contractName = configuration.GetContractName(contract);
                 var method = configuration.GetRemoteMethodName(contract);
-                var id = configuration.CalculateMetaId(contractName, contract);
+                var id = configuration.CalculateMetaId(contract);
                 
                 var remoteItem = new RemoteMetaCallData()
                 {

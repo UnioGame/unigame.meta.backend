@@ -10,6 +10,6 @@
 
         string GetContractName(IRemoteCallContract contract);
         string GetRemoteMethodName(IRemoteCallContract contract);
-        int CalculateMetaId(string contractName, IRemoteCallContract contract);
+        int CalculateMetaId(IRemoteCallContract contract);
     }
 }
