@@ -10,10 +10,8 @@
     using Shared.Data;
     using UniGame.UniNodes.GameFlow.Runtime;
     using UniModules.UniCore.Runtime.DateTime;
-    using UniModules.UniCore.Runtime.Utils;
     using UniRx;
     using UnityEngine;
-    using Object = System.Object;
 
     [Serializable]
     public class BackendMetaService : GameService,IBackendMetaService
@@ -26,6 +24,7 @@
         private Dictionary<string,RemoteMetaCallData> _metaMethodCache;
         private Dictionary<Type,RemoteMetaCallData> _resultTypeCache;
         private Subject<MetaDataResult> _dataStream;
+        private string _connectionId = string.Empty;
 
         public BackendMetaService(IRemoteMetaProvider defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
@@ -57,19 +56,25 @@
             return _defaultMetaProvider;
         }        
         
-        public async UniTask<MetaConnectionResult> ConnectAsync(string deviceId)
+        public async UniTask<MetaConnectionResult> ConnectAsync(string connectionId)
         {
+            _connectionId = connectionId;
 #if UNITY_EDITOR
-            Debug.Log($"BackendMetaService ConnectAsync with deviceId: {deviceId}");
+            Debug.Log($"BackendMetaService ConnectAsync with deviceId: {_connectionId}");
 #endif
-            return await _defaultMetaProvider.ConnectAsync(deviceId);
+            return await _defaultMetaProvider.ConnectAsync(_connectionId);
         }
 
         public async UniTask DisconnectAsync()
         {
             await _defaultMetaProvider.DisconnectAsync();
         }
-        
+
+        public void SwitchProvider(int providerId)
+        {
+            _defaultMetaProvider = GetProvider(providerId);
+        }
+
         public async UniTask<MetaDataResult> InvokeAsync(object payload)
         {
             var type = payload.GetType();
@@ -84,32 +89,6 @@
             if (meta == RemoteMetaCallData.Empty)
                 return MetaDataResult.Empty;
             return await InvokeAsync(meta.id,contract.Payload);
-        }
-
-        public async UniTask<MetaDataResult> InvokeAsync(IRemoteMetaProvider provider,string remoteId, string payload)
-        {
-            try
-            {
-                payload = string.IsNullOrEmpty(payload) ? string.Empty : payload;
-                
-                var remoteResult = await provider.CallRemoteAsync(remoteId,payload);
-
-                var result = RegisterRemoteResult(remoteId,payload,remoteResult);
-
-                _responceCache.TryGetValue(result.Id, out var response);
-                _responceCache[result.Id] = result;
-                
-                var isChanged = response == null || response.Hash != result.Hash;
-                if(isChanged && result.Success) 
-                    _dataStream.OnNext(response);
-                
-                return result;
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return MetaDataResult.Empty;
-            }
         }
         
         public async UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload)
@@ -136,6 +115,40 @@
             var result = await InvokeAsync(metaData, payload);
             return result;
         }
+        
+        private async UniTask<MetaDataResult> InvokeAsync(IRemoteMetaProvider provider,string remoteId, string payload)
+        {
+            try
+            {
+                payload = string.IsNullOrEmpty(payload) ? string.Empty : payload;
+
+                if (provider.State.Value != ConnectionState.Connected)
+                {
+                    var connectionResult = await provider.ConnectAsync(_connectionId);
+                    if(connectionResult.Success == false)
+                        return MetaDataResult.Empty;
+                }
+                
+                var remoteResult = await provider.CallRemoteAsync(remoteId,payload);
+
+                var result = RegisterRemoteResult(remoteId,payload,remoteResult);
+
+                _responceCache.TryGetValue(result.Id, out var response);
+                _responceCache[result.Id] = result;
+                
+                var isChanged = response == null || response.Hash != result.Hash;
+                if(isChanged && result.Success) 
+                    _dataStream.OnNext(response);
+                
+                return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return MetaDataResult.Empty;
+            }
+        }
+
         
         public MetaDataResult RegisterRemoteResult(
             string remoteId,

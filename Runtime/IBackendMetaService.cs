@@ -15,6 +15,8 @@
         
         IObservable<MetaDataResult> DataStream { get; }
         
+        void SwitchProvider(int providerId);
+        
         UniTask<MetaDataResult> InvokeAsync(object payload);
         
         UniTask<MetaDataResult> InvokeAsync<TContract>(TContract payload)
