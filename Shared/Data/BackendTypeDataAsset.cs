@@ -5,10 +5,13 @@
     using System.Reflection;
     using System.Text;
     using Sirenix.OdinInspector;
-    using UniModules.Editor;
-    using UnityEditor;
     using UnityEngine;
 
+#if UNITY_EDITOR
+    using UniModules.Editor;
+    using UnityEditor;
+#endif
+    
     [CreateAssetMenu(menuName = "UniGame/Meta Backend/BackendType Data Asset", fileName = "BackendType  Data Asset")]
     public class BackendTypeDataAsset : ScriptableObject
     {
