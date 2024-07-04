@@ -7,13 +7,15 @@
     using System.Text;
     using MetaService.Runtime;
     using MetaService.Shared;
-    using MetaService.Shared.Data;
     using Sirenix.OdinInspector;
-    using UniModules.Editor;
     using UniModules.UniCore.Runtime.Utils;
-    using UnityEditor;
     using UnityEngine;
 
+#if UNITY_EDITOR
+    using UniModules.Editor;
+    using UnityEditor;
+#endif
+    
     [CreateAssetMenu(menuName = "UniGame/Meta Backend/Remote Meta Data Config", 
         fileName = "RemoteMetaDataConfiguration")]
     public class RemoteMetaDataConfigAsset : ScriptableObject
