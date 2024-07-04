@@ -122,11 +122,18 @@
             return true;
         }
         
+        [PropertyOrder(-1)]
+        [Button("Generate Static Properties")]
+        public void GenerateProperties()
+        {
+            GenerateStaticProperties(this);
+        }
+        
         public static void GenerateStaticProperties(RemoteMetaDataConfigAsset dataAsset)
         {
             var idType = typeof(RemoteMetaId);
             var typeName = nameof(RemoteMetaId);
-            var outputPath = $"/UniGame.Generated/{typeName}/"
+            var outputPath = $"/UniGame.Generated/RemoteMetaService/"
                 .FixUnityPath()
                 .ToProjectPath();
             
@@ -145,7 +152,7 @@
             {
                 writer.WriteLine($"namespace {namespaceName}");
                 writer.WriteLine("{");
-                writer.WriteLine($"    public partial struct {typeName}");
+                writer.WriteLine($"    public struct RemoteMetaContracts");
                 writer.WriteLine("    {");
 
                 var items = dataAsset.configuration.remoteMetaData;
