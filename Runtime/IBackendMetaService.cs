@@ -9,6 +9,7 @@
 
     public interface IBackendMetaService : 
         IMetaConnection,
+        IRemoteMetaMatchmaking,
         ILifeTimeContext
     {
         IRemoteMetaDataConfiguration MetaDataConfiguration { get; }
@@ -27,5 +28,8 @@
         UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload);
         
         UniTask<MetaDataResult> InvokeAsync(Type resultType, object payload);
+
+        
+        event Action<int, string> OnBackendNotification;
     }
 }

@@ -8,6 +8,7 @@
         public string ConnectionId;
         public string AuthToken;
         public string RefreshToken;
+        public string MatchmakerTicket;
         public long ExpireTime;
     }
 }

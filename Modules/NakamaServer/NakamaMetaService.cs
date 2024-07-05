@@ -35,6 +35,8 @@
         private IObservable<Unit> _socketClosed;
         private NakamaSessionData _nakamaSessionData;
         private bool _isReconnecting;
+        
+        public event Action<int, string> OnBackendNotification;
 
         public NakamaMetaService(NakamaConnectionData connectionData)
         {
@@ -186,6 +188,18 @@
         public async UniTask DisconnectAsync()
         {
             await _socket.CloseAsync();
+        }
+        
+        public async UniTask<string> AddMatchmakerAsync()
+        {
+            if (_connectionState.Value != ConnectionState.Connected)
+            {
+                return string.Empty;
+            }
+
+            var ticket = await _socket.AddMatchmakerAsync();
+            _nakamaSessionData.MatchmakerTicket = ticket.Ticket;
+            return ticket.Ticket;
         }
 
         [Conditional("GAME_DEBUG")]
@@ -419,6 +433,5 @@
             SetState(ConnectionState.Closed);
             DisconnectAsync().Forget();
         }
-
     }
 }

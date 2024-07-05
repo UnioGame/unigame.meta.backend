@@ -13,9 +13,14 @@
     [Serializable]
     public class MockBackendService : IRemoteMetaProvider
     {
+        private const string TestTicket = "39eaa676-f22b-45e4-9f6d-571a1632fb3c";
+        private const string TestSessionToken = "MBjQoiq7MY3h1lsphDPYpJe3vA4O1lEOwV8IeehbZWstW0Py8uKXHB6bEwGSOKjR";
+        
         private MockBackendDataConfig _config;
         private ReactiveValue<ConnectionState> _connectionState;
         private LifeTimeDefinition _lifeTime;
+        
+        public event Action<int, string> OnBackendNotification;
 
         public MockBackendService(MockBackendDataConfig config)
         {
@@ -66,6 +71,11 @@
             var success = result is { Success: true };
             var resultData = result == null ? string.Empty : result.Result;
             var error = result == null ? string.Empty : result.Error;
+
+            if (method == "AcceptGame")
+            {
+                OnBackendNotification?.Invoke(1, $"{{\tSessionTicket:\n\t\"{TestSessionToken}\"\t}}");
+            }
             
             return new RemoteMetaResult()
             {
@@ -85,6 +95,12 @@
         {
             _lifeTime.Terminate();
             _connectionState.Value = ConnectionState.Closed;
+        }
+
+        public async UniTask<string> AddMatchmakerAsync()
+        {
+            await UniTask.Yield();
+            return TestTicket;
         }
     }
 }

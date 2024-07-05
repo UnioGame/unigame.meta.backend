@@ -12,7 +12,7 @@ namespace MetaService.Runtime
         [HideLabel]
         [InlineEditor]
         public RemoteMetaDataConfigAsset meta;
-        
+
         [BoxGroup("Backend Type")]
         [InlineEditor]
         public BackendTypeDataAsset backend;

@@ -14,7 +14,7 @@
     using UnityEngine;
 
     [Serializable]
-    public class BackendMetaService : GameService,IBackendMetaService
+    public class BackendMetaService : GameService, IBackendMetaService
     {
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
@@ -25,6 +25,8 @@
         private Dictionary<Type,RemoteMetaCallData> _resultTypeCache;
         private Subject<MetaDataResult> _dataStream;
         private string _connectionId = string.Empty;
+        
+        public event Action<int, string> OnBackendNotification;
 
         public BackendMetaService(IRemoteMetaProvider defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
@@ -40,6 +42,8 @@
             _defaultMetaProvider = defaultMetaProvider;
             _metaProviders = metaProviders;
 
+            _defaultMetaProvider.OnBackendNotification += ProviderNotification_Callback;
+            
             InitializeCache();
         }
 
@@ -115,7 +119,7 @@
             var result = await InvokeAsync(metaData, payload);
             return result;
         }
-        
+
         private async UniTask<MetaDataResult> InvokeAsync(IRemoteMetaProvider provider,string remoteId, string payload)
         {
             try
@@ -149,6 +153,10 @@
             }
         }
 
+        private void ProviderNotification_Callback(int id, string payload)
+        {
+            OnBackendNotification?.Invoke(id, payload);
+        }
         
         public MetaDataResult RegisterRemoteResult(
             string remoteId,
@@ -299,6 +307,10 @@
 
             return true;
         }
-    }
 
+        public async UniTask<string> AddMatchmakerAsync()
+        {
+            return await _defaultMetaProvider.AddMatchmakerAsync();
+        }
+    }
 }

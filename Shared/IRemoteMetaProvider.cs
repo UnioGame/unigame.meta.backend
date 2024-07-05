@@ -7,9 +7,11 @@
 
     public interface IRemoteMetaProvider:
         IMetaConnection,
+        IRemoteMetaMatchmaking,
         IDisposable,
         ILifeTimeContext
     {
         UniTask<RemoteMetaResult> CallRemoteAsync(string method,string data);
+        event Action<int, string> OnBackendNotification;
     }
 }
