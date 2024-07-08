@@ -12,7 +12,7 @@
         public IRemoteDataConverter defaultConverter = new JsonRemoteDataConverter();
 
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
-        [ListDrawerSettings(ListElementLabelName = "method",DefaultExpandedState = false)]
+        [ListDrawerSettings(ListElementLabelName = "method")]
         public RemoteMetaCallData[] remoteMetaData = Array.Empty<RemoteMetaCallData>();
 
         public IRemoteDataConverter Converter => defaultConverter;
@@ -42,11 +42,12 @@
             return result;
         }
         
-        public int CalculateMetaId(string contractName,IRemoteCallContract contract)
+        public int CalculateMetaId(IRemoteCallContract contract)
         {
+            var contractType = contract.GetType().Name;
             var inputType = contract.InputType;
             var outputType = contract.OutputType;
-            var id = HashCode.Combine(contractName, inputType.Name, outputType.Name);
+            var id = HashCode.Combine(contractType, inputType.Name, outputType.Name);
             return id;
         }
         

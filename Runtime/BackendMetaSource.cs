@@ -40,8 +40,6 @@
                 providers[backendType.Id] = metaProvider;
                 if (backendType.Id == backendMetaType)
                     defaultProvider = metaProvider;
-                
-                break;
             }
 
             if (defaultProvider == null)
@@ -52,6 +50,9 @@
 
             context.Publish<IRemoteMetaProvider>(defaultProvider);
             var service = new BackendMetaService(defaultProvider,providers,remoteMeta);
+            
+            
+            
             return service;
         }
 

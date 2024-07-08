@@ -10,6 +10,7 @@
         public int Hash = 0;
         public Type ResultType;
         public string Payload = string.Empty;
+        public string RawResult = string.Empty;
         public string Result = string.Empty;
         public object Model = null;
         public bool Success = false;

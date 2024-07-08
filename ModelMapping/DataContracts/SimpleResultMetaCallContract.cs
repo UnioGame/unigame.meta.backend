@@ -19,7 +19,11 @@
         public string method = string.Empty;
         public SType input;
         public SType output;
-        
+
+        public override Type InputType => input;
+        public override Type OutputType => output;
+        public override string MethodName => method;
+
         public SimpleMetaCallContract(string method)
             : this()
         {

@@ -82,7 +82,8 @@
             _socketClosed = Observable.FromEvent(handler => _socket.Closed += handler,
                     handler => _socket.Closed -= handler);
                 
-            _socketClosed.Subscribe(OnSocketClosed).AddTo(_lifeTime);
+            _socketClosed.Subscribe(OnSocketClosed)
+                .AddTo(_lifeTime);
             
             _socketConnected
                 .Subscribe(OnSocketConnected)
@@ -307,6 +308,11 @@
                 SetState(ConnectionState.Disconnected);
                 GameLog.LogError($"Error authenticating device:{ex.StatusCode} : {ex.Message}");
             }
+            catch (Exception ex)
+            {
+                SetState(ConnectionState.Disconnected);
+                GameLog.LogError($"Error authenticating device:{ex.Message}");
+            }
 
             return null;
         }
@@ -397,6 +403,16 @@
             }
             catch (ApiResponseException ex)
             {
+                Debug.LogException(ex);
+                return new NakamaSessionResult()
+                {
+                    Success = false,
+                    Error = ex.Message,
+                };
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
                 return new NakamaSessionResult()
                 {
                     Success = false,

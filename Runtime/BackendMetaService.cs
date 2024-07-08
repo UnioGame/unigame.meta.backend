@@ -208,7 +208,7 @@
             var result = new MetaDataResult()
             {
                 Id = metaData.id,
-                Payload = payload,
+                RawResult = payload,
                 ResultType = outputType,
                 Model = resultObject,
                 Result = responceData,
@@ -284,7 +284,7 @@
         private RemoteMetaCallData CreateNewRemoteMeta(string methodName)
         {
             var contract = new SimpleMetaCallContract<string, string>();
-            var id = _metaDataConfiguration.CalculateMetaId(methodName, contract);
+            var id = _metaDataConfiguration.CalculateMetaId(contract);
             
             return new RemoteMetaCallData()
             {
@@ -302,8 +302,8 @@
             var contract = metaCallData.contract;
             
             _metaIdCache.Add((RemoteMetaId)metaCallData.id,metaCallData);
-            _resultTypeCache.Add(contract.OutputType,metaCallData);
-            _metaMethodCache.Add(metaCallData.method,metaCallData);
+            _resultTypeCache[contract.OutputType] = metaCallData;
+            _metaMethodCache[metaCallData.method] = metaCallData;
 
             return true;
         }

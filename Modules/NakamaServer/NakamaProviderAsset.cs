@@ -14,14 +14,10 @@
         [HideLabel]
         public NakamaConnectionData connectionData;
         
-        public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
+        public override UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
-            // var remoteMetaDataConfig = await context
-            //     .ReceiveFirstAsync<IRemoteMetaDataConfiguration>()
-            //     .Timeout(TimeSpan.FromSeconds(connectionData.initTimeoutSec));
-            
             var nakamaProvider = new NakamaMetaService(connectionData);
-            return nakamaProvider;
+            return UniTask.FromResult<IRemoteMetaProvider>(nakamaProvider);
         }
     }
 }
