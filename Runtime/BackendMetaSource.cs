@@ -18,7 +18,7 @@
         [InlineProperty]
         [HideLabel]
         public BackendMetaConfiguration backendMetaConfiguration = new();
-
+        
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
         {
             var meta = backendMetaConfiguration.meta;
@@ -50,8 +50,6 @@
 
             context.Publish<IRemoteMetaProvider>(defaultProvider);
             var service = new BackendMetaService(defaultProvider,providers,remoteMeta);
-            
-            
             
             return service;
         }

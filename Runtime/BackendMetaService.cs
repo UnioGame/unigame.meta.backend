@@ -8,6 +8,7 @@
     using Newtonsoft.Json;
     using Shared;
     using Shared.Data;
+    using UniCore.Runtime.ProfilerTools;
     using UniGame.UniNodes.GameFlow.Runtime;
     using UniModules.UniCore.Runtime.DateTime;
     using UniRx;
@@ -62,7 +63,7 @@
 #if UNITY_EDITOR
             Debug.Log($"BackendMetaService ConnectAsync with deviceId: {_connectionId}");
 #endif
-            return await _defaultMetaProvider.ConnectAsync(_connectionId);
+            return await ConnectAsync(_defaultMetaProvider,connectionId);
         }
 
         public async UniTask DisconnectAsync()
@@ -115,46 +116,48 @@
             var result = await InvokeAsync(metaData, payload);
             return result;
         }
-        
-        private async UniTask<MetaDataResult> InvokeAsync(IRemoteMetaProvider provider,string remoteId, string payload)
+               
+        public RemoteMetaCallData FindMetaData<TResult>()
         {
-            try
+            var type = typeof(TResult);
+            return FindMetaData(type);
+        }
+        
+        public RemoteMetaCallData FindMetaData<TContract>(TContract contract)
+            where TContract : IRemoteMetaCall
+        {
+            foreach (var meta in _metaDataConfiguration.RemoteMetaData)
             {
-                payload = string.IsNullOrEmpty(payload) ? string.Empty : payload;
-
-                if (provider.State.Value != ConnectionState.Connected)
-                {
-                    var connectionResult = await provider.ConnectAsync(_connectionId);
-                    if(connectionResult.Success == false)
-                        return MetaDataResult.Empty;
-                }
-                
-                var remoteResult = await provider.CallRemoteAsync(remoteId,payload);
-
-                var result = RegisterRemoteResult(remoteId,payload,remoteResult);
-
-                _responceCache.TryGetValue(result.Id, out var response);
-                _responceCache[result.Id] = result;
-                
-                var isChanged = response == null || response.Hash != result.Hash;
-                if(isChanged && result.Success) 
-                    _dataStream.OnNext(response);
-                
-                return result;
+                if(meta.contract.OutputType == contract.Output && 
+                   meta.contract.InputType == contract.Input)
+                    return meta;
             }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                return MetaDataResult.Empty;
-            }
+            
+            return RemoteMetaCallData.Empty;
+        }
+        
+        public RemoteMetaCallData FindMetaData(Type resultType)
+        {
+            return _resultTypeCache.TryGetValue(resultType, out var metaData) 
+                ? metaData : RemoteMetaCallData.Empty;
+        }
+        
+        public RemoteMetaCallData FindMetaData(int metaId)
+        {
+            if (_metaIdCache.TryGetValue(metaId, out var metaData))
+                return metaData;
+            return RemoteMetaCallData.Empty;
         }
 
-        
         public MetaDataResult RegisterRemoteResult(
             string remoteId,
             string payload,
             RemoteMetaResult response)
         {
+#if UNITY_EDITOR
+            GameLog.Log($"Backend result: {response.Data}",Color.green);
+#endif
+            
             if(!_metaMethodCache.TryGetValue(remoteId, out var metaData))
             {
                 metaData = CreateNewRemoteMeta(remoteId);
@@ -218,6 +221,54 @@
             return result;
         }
         
+                
+        private async UniTask<MetaConnectionResult> ConnectAsync(IRemoteMetaProvider provider, string connectionId)
+        {
+            if (provider.State.Value != ConnectionState.Connected)
+            {
+                var connectionResult = await provider.ConnectAsync(connectionId);
+                return connectionResult;
+            }
+
+            return new MetaConnectionResult()
+            {
+                Success = true,
+                Error = string.Empty,
+                State = ConnectionState.Connected,
+            };
+        }
+        
+        private async UniTask<MetaDataResult> InvokeAsync(IRemoteMetaProvider provider,string remoteId, string payload)
+        {
+            try
+            {
+                payload = string.IsNullOrEmpty(payload) ? string.Empty : payload;
+
+                var connectionResult = await ConnectAsync(provider,_connectionId);
+                if(connectionResult.Success == false) 
+                    return MetaDataResult.Empty;
+                
+                var remoteResult = await provider.CallRemoteAsync(remoteId,payload);
+
+                var result = RegisterRemoteResult(remoteId,payload,remoteResult);
+
+                _responceCache.TryGetValue(result.Id, out var response);
+                _responceCache[result.Id] = result;
+                
+                var isChanged = response == null || response.Hash != result.Hash;
+                if(isChanged && result.Success) 
+                    _dataStream.OnNext(response);
+                
+                return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return MetaDataResult.Empty;
+            }
+        }
+
+
         private async UniTask<MetaDataResult> InvokeAsync(RemoteMetaCallData metaCallData,object payload)
         {
             var parameter = payload switch
@@ -230,38 +281,6 @@
             
             var remoteResult = await InvokeAsync(provider,metaCallData.method, parameter);
             return remoteResult;
-        }
-        
-        public RemoteMetaCallData FindMetaData<TResult>()
-        {
-            var type = typeof(TResult);
-            return FindMetaData(type);
-        }
-        
-        public RemoteMetaCallData FindMetaData<TContract>(TContract contract)
-            where TContract : IRemoteMetaCall
-        {
-            foreach (var meta in _metaDataConfiguration.RemoteMetaData)
-            {
-                if(meta.contract.OutputType == contract.Output && 
-                   meta.contract.InputType == contract.Input)
-                    return meta;
-            }
-            
-            return RemoteMetaCallData.Empty;
-        }
-        
-        public RemoteMetaCallData FindMetaData(Type resultType)
-        {
-            return _resultTypeCache.TryGetValue(resultType, out var metaData) 
-                ? metaData : RemoteMetaCallData.Empty;
-        }
-        
-        public RemoteMetaCallData FindMetaData(int metaId)
-        {
-            if (_metaIdCache.TryGetValue(metaId, out var metaData))
-                return metaData;
-            return RemoteMetaCallData.Empty;
         }
         
         private void InitializeCache()

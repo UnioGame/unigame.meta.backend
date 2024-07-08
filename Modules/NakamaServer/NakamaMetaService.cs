@@ -48,6 +48,7 @@
                 _connectionData.retryCount,
                 RetryLogging);
 
+            
             _client = new Client(
                 scheme:_connectionData.scheme, 
                 host:_connectionData.host,
@@ -134,6 +135,11 @@
         
         public async UniTask<MetaConnectionResult> ConnectAsync(string deviceId)
         {
+            
+#if GAME_DEBUG
+            Debug.Log($"Nakama ConnectAsync: address {_connectionData.host} scheme {_connectionData.scheme} port {_connectionData.port} key {_connectionData.serverKey}");
+#endif
+            
             if(_lifeTime.IsTerminated)
                 return NakamaMessages.NamakaClosedResult;
             
@@ -155,6 +161,7 @@
             _nakamaSessionData.ConnectionId = deviceId;
             
             _session = await CreateSessionAsync(_nakamaSessionData);
+            
             if (_session == null)
             {
                 SetState(ConnectionState.Disconnected);
