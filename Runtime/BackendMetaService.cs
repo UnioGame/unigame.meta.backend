@@ -5,9 +5,11 @@
     using Cysharp.Threading.Tasks;
     using DefaultNamespace;
     using Game.Modules.ModelMapping;
+    using ModelMapping;
     using Newtonsoft.Json;
     using Shared;
     using Shared.Data;
+    using UniCore.Runtime.ProfilerTools;
     using UniGame.UniNodes.GameFlow.Runtime;
     using UniModules.UniCore.Runtime.DateTime;
     using UniRx;
@@ -26,7 +28,7 @@
         private Subject<MetaDataResult> _dataStream;
         private string _connectionId = string.Empty;
         
-        public event Action<int, string> OnBackendNotification;
+        public event Action<MetaNotification, MetaDataResult> OnBackendNotification;
 
         public BackendMetaService(IRemoteMetaProvider defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
@@ -153,9 +155,51 @@
             }
         }
 
-        private void ProviderNotification_Callback(int id, string payload)
+        private void ProviderNotification_Callback(MetaNotificationResult notificationResult)
         {
-            OnBackendNotification?.Invoke(id, payload);
+            var contractsData = _metaDataConfiguration.RemoteMetaNotificationData;
+            IRemoteNotificationContract contract = null;
+            IRemoteDataConverter converter = null;
+            var notificationId = notificationResult.Code;
+            var rawResult = notificationResult.Content;
+            var creationTime = notificationResult.CreateTime;
+            foreach (var data in contractsData)
+            {
+                if (data.contract.NotificationId == notificationId)
+                {
+                    contract = data.contract;
+                    converter = data.overriderDataConverter
+                        ? data.converter
+                        : _metaDataConfiguration.Converter;
+                    break;
+                }
+            }
+
+            if (contract == null || converter == null)
+            {
+                GameLog.LogWarning($"No notification config for id {notificationId} or config contains invalid parameters");
+                return;
+            }
+
+            var resultType = contract.DtoType;
+            var resultModel = converter.Convert(contract.DtoType, rawResult);
+            var timestamp = DateTime.TryParse(creationTime, out var parsedCreationTime)
+                ? parsedCreationTime.ToUnixTimestamp()
+                : DateTime.Now.ToUnixTimestamp();
+            
+            MetaDataResult resultData = new MetaDataResult
+            {
+                Success = true,
+                ResultType = resultType,
+                Timestamp = timestamp,
+                RawResult = rawResult,
+                Model = resultModel
+            };
+            
+#if UNITY_EDITOR || DEBUG
+            GameLog.Log($"Backend notification: id: {notificationId}\ncontent: {rawResult}");
+#endif
+            OnBackendNotification?.Invoke(notificationId, resultData);
         }
         
         public MetaDataResult RegisterRemoteResult(

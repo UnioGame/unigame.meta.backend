@@ -1,6 +1,7 @@
 ﻿namespace Game.Modules.ModelMapping
 {
     using System;
+    using global::ModelMapping;
     using MetaService.Shared;
     using Sirenix.OdinInspector;
     using UnityEngine;
@@ -14,9 +15,11 @@
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
         [ListDrawerSettings(ListElementLabelName = "method")]
         public RemoteMetaCallData[] remoteMetaData = Array.Empty<RemoteMetaCallData>();
+        public RemoteMetaNotificationData[] remoteMetaNotificationData = Array.Empty<RemoteMetaNotificationData>();
 
         public IRemoteDataConverter Converter => defaultConverter;
         public RemoteMetaCallData[] RemoteMetaData => remoteMetaData;
+        public RemoteMetaNotificationData[] RemoteMetaNotificationData => remoteMetaNotificationData;
         
         
         public string GetContractName(IRemoteCallContract contract)

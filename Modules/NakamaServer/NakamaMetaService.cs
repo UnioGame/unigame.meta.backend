@@ -36,7 +36,7 @@
         private NakamaSessionData _nakamaSessionData;
         private bool _isReconnecting;
         
-        public event Action<int, string> OnBackendNotification;
+        public event Action<MetaNotificationResult> OnBackendNotification;
 
         public NakamaMetaService(NakamaConnectionData connectionData)
         {
@@ -69,6 +69,8 @@
                 .FromEvent<ISession>(handler => _client.ReceivedSessionUpdated += handler,
                         handler => _client.ReceivedSessionUpdated -= handler);
 
+            _socket.ReceivedNotification += NakamaNotification_Callback;
+            
 #if GAME_DEBUG
             _connectionState
                 .Subscribe(x => LogConnectionState(x))
@@ -441,6 +443,12 @@
             }
             
             _connectionState.Value = newState;
+        }
+
+        private void NakamaNotification_Callback(IApiNotification notification)
+        {
+            var result = MetaNotificationResult.Map(notification);
+            OnBackendNotification?.Invoke(result);
         }
 
         public void Dispose()

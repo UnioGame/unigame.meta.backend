@@ -40,7 +40,7 @@
         [LabelText("Set Remote For All")]
         public void SetRemoteForAll()
         {
-            foreach (var metaCallData in configuration.remoteMetaData)
+            foreach (var metaCallData in configuration.RemoteMetaData)
             {
                 metaCallData.provider = settings.backendType;
             }

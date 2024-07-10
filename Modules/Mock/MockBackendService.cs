@@ -1,6 +1,7 @@
 ﻿namespace Game.Runtime.Services.Backend.Mock.Data
 {
     using System;
+    using System.Globalization;
     using System.Linq;
     using Cysharp.Threading.Tasks;
     using MetaService.Shared;
@@ -14,13 +15,12 @@
     public class MockBackendService : IRemoteMetaProvider
     {
         private const string TestTicket = "39eaa676-f22b-45e4-9f6d-571a1632fb3c";
-        private const string TestSessionToken = "MBjQoiq7MY3h1lsphDPYpJe3vA4O1lEOwV8IeehbZWstW0Py8uKXHB6bEwGSOKjR";
         
         private MockBackendDataConfig _config;
         private ReactiveValue<ConnectionState> _connectionState;
         private LifeTimeDefinition _lifeTime;
         
-        public event Action<int, string> OnBackendNotification;
+        public event Action<MetaNotificationResult> OnBackendNotification;
 
         public MockBackendService(MockBackendDataConfig config)
         {
@@ -72,9 +72,11 @@
             var resultData = result == null ? string.Empty : result.Result;
             var error = result == null ? string.Empty : result.Error;
 
-            if (method == "AcceptGame")
+            // Simulate notifications from server
+            if (method == "AcceptMatch")
             {
-                OnBackendNotification?.Invoke(1, $"{{\tSessionTicket:\n\t\"{TestSessionToken}\"\t}}");
+                SimulateNotificationAsync(MetaNotification.SessionToken).Forget();
+                SimulateNotificationAsync(MetaNotification.ServerInfo, 3000).Forget();
             }
             
             return new RemoteMetaResult()
@@ -100,7 +102,33 @@
         public async UniTask<string> AddMatchmakerAsync()
         {
             await UniTask.Yield();
+
+            SimulateNotificationAsync(MetaNotification.RoomIsReady).Forget();
             return TestTicket;
+        }
+
+        private async UniTaskVoid SimulateNotificationAsync(MetaNotification notificationId, int delayMs = 1000)
+        {
+            var createTime = DateTime.Now;
+            await UniTask.Delay(delayMs);
+
+            var mockData = _config.mockBackendNotificationData;
+            MetaNotificationResult result = new MetaNotificationResult();
+            foreach (var data in mockData)
+            {
+                if (data.NotificationId == notificationId)
+                {
+                    result.Code = notificationId;
+                    result.Id = Guid.NewGuid().ToString();
+                    result.Content = data.Result;
+                    result.Persistent = data.Persistent;
+                    result.Subject = data.Subject;
+                    result.CreateTime = createTime.ToString(CultureInfo.InvariantCulture);
+                    result.SenderId = data.SenderId;
+                    
+                    OnBackendNotification?.Invoke(result);
+                }
+            }
         }
     }
 }

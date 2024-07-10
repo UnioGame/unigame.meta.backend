@@ -4,9 +4,9 @@
     using Newtonsoft.Json;
 
     [Serializable]
-    public class SessionTokenDto
+    public class RoomIsReadyDto
     {
-        [JsonProperty("session_token")]
-        public string sessionToken;
+        [JsonProperty("room_id")]
+        public string roomId;
     }
 }

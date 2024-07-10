@@ -29,5 +29,8 @@
         
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
         public List<MockBackendData> mockBackendData = new();
+
+        [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
+        public List<MockBackendNotificationData> mockBackendNotificationData = new();
     }
 }

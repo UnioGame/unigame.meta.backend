@@ -30,7 +30,7 @@
         UniTask<MetaDataResult> InvokeAsync(Type resultType, object payload);
 
         
-        event Action<int, string> OnBackendNotification;
+        event Action<MetaNotification, MetaDataResult> OnBackendNotification;
     }
 
 }
