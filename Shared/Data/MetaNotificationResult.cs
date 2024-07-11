@@ -4,13 +4,13 @@
 
     public sealed class MetaNotificationResult
     {
-        public MetaNotification Code { get; set; }
-        public string Content { get; set; }
-        public string CreateTime { get; set; }
-        public string Id { get; set; }
-        public bool Persistent { get; set; }
-        public string SenderId { get; set; }
-        public string Subject { get; set; }
+        public MetaNotification Code;
+        public string Content;
+        public string CreateTime;
+        public string Id;
+        public bool Persistent;
+        public string SenderId;
+        public string Subject;
         
         public static MetaNotificationResult Map(IApiNotification notification)
         {
