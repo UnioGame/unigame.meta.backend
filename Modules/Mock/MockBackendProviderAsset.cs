@@ -12,7 +12,8 @@
     [CreateAssetMenu(menuName = "UniGame/Meta Backend/Mock Backend Provider", fileName = "Mock Backend Provider")]
     public class MockBackendProviderAsset : BackendMetaServiceAsset
     {
-
+        [InlineProperty]
+        [HideLabel]
         public MockBackendDataConfig configuration = new();
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)

@@ -12,7 +12,7 @@
     using UnityEditor;
 #endif
     
-    [CreateAssetMenu(menuName = "UniGame/Meta Backend/BackendType Data Asset", fileName = "BackendType  Data Asset")]
+    [CreateAssetMenu(menuName = "UniGame/Meta Backend/Backend Type Data Asset", fileName = "Backend Type Data Asset")]
     public class BackendTypeDataAsset : ScriptableObject
     {
         public const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
