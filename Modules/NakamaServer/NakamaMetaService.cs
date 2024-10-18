@@ -160,7 +160,8 @@
             _nakamaSessionData = LoadLocalData();
             _nakamaSessionData.ConnectionId = deviceId;
             
-            _session = await CreateSessionAsync(_nakamaSessionData);
+            _session = await CreateSessionAsync(_nakamaSessionData)
+                .AttachExternalCancellation(LifeTime.Token);
             
             if (_session == null)
             {
@@ -232,7 +233,9 @@
             var sessionResult = await RestoreSessionAsync(sessionData);
             if(sessionResult.Success) return sessionResult.Session;
             
-            var newSession = await CreateSessionAsync(sessionData.ConnectionId);
+            var newSession = await CreateSessionAsync(sessionData.ConnectionId)
+                .AttachExternalCancellation(LifeTime.Token);
+            
             return newSession;
         }
         
@@ -293,7 +296,11 @@
             {
                 GameLog.Log($"nakama Try to Authenticate with auth {authId}");
                 
-                var authResult = await _client.AuthenticateCustomAsync(authId,canceller:_lifeTime.Token);
+                var authResult = await _client
+                    .AuthenticateCustomAsync(authId,canceller:_lifeTime.Token)
+                    .AsUniTask()
+                    .AttachExternalCancellation(LifeTime.Token);
+                
                 return authResult;
             }
             catch (ApiResponseException ex)
