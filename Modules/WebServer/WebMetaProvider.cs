@@ -6,21 +6,18 @@
     using MetaService.Shared.Data;
     using UniGame.Core.Runtime;
     using UniModules.UniCore.Runtime.DataFlow;
+    using UniModules.UniGame.Core.Runtime.Rx;
     using UniRx;
 
     [Serializable]
     public class WebMetaProvider : IRemoteMetaProvider
     {
-        private LifeTime _lifeTime;
-
-        public WebMetaProvider()
-        {
-            _lifeTime = new LifeTime();
-        }
+        private LifeTime _lifeTime = new();
+        private ReactiveValue<ConnectionState> _connectionState = new(ConnectionState.Disconnected);
         
         public ILifeTime LifeTime => _lifeTime;
-        
-        public IReadOnlyReactiveProperty<ConnectionState> State { get; }
+
+        public IReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
         
         public UniTask DisconnectAsync()
         {
@@ -39,6 +36,7 @@
         
         public void Dispose()
         {
+            _lifeTime.Release();
         }
     }
 }
