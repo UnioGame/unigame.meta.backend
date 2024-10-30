@@ -5,6 +5,7 @@
     using Cysharp.Threading.Tasks;
     using Extensions;
     using Game.Modules.ModelMapping;
+    using Shared;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using UniCore.Runtime.ProfilerTools;
@@ -25,6 +26,7 @@
         private Dictionary<Type,RemoteMetaCallData> _resultTypeCache;
         private Dictionary<Type, IRemoteMetaProvider> _contractsCache;
         private Subject<MetaDataResult> _dataStream;
+        private List<IMetaContractHandler> _contractHandlers = new();
         private string _connectionId = string.Empty;
 
         public BackendMetaService(IRemoteMetaProvider defaultMetaProvider,
@@ -50,7 +52,20 @@
         public IObservable<MetaDataResult> DataStream => _dataStream;
 
         public IReadOnlyReactiveProperty<ConnectionState> State => _defaultMetaProvider.State;
-        
+
+        public bool AddContractHandler(IMetaContractHandler handler)
+        {
+            if (_contractHandlers.Contains(handler)) return false;
+            _contractHandlers.Add(handler);
+            return true;
+        }
+
+        public bool RemoveContractHandler<T>() where T : IMetaContractHandler
+        {
+            var count = _contractHandlers.RemoveAll(x => x is T);
+            return count > 0;
+        }
+
         public IRemoteMetaDataConfiguration MetaDataConfiguration => _metaDataConfiguration;
         
         public IRemoteMetaProvider FindProvider(MetaContractData data)
@@ -148,7 +163,12 @@
                 
                 if(!provider.IsContractSupported(contract))
                     return BackendMetaConstants.UnsupportedContract;
+
+                var contractValue = contractData.contract;
+                foreach (var contractHandler in _contractHandlers)
+                    contractValue = contractHandler.UpdateContract(contractValue); 
                 
+                contractData.contract = contractValue;
                 var remoteResult = await provider.ExecuteAsync(contractData);
 
                 var result = RegisterRemoteResult(contractData,remoteResult);

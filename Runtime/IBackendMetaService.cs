@@ -4,12 +4,17 @@
     using Cysharp.Threading.Tasks;
     using Data;
     using Game.Modules.ModelMapping;
+    using global::Shared;
     using UniGame.Core.Runtime;
 
     public interface IBackendMetaService : 
         IMetaConnection,
         ILifeTimeContext
     {
+        public bool AddContractHandler(IMetaContractHandler handler);
+        
+        public bool RemoveContractHandler<T>() where T : IMetaContractHandler;
+        
         IRemoteMetaDataConfiguration MetaDataConfiguration { get; }
         
         IObservable<MetaDataResult> DataStream { get; }
