@@ -1,7 +1,7 @@
 ﻿namespace Game.Modules.ModelMapping
 {
     using System;
-    using MetaService.Shared;
+    using UniGame.MetaBackend.Shared;
     using Sirenix.OdinInspector;
     using UnityEngine;
 

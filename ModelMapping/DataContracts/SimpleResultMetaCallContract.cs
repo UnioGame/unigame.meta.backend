@@ -1,4 +1,4 @@
-﻿namespace MetaService.Shared
+﻿namespace UniGame.MetaBackend.Shared
 {
     using System;
     using UniGame.Core.Runtime.SerializableType;

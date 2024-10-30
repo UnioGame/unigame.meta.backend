@@ -1,29 +1,18 @@
-﻿namespace MetaService.Shared.Data
+﻿namespace UniGame.MetaBackend.Shared.Data
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using Sirenix.OdinInspector;
-    using UnityEngine;
-
-#if UNITY_EDITOR
     using UniModules.Editor;
-#endif
-
-    [Serializable]
-    public struct BackendType
-    {
-        public string Name;
-        public int Id;
-
-        [SerializeReference]
-        public BackendMetaServiceAsset Provider;
-    }
+    using UnityEngine;
 
     [Serializable]
     [ValueDropdown("@MetaService.Shared.Data.BackendTypeId.GetBackendTypes()", IsUniqueList = true, DropdownTitle = "BackendType")]
-    public partial struct BackendTypeId
+    public struct BackendTypeId : IEquatable<int>
     {
+        public static readonly BackendTypeId Empty = new() { value = nameof(Empty).GetHashCode() };
+        
         [SerializeField]
         public int value;
 
@@ -40,8 +29,8 @@
             {
                 yield return new ValueDropdownItem<BackendTypeId>()
                 {
-                    Text = "EMPTY",
-                    Value = (BackendTypeId)0,
+                    Text = nameof(Empty),
+                    Value = Empty,
                 };
                 yield break;
             }
@@ -95,8 +84,12 @@
         public BackendTypeId FromInt(int data)
         {
             value = data;
-
             return this;
+        }
+
+        public bool Equals(int other)
+        {
+            return value == other;
         }
 
         public override bool Equals(object obj)

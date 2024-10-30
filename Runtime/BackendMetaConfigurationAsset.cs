@@ -2,7 +2,7 @@ namespace MetaService.Runtime
 {
     using System;
     using Game.Modules.ModelMapping;
-    using Shared.Data;
+    using UniGame.MetaBackend.Shared.Data;
     using Sirenix.OdinInspector;
 
     [Serializable]

@@ -3,8 +3,9 @@
     using System;
     using System.Linq;
     using Cysharp.Threading.Tasks;
-    using MetaService.Shared;
-    using MetaService.Shared.Data;
+    using MetaService.Runtime;
+    using UniGame.MetaBackend.Shared;
+    using UniGame.MetaBackend.Shared.Data;
     using UniGame.Core.Runtime;
     using UniModules.UniCore.Runtime.DataFlow;
     using UniModules.UniGame.Core.Runtime.Rx;
@@ -28,7 +29,7 @@
         
         public IReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
         
-        public UniTask<MetaConnectionResult> ConnectAsync(string deviceId)
+        public UniTask<MetaConnectionResult> ConnectAsync()
         {
             _connectionState.Value = _config.allowConnect 
                     ? ConnectionState.Connected
@@ -56,8 +57,9 @@
             return UniTask.FromResult(result);
         }
 
-        public async UniTask<RemoteMetaResult> CallRemoteAsync(string method, string data)
+        public UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contract)
         {
+            var method = contract.contractName;
             var result = _config
                 .mockBackendData
                 .FirstOrDefault(x => 
@@ -67,13 +69,15 @@
             var resultData = result == null ? string.Empty : result.Result;
             var error = result == null ? string.Empty : result.Error;
             
-            return new RemoteMetaResult()
+            var resultValue = new RemoteMetaResult()
             {
                 Id = method,
                 Error = error,
                 Success = success,
                 Data = resultData,
             };
+
+            return UniTask.FromResult(resultValue);
         }
 
         public ConnectionState GetConnectionState()
@@ -85,6 +89,11 @@
         {
             _lifeTime.Terminate();
             _connectionState.Value = ConnectionState.Closed;
+        }
+
+        public bool IsContractSupported(IRemoteMetaContract command)
+        {
+            return true;
         }
     }
 }

@@ -1,9 +1,8 @@
-﻿namespace MetaService.Shared
+﻿namespace UniGame.MetaBackend.Shared
 {
     using System;
     using Cysharp.Threading.Tasks;
     using Data;
-    using DefaultNamespace;
     using Game.Modules.ModelMapping;
     using UniGame.Core.Runtime;
 
@@ -17,16 +16,7 @@
         
         void SwitchProvider(int providerId);
         
-        UniTask<MetaDataResult> InvokeAsync(object payload);
-        
-        UniTask<MetaDataResult> InvokeAsync<TContract>(TContract payload)
-            where TContract : IRemoteMetaCall;
-
-        UniTask<MetaDataResult> InvokeAsync(int remoteId, object payload);
-        
-        UniTask<MetaDataResult> InvokeAsync(string remoteId, string payload);
-        
-        UniTask<MetaDataResult> InvokeAsync(Type resultType, object payload);
+        UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract payload);
     }
 
 }

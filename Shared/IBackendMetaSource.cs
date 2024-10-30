@@ -1,4 +1,4 @@
-﻿namespace MetaService.Shared
+﻿namespace UniGame.MetaBackend.Shared
 {
     using Cysharp.Threading.Tasks;
     using UniGame.Core.Runtime;

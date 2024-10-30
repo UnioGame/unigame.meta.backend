@@ -1,6 +1,6 @@
 ﻿namespace Game.Modules.ModelMapping
 {
-    using MetaService.Shared;
+    using UniGame.MetaBackend.Shared;
 
     public interface IRemoteMetaDataConfiguration
     {

@@ -1,42 +1,50 @@
 namespace Extensions
 {
     using Cysharp.Threading.Tasks;
-    using DefaultNamespace;
-    using MetaService.Shared;
-
+    using UniGame.MetaBackend.Shared;
+    
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
+    
     public static class BackendMetaServiceExtensions
     {
-        
-        public static async UniTask<MetaRequestResult<TModel>> 
-            InvokeContractAsync<TModel>(this IBackendMetaService backendMetaService, IRemoteMetaCall contract) 
-            where TModel : class
+        public static IBackendMetaService RemoteMetaService;
+
+#if UNITY_EDITOR
+        [InitializeOnLoadMethod]
+        public static void Reset()
         {
-            var result = await backendMetaService.InvokeAsync(contract);
-            return new MetaRequestResult<TModel>
-            {
-                Model = result.Model as TModel,
-                Success = result.Success,
-                Error = result.Error
-            };
+            RemoteMetaService = null;
         }
+#endif
         
-        public static async UniTask<MetaRequestResult<TModel>> 
-            InvokeContractAsync<TModel>(this IBackendMetaService backendMetaService, int id, object payload) 
-            where TModel : class
+        public static async UniTask<MetaRequestResult<TResult>> ExecuteAsync<TResult>(this IRemoteMetaContract contract) 
+            where TResult : class
         {
-            var result = await backendMetaService.InvokeAsync(id,payload);
-            return new MetaRequestResult<TModel>
+            var resultValue = new MetaRequestResult<TResult>
             {
-                Model = result.Model as TModel,
-                Success = result.Success,
-                Error = result.Error
+                Result = default,
+                Success = false,
+                Error = string.Empty,
             };
+
+            if (RemoteMetaService == null)
+                return resultValue;
+            
+            var result = await RemoteMetaService.ExecuteAsync(contract);
+            
+            resultValue.Result = result.model as TResult;
+            resultValue.Success = result.success;
+            resultValue.Error = result.error;
+            
+            return resultValue;
         }
     }
     
-    public struct MetaRequestResult<TModel>
+    public struct MetaRequestResult<TResult>
     {
-        public TModel Model;
+        public TResult Result;
         public bool Success;
         public string Error;
     }

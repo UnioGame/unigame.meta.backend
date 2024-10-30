@@ -1,8 +1,9 @@
-﻿namespace MetaService.Shared
+﻿namespace UniGame.MetaBackend.Shared
 {
     using System;
     using Cysharp.Threading.Tasks;
     using Data;
+    using MetaService.Runtime;
     using UniGame.Core.Runtime;
 
     public interface IRemoteMetaProvider:
@@ -10,6 +11,8 @@
         IDisposable,
         ILifeTimeContext
     {
-        UniTask<RemoteMetaResult> CallRemoteAsync(string method,string data);
+        bool IsContractSupported(IRemoteMetaContract command);
+        
+        UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData);
     }
 }

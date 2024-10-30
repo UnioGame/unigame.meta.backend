@@ -1,4 +1,4 @@
-﻿namespace MetaService.Shared.Data
+﻿namespace UniGame.MetaBackend.Shared.Data
 {
     using System.Collections.Generic;
     using System.IO;
@@ -16,6 +16,7 @@
     [CreateAssetMenu(menuName = "UniGame/Meta Backend/Backend Type Data Asset", fileName = "Backend Type Data Asset")]
     public class BackendTypeDataAsset : ScriptableObject
     {
+        public const string IdsType = "BackendTypeIds";
         public const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
         public const string FileName = "BackendTypeIds.Generated.cs";
         
@@ -34,6 +35,7 @@
         public static void GenerateStaticProperties(BackendTypeDataAsset dataAsset)
         {
             var idType = typeof(BackendTypeId);
+            var idsTypeName = IdsType;
             var outputPath = DefaultDirectory
                 .ToProjectPath()
                 .FixUnityPath();
@@ -51,7 +53,7 @@
             {
                 writer.WriteLine($"namespace {namespaceName}");
                 writer.WriteLine("{");
-                writer.WriteLine("    public struct BackendTypeIds");
+                writer.WriteLine($"    public struct {idsTypeName}");
                 writer.WriteLine("    {");
 
                 var typesField = typeof(BackendTypeDataAsset).GetField("Types",

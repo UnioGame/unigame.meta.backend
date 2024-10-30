@@ -1,8 +1,8 @@
 ﻿namespace Modules.WebServer
 {
     using Cysharp.Threading.Tasks;
-    using MetaService.Shared;
-    using MetaService.Shared.Data;
+    using UniGame.MetaBackend.Shared;
+    using UniGame.MetaBackend.Shared.Data;
     using UniGame.Core.Runtime;
     using UnityEngine;
 

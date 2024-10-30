@@ -6,7 +6,7 @@
     using System.Linq;
     using System.Text;
     using MetaService.Runtime;
-    using MetaService.Shared;
+    using UniGame.MetaBackend.Shared;
     using Sirenix.OdinInspector;
     using UniModules;
     using UniModules.UniCore.Runtime.Utils;

@@ -1,16 +1,15 @@
-﻿namespace MetaService.Shared
+﻿namespace UniGame.MetaBackend.Shared
 {
     using System;
     using Cysharp.Threading.Tasks;
-    using MetaService.Shared.Data;
-    using UniGame.Core.Runtime.Rx;
+    using Data;
     using UniRx;
 
     public interface IMetaConnection : IDisposable
     {
         IReadOnlyReactiveProperty<ConnectionState> State { get; }
         
-        UniTask<MetaConnectionResult> ConnectAsync(string deviceId);
+        UniTask<MetaConnectionResult> ConnectAsync();
         
         UniTask DisconnectAsync();
     }

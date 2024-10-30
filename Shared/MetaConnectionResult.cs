@@ -1,4 +1,4 @@
-﻿namespace MetaService.Shared.Data
+﻿namespace UniGame.MetaBackend.Shared.Data
 {
     using System;
 

@@ -1,4 +1,4 @@
-﻿namespace MetaService.Shared
+﻿namespace UniGame.MetaBackend.Shared
 {
     public interface IRemoteMetaResult
     {

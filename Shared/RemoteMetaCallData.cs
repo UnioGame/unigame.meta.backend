@@ -1,8 +1,8 @@
 ﻿namespace Game.Modules.ModelMapping
 {
     using System;
-    using MetaService.Shared;
-    using MetaService.Shared.Data;
+    using UniGame.MetaBackend.Shared;
+    using UniGame.MetaBackend.Shared.Data;
     using Sirenix.OdinInspector;
     using UniModules.UniCore.Runtime.Utils;
     using UnityEngine;
@@ -25,7 +25,7 @@
         public int id = 0;
         
         [ShowIf(nameof(enabled))]
-        public BackendTypeId provider;
+        public BackendTypeId provider = BackendTypeId.Empty;
         
         [ShowIf(nameof(enabled))]
         [BoxGroup(nameof(contract))]

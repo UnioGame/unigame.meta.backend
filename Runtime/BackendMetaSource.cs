@@ -3,7 +3,7 @@
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
     using Game.Modules.ModelMapping;
-    using Shared;
+    using UniGame.MetaBackend.Shared;
     using Sirenix.OdinInspector;
     using UniGame.Core.Runtime;
     using UniGame.GameFlow.Runtime.Services;

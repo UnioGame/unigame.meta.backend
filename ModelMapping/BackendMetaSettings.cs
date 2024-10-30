@@ -1,7 +1,7 @@
 namespace MetaService.Runtime
 {
     using System;
-    using Shared.Data;
+    using UniGame.MetaBackend.Shared.Data;
 
     [Serializable]
     public class BackendMetaSettings
