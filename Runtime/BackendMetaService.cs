@@ -245,7 +245,7 @@
             var contract = contractData.contract;
             
 #if UNITY_EDITOR
-            GameLog.Log($"Backend result: {response.Data}",Color.green);
+            GameLog.Log($"Backend result: {response.data}",Color.green);
 #endif
             
             if(!_metaMethodCache.TryGetValue(remoteId, out var metaData))
@@ -255,7 +255,7 @@
                 AddRemoteMetaCache(metaData);
             }
 
-            var responceData = response.Data ?? string.Empty;
+            var responceData = response.data ?? string.Empty;
             var unixTime = DateTime.Now.ToUnixTimestamp();
             var outputType = contract.Output;
             
@@ -282,15 +282,15 @@
                 resultType = outputType,
                 model = resultObject,
                 result = responceData,
-                success = response.Success,
+                success = response.success,
                 hash = responceData.GetHashCode(),
-                error = response.Error,
+                error = response.error,
                 timestamp = unixTime,
             };
                 
-            if (!response.Success)
+            if (!response.success)
             {
-                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.Error}");
+                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error}");
             }
             
             return result;

@@ -72,9 +72,9 @@
             var resultValue = new RemoteMetaResult()
             {
                 Id = method,
-                Error = error,
-                Success = success,
-                Data = resultData,
+                error = error,
+                success = success,
+                data = resultData,
             };
 
             return UniTask.FromResult(resultValue);

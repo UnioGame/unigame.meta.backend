@@ -1,14 +1,17 @@
 ﻿namespace UniGame.MetaBackend.Shared.Data
 {
     using System;
+    using UnityEngine.Serialization;
 
     [Serializable]
     public struct RemoteMetaResult
     {
         public string Id;
-        public object Data;
-        public bool Success;
-        public string Error;
+        public object data;
+        [FormerlySerializedAs("Success")]
+        public bool success;
+        [FormerlySerializedAs("Error")]
+        public string error;
     }
     
     [Serializable]
