@@ -21,9 +21,7 @@
         private IRemoteMetaProvider _defaultMetaProvider;
         private IDictionary<int, IRemoteMetaProvider> _metaProviders;
         private Dictionary<int,MetaDataResult> _responceCache;
-        private Dictionary<int,RemoteMetaCallData> _metaIdCache;
-        private Dictionary<string,RemoteMetaCallData> _metaMethodCache;
-        private Dictionary<Type,RemoteMetaCallData> _resultTypeCache;
+        private Dictionary<int,RemoteMetaData> _metaIdCache;
         private Dictionary<Type, IRemoteMetaProvider> _contractsCache;
         private Subject<MetaDataResult> _dataStream;
         private List<IMetaContractHandler> _contractHandlers = new();
@@ -36,9 +34,7 @@
             BackendMetaServiceExtensions.RemoteMetaService = this;
             
             _responceCache = new Dictionary<int, MetaDataResult>(64);
-            _metaIdCache = new Dictionary<int, RemoteMetaCallData>(64);
-            _resultTypeCache = new Dictionary<Type, RemoteMetaCallData>(64);
-            _metaMethodCache = new Dictionary<string, RemoteMetaCallData>(64);
+            _metaIdCache = new Dictionary<int, RemoteMetaData>(64);
             _contractsCache = new Dictionary<Type, IRemoteMetaProvider>(64);
             _dataStream = new Subject<MetaDataResult>().AddTo(LifeTime);
             
@@ -78,21 +74,29 @@
             if(_contractsCache.TryGetValue(contractType,out var provider))
                 return provider;
 
+            IRemoteMetaProvider resultProvider = null;
+            
             if (_metaProviders.TryGetValue(providerId, out var contractProvider))
                 return contractProvider;
             
-            foreach (var metaProvider in _metaProviders.Values)
+            if(_defaultMetaProvider.IsContractSupported(contract))
+                resultProvider = _defaultMetaProvider;
+
+            if (resultProvider == null)
             {
-                if(!metaProvider.IsContractSupported(data.contract))
-                    continue;
-                provider = metaProvider;
-                break;
+                foreach (var metaProvider in _metaProviders.Values)
+                {
+                    if(!metaProvider.IsContractSupported(data.contract))
+                        continue;
+                    resultProvider = metaProvider;
+                    break;
+                }
             }
-                        
-            provider ??= _defaultMetaProvider;
-            _contractsCache[contractType] = provider;
             
-            return provider;
+            resultProvider ??= _defaultMetaProvider;
+            _contractsCache[contractType] = resultProvider;
+            
+            return resultProvider;
         }     
         
         public IRemoteMetaProvider GetProvider(int providerId)
@@ -129,7 +133,7 @@
         public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract)
         {
             var meta = FindMetaData(contract);
-            if (meta == RemoteMetaCallData.Empty) 
+            if (meta == RemoteMetaData.Empty) 
                 return MetaDataResult.Empty;
 
             var provider = GetProvider(meta.provider);
@@ -189,37 +193,24 @@
             }
         }
         
-                
-        public RemoteMetaCallData FindMetaData<TResult>()
-        {
-            var type = typeof(TResult);
-            return FindMetaData(type);
-        }
-        
-        public RemoteMetaCallData FindMetaData<TContract>(TContract contract)
+        public RemoteMetaData FindMetaData<TContract>(TContract contract)
             where TContract : IRemoteMetaContract
         {
             foreach (var meta in _metaDataConfiguration.RemoteMetaData)
             {
-                if(meta.contract.OutputType == contract.Output && 
-                   meta.contract.InputType == contract.Input)
+                if(meta.contract.OutputType == contract.OutputType && 
+                   meta.contract.InputType == contract.InputType)
                     return meta;
             }
             
-            return RemoteMetaCallData.Empty;
+            return RemoteMetaData.Empty;
         }
         
-        public RemoteMetaCallData FindMetaData(Type resultType)
-        {
-            return _resultTypeCache.TryGetValue(resultType, out var metaData) 
-                ? metaData : RemoteMetaCallData.Empty;
-        }
-        
-        public RemoteMetaCallData FindMetaData(int metaId)
+        public RemoteMetaData FindMetaData(int metaId)
         {
             if (_metaIdCache.TryGetValue(metaId, out var metaData))
                 return metaData;
-            return RemoteMetaCallData.Empty;
+            return RemoteMetaData.Empty;
         }
 
                 
@@ -243,21 +234,15 @@
         {
             var remoteId = contractData.contractName;
             var contract = contractData.contract;
+            var metaData = contractData.metaData;
             
 #if UNITY_EDITOR
             GameLog.Log($"Backend result: {response.data}",Color.green);
 #endif
             
-            if(!_metaMethodCache.TryGetValue(remoteId, out var metaData))
-            {
-                metaData = CreateNewRemoteMeta(remoteId);
-                metaData.method = remoteId;
-                AddRemoteMetaCache(metaData);
-            }
-
             var responceData = response.data ?? string.Empty;
             var unixTime = DateTime.Now.ToUnixTimestamp();
-            var outputType = contract.Output;
+            var outputType = contract.OutputType;
             
             outputType = outputType == null || outputType == typeof(VoidRemoteData) 
                 ? typeof(string)
@@ -306,12 +291,12 @@
             }
         }
 
-        private RemoteMetaCallData CreateNewRemoteMeta(string methodName)
+        private RemoteMetaData CreateNewRemoteMeta(string methodName)
         {
             var contract = new SimpleMetaCallContract<string, string>();
             var id = _metaDataConfiguration.CalculateMetaId(contract);
             
-            return new RemoteMetaCallData()
+            return new RemoteMetaData()
             {
                 id = id,
                 method = methodName,
@@ -319,16 +304,12 @@
             };
         }
 
-        private bool AddRemoteMetaCache(RemoteMetaCallData metaCallData)
+        private bool AddRemoteMetaCache(RemoteMetaData metaCallData)
         {
             if(_metaIdCache.TryGetValue((RemoteMetaId)metaCallData.id,out var _))
                 return false;
 
-            var contract = metaCallData.contract;
-            
-            _metaIdCache.Add((RemoteMetaId)metaCallData.id,metaCallData);
-            _resultTypeCache[contract.OutputType] = metaCallData;
-            _metaMethodCache[metaCallData.method] = metaCallData;
+            _metaIdCache[(RemoteMetaId)metaCallData.id] = metaCallData;
 
             return true;
         }

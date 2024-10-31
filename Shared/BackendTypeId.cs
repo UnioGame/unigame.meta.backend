@@ -8,7 +8,7 @@
     using UnityEngine;
 
     [Serializable]
-    [ValueDropdown("@MetaService.Shared.Data.BackendTypeId.GetBackendTypes()", IsUniqueList = true, DropdownTitle = "BackendType")]
+    [ValueDropdown("@UniGame.MetaBackend.Shared.Data.BackendTypeId.GetBackendTypes()", IsUniqueList = true, DropdownTitle = "BackendType")]
     public struct BackendTypeId : IEquatable<int>
     {
         public static readonly BackendTypeId Empty = new() { value = nameof(Empty).GetHashCode() };

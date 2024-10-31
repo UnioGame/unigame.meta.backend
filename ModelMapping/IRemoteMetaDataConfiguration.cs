@@ -6,10 +6,10 @@
     {
         public IRemoteDataConverter Converter { get; }
 
-        public RemoteMetaCallData[] RemoteMetaData { get; }
+        public RemoteMetaData[] RemoteMetaData { get; }
 
-        string GetContractName(IRemoteCallContract contract);
-        string GetRemoteMethodName(IRemoteCallContract contract);
-        int CalculateMetaId(IRemoteCallContract contract);
+        string GetContractName(IRemoteMetaContract contract);
+        string GetRemoteMethodName(IRemoteMetaContract contract);
+        int CalculateMetaId(IRemoteMetaContract contract);
     }
 }

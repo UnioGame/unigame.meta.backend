@@ -4,15 +4,16 @@ namespace UniGame.MetaBackend.Shared
     using Newtonsoft.Json;
 
     [Serializable]
-    public class RemoteMetaContract : IRemoteMetaContract
+    public abstract class RemoteMetaContract : IRemoteMetaContract
     {
         public object payload;
         public Type output;
         public Type input;
-        
+
         public object Payload => payload;
-        public Type Output => output;
-        public Type Input => input;
+        public Type OutputType => output;
+        public Type InputType => input;
+        public virtual string MethodName => GetType().Name;
     }
     
     [Serializable]
@@ -20,22 +21,33 @@ namespace UniGame.MetaBackend.Shared
     {
         public TInput payload;
         
+        [JsonIgnore]
         public object Payload => payload;
-        public Type Output => typeof(TOutput);
-        public Type Input => typeof(TInput);
+        
+        [JsonIgnore]
+        public Type OutputType => typeof(TOutput);
+        
+        [JsonIgnore]
+        public Type InputType => typeof(TInput);
+        
+        [JsonIgnore]
+        public virtual string MethodName => GetType().Name;
     }
     
     [Serializable]
-    public abstract class RemoteMetaSelfContract<TInput,TOutput> : IRemoteMetaContract<TInput,TOutput>
+    public abstract class RemoteMetaSelfContract<TOutput> : IRemoteMetaContract<IRemoteMetaContract,TOutput>
     {
         [JsonIgnore]
         public object Payload => this;
         
         [JsonIgnore]
-        public Type Output => typeof(TOutput);
+        public Type OutputType => typeof(TOutput);
         
         [JsonIgnore]
-        public Type Input => GetType();
+        public Type InputType => GetType();
+        
+        [JsonIgnore]
+        public virtual string MethodName => GetType().Name;
     }
     
 }

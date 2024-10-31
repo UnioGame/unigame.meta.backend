@@ -8,9 +8,9 @@
     using UnityEngine;
 
     [Serializable]
-    public class RemoteMetaCallData : ISearchFilterable
+    public class RemoteMetaData : ISearchFilterable
     {
-        public static readonly RemoteMetaCallData Empty = new()
+        public static readonly RemoteMetaData Empty = new()
         {
             id = -1,
             enabled = false,
@@ -32,7 +32,7 @@
         [HideLabel]
         [InlineProperty]
         [SerializeReference]
-        public IRemoteCallContract contract;
+        public IRemoteMetaContract contract;
         
         [ShowIf(nameof(enabled))]
         [BoxGroup(nameof(converter))]

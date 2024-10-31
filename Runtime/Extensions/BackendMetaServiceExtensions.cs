@@ -1,8 +1,10 @@
 namespace Extensions
 {
+    using System;
     using Cysharp.Threading.Tasks;
     using UniGame.MetaBackend.Shared;
-    
+    using UnityEngine.Serialization;
+
 #if UNITY_EDITOR
     using UnityEditor;
 #endif
@@ -11,22 +13,21 @@ namespace Extensions
     {
         public static IBackendMetaService RemoteMetaService;
 
-#if UNITY_EDITOR
-        [InitializeOnLoadMethod]
-        public static void Reset()
+        public static async UniTask<MetaRequestResult<TOutput>> ExecuteAsync<TInput,TOutput>(
+            this IRemoteMetaContract<TInput,TOutput> contract)
+            where TOutput : class
         {
-            RemoteMetaService = null;
+            return await ExecuteAsync<TOutput>(contract);
         }
-#endif
-        
+
         public static async UniTask<MetaRequestResult<TResult>> ExecuteAsync<TResult>(this IRemoteMetaContract contract) 
             where TResult : class
         {
             var resultValue = new MetaRequestResult<TResult>
             {
-                Result = default,
-                Success = false,
-                Error = string.Empty,
+                data = default,
+                success = false,
+                error = string.Empty,
             };
 
             if (RemoteMetaService == null)
@@ -34,18 +35,19 @@ namespace Extensions
             
             var result = await RemoteMetaService.ExecuteAsync(contract);
             
-            resultValue.Result = result.model as TResult;
-            resultValue.Success = result.success;
-            resultValue.Error = result.error;
+            resultValue.data = result.model as TResult;
+            resultValue.success = result.success;
+            resultValue.error = result.error;
             
             return resultValue;
         }
     }
     
+    [Serializable]
     public struct MetaRequestResult<TResult>
     {
-        public TResult Result;
-        public bool Success;
-        public string Error;
+        public TResult data;
+        public bool success;
+        public string error;
     }
 }

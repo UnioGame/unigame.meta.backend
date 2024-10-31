@@ -8,9 +8,7 @@
     {
         public string Id;
         public object data;
-        [FormerlySerializedAs("Success")]
         public bool success;
-        [FormerlySerializedAs("Error")]
         public string error;
     }
     

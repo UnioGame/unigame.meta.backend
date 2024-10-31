@@ -13,18 +13,18 @@
 
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
         [ListDrawerSettings(ListElementLabelName = "method")]
-        public RemoteMetaCallData[] remoteMetaData = Array.Empty<RemoteMetaCallData>();
+        public RemoteMetaData[] remoteMetaData = Array.Empty<RemoteMetaData>();
 
         public IRemoteDataConverter Converter => defaultConverter;
-        public RemoteMetaCallData[] RemoteMetaData => remoteMetaData;
+        public RemoteMetaData[] RemoteMetaData => remoteMetaData;
         
         
-        public string GetContractName(IRemoteCallContract contract)
+        public string GetContractName(IRemoteMetaContract contract)
         {
             return GetRemoteMethodName(contract);
         }
         
-        public string GetRemoteMethodName(IRemoteCallContract contract)
+        public string GetRemoteMethodName(IRemoteMetaContract contract)
         {
             if (string.IsNullOrEmpty(contract.MethodName) == false)
                 return contract.MethodName;
@@ -42,12 +42,12 @@
             return result;
         }
         
-        public int CalculateMetaId(IRemoteCallContract contract)
+        public int CalculateMetaId(IRemoteMetaContract contract)
         {
             var contractType = contract.GetType().Name;
-            var inputType = contract.InputType;
-            var outputType = contract.OutputType;
-            var id = HashCode.Combine(contractType, inputType.Name, outputType.Name);
+            var inputType = contract.InputType?.GetHashCode() ?? 0;
+            var outputType = contract.OutputType?.GetHashCode() ?? 0;
+            var id = HashCode.Combine(contractType, inputType, outputType);
             return id;
         }
         

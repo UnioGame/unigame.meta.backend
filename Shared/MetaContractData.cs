@@ -10,7 +10,7 @@
         public int id;
         public string contractName;
         public IRemoteMetaProvider provider;
-        public RemoteMetaCallData metaData;
+        public RemoteMetaData metaData;
         public IRemoteMetaContract contract;
     }
 }

@@ -91,28 +91,29 @@
             foreach (var metaCallData in configuration.remoteMetaData)
             {
                 var method =  metaCallData.contract.MethodName;
-                if(string.IsNullOrEmpty(method))continue;
-                metaCallData.method = metaCallData.contract.MethodName;
+                metaCallData.method = string.IsNullOrEmpty(method)
+                    ?metaCallData.contract.GetType().Name
+                    :method;
             }
         }
         
-        public Dictionary<int,RemoteMetaCallData> LoadRemoteMetaData()
+        public Dictionary<int,RemoteMetaData> LoadRemoteMetaData()
         {
-            var remoteCallContractType = typeof(IRemoteCallContract);
+            var remoteCallContractType = typeof(IRemoteMetaContract);
             var contractTypes = TypeCache.GetTypesDerivedFrom(remoteCallContractType);
-            var remoteModels = new Dictionary<int,RemoteMetaCallData>();
+            var remoteModels = new Dictionary<int,RemoteMetaData>();
             
             foreach (var typeItem in contractTypes)
             {
                 if(!ValidateType(typeItem)) continue;
 
-                var contract = typeItem.CreateWithDefaultConstructor() as IRemoteCallContract;
+                var contract = typeItem.CreateWithDefaultConstructor() as IRemoteMetaContract;
                 if(contract == null) continue;
                 
                 var method = configuration.GetRemoteMethodName(contract);
                 var id = configuration.CalculateMetaId(contract);
                 
-                var remoteItem = new RemoteMetaCallData()
+                var remoteItem = new RemoteMetaData()
                 {
                     id = id,
                     method = method,
