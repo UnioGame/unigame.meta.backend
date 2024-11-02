@@ -7,7 +7,7 @@
     using UniGame.Core.Runtime;
     using UnityEngine;
 
-    [CreateAssetMenu(menuName = "UniGame/Meta Backend/Nakama Provider", fileName = "Nakama Provider")]
+    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Nakama Provider", fileName = "Nakama Provider")]
     public class NakamaProviderAsset : BackendMetaServiceAsset
     {
         [InlineProperty]

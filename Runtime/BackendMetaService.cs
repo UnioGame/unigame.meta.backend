@@ -235,11 +235,7 @@
             var remoteId = contractData.contractName;
             var contract = contractData.contract;
             var metaData = contractData.metaData;
-            
-#if UNITY_EDITOR
-            GameLog.Log($"Backend result: {response.data}",Color.green);
-#endif
-            
+
             var responceData = response.data ?? string.Empty;
             var unixTime = DateTime.Now.ToUnixTimestamp();
             var outputType = contract.OutputType;

@@ -7,8 +7,8 @@
     using UniGame.Core.Runtime;
     using UnityEngine;
 
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Backend Provider", fileName = "Web Backend Provider")]
-    public class WebMetaProviderAsset : BackendMetaServiceAsset
+    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Backend Mock", fileName = "Web Backend Mock")]
+    public class WebMetaProviderMockAsset : BackendMetaServiceAsset
     {
         [InlineProperty]
         [HideLabel]
@@ -16,8 +16,7 @@
         
         public override UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
-            var service = new WebMetaProvider(settings);
-            context.Publish<IWebMetaProvider>(service);
+            var service = new WebMetaMockProvider(settings);
             return UniTask.FromResult<IRemoteMetaProvider>(service);
         }
     }

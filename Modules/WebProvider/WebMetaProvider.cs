@@ -29,7 +29,9 @@
         };
         
         private WebMetaProviderSettings _settings;
-        private Dictionary<Type, ApiEndPoint> _contractsMap;
+        private string _defaultUrl;
+        private Dictionary<Type, WebApiEndPoint> _contractsMap;
+        private Dictionary<string, string> _urlsCache;
         
         private WebRequestBuilder _webRequestBuilder = new();
         private LifeTime _lifeTime = new();
@@ -40,7 +42,9 @@
 
         public WebMetaProvider(WebMetaProviderSettings settings)
         {
+            _urlsCache = new(64);
             _settings = settings;
+            _defaultUrl = settings.defaultUrl;
             _token = settings.defaultToken;
             _debugMode = settings.debugMode;
             _contractsMap = settings.contracts
@@ -62,6 +66,7 @@
         public void SetToken(string token)
         {
             _token = token;
+            _webRequestBuilder.SetToken(token);
         }
         
         public bool IsContractSupported(IRemoteMetaContract command)
@@ -85,11 +90,36 @@
             if (!_contractsMap.TryGetValue(contractType, out var endPoint))
                 return result;
 
-            if (_debugMode)
-                return ExecuteDebugAsync(contract, endPoint);
+            var requestResult  = _debugMode 
+                ? ExecuteDebugAsync(endPoint) 
+                : await ExecuteWebRequest(contract, endPoint);
+            
+#if UNITY_EDITOR
+            if (_settings.enableLogs)
+            {
+                var color = requestResult.success ? Color.green : Color.red;
+                GameLog.Log($"[WebMetaProvider] {contract.GetType().Name} {endPoint.url} result : {requestResult.data} {requestResult.error}",color);
+            }
+#endif
 
+            var resultData = requestResult.success 
+                ? JsonConvert.DeserializeObject(requestResult.data,contract.OutputType) 
+                : null;
+            
+            result.data = resultData;
+            result.success = requestResult.success;
+            result.error = requestResult.error;
+            
+            return result;
+        }
+
+        public async UniTask<WebServerResult> ExecuteWebRequest(IRemoteMetaContract contract,
+            WebApiEndPoint endPoint)
+        {
             var payload = contract.Payload;
-            var url = endPoint.url;
+            var url = string.IsNullOrEmpty(endPoint.url) 
+                ? _defaultUrl : endPoint.url;
+            url = GetServerUrl(url, endPoint.path);
             var token = _token;
 
             if (contract is IWebRequestContract webRequestContract)
@@ -108,8 +138,14 @@
                 ? string.Empty 
                 : JsonConvert.SerializeObject(payload, JsonSettings);
 
-            GameLog.Log($"{contract.GetType().Name} : {url} : {serializedPayload}",Color.cyan);
-
+#if UNITY_EDITOR
+            if (_settings.enableLogs)
+            {
+                var color = Color.green;
+                GameLog.Log($"[WebMetaProvider] request [{endPoint.requestType}] : {contract.GetType().Name} : {endPoint.url} : {serializedPayload}",color);
+            }
+#endif
+            
             var requestResult = new WebServerResult();
             
             switch (endPoint.requestType)
@@ -123,31 +159,22 @@
                     break;
             }
 
-            var resultData = requestResult.success 
-                ? JsonConvert.DeserializeObject(requestResult.data,contract.OutputType) 
-                : null;
-            
-            result.data = resultData;
-            result.success = requestResult.success;
-            result.error = requestResult.error;
-            
-            return result;
+            return requestResult;
         }
-
-        public RemoteMetaResult ExecuteDebugAsync(IRemoteMetaContract contract,ApiEndPoint endPoint)
+        
+        public WebServerResult ExecuteDebugAsync(WebApiEndPoint endPoint)
         {
             var debugResult = endPoint.debugResult;
-            var result = new RemoteMetaResult()
+            var result = new WebServerResult()
             {
                 error = debugResult.error,
-                data = null,
+                data = string.Empty,
                 success = debugResult.success,
             };
 
             if (!debugResult.success) return result;
 
-            var data = JsonConvert.DeserializeObject(debugResult.data, contract.OutputType);
-            result.data = data;
+            result.data = debugResult.data;
             return result;
         }
         
@@ -185,5 +212,22 @@
             _lifeTime.Release();
         }
 
+        public string GetServerUrl(string serverUrl,string path)
+        {
+            if(_urlsCache.TryGetValue(path, out var url))
+                return url;
+
+            var server = serverUrl;
+            path = string.IsNullOrEmpty(path) ? string.Empty : path;
+            
+            var uriBuilder = new UriBuilder(server)
+            {
+                Path = path
+            };
+            
+            var result = uriBuilder.Uri.ToString();
+            _urlsCache[path] = result;
+            return result;
+        }
     }
 }

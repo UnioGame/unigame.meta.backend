@@ -13,7 +13,7 @@
     using UnityEditor;
 #endif
     
-    [CreateAssetMenu(menuName = "UniGame/Meta Backend/Backend Type Data Asset", fileName = "Backend Type Data Asset")]
+    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Backend Type Data Asset", fileName = "Backend Type Data Asset")]
     public class BackendTypeDataAsset : ScriptableObject
     {
         public const string IdsType = "BackendTypeIds";

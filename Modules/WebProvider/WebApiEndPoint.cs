@@ -11,10 +11,11 @@
 #endif
     
     [Serializable]
-    public class ApiEndPoint : ISearchFilterable
+    public class WebApiEndPoint : ISearchFilterable
     {
         public string name;
         public string url;
+        public string path;
         public WebRequestType requestType = WebRequestType.Get;
         
         [ValueDropdown(nameof(GetContracts))]
@@ -23,6 +24,8 @@
         [BoxGroup("debug")]
         public DebugApiResult debugResult = new();
 
+        public string Name => string.IsNullOrEmpty(name) ? path : name;
+        
         public static IEnumerable<ValueDropdownItem<SType>> GetContracts()
         {
 #if UNITY_EDITOR

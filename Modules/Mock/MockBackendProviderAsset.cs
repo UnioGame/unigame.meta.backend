@@ -9,7 +9,7 @@
     using UniGame.Core.Runtime;
     using UnityEngine;
 
-    [CreateAssetMenu(menuName = "UniGame/Meta Backend/Mock Backend Provider", fileName = "Mock Backend Provider")]
+    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Mock Backend Provider", fileName = "Mock Backend Provider")]
     public class MockBackendProviderAsset : BackendMetaServiceAsset
     {
         [InlineProperty]
