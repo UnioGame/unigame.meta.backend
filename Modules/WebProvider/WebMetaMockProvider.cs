@@ -52,7 +52,7 @@
                 error = NotSupportedError,
                 data = null,
                 success = true,
-                Id = contractType.Name,
+                id = contractType.Name,
             };
             
             if (!_contractsMap.TryGetValue(contractType, out var endPoint))
@@ -86,7 +86,7 @@
         public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data)
         {
             var result = await ExecuteAsync(data.contract);
-            result.Id = data.contractName;
+            result.id = data.contractName;
             return result;
         }
 

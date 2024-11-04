@@ -37,6 +37,8 @@
             {
                 var providerSource = Instantiate(backendType.Provider);
                 var metaProvider = await providerSource.CreateAsync(context);
+                metaProvider.AddTo(context.LifeTime);
+                
                 providers[backendType.Id] = metaProvider;
                 if (backendType.Id == backendMetaType)
                     defaultProvider = metaProvider;

@@ -71,7 +71,7 @@
             
             var resultValue = new RemoteMetaResult()
             {
-                Id = method,
+                id = method,
                 error = error,
                 success = success,
                 data = resultData,

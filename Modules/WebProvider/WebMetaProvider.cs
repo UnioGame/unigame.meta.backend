@@ -31,7 +31,6 @@
         private WebMetaProviderSettings _settings;
         private string _defaultUrl;
         private Dictionary<Type, WebApiEndPoint> _contractsMap;
-        private Dictionary<string, string> _urlsCache;
         
         private WebRequestBuilder _webRequestBuilder = new();
         private LifeTime _lifeTime = new();
@@ -42,7 +41,6 @@
 
         public WebMetaProvider(WebMetaProviderSettings settings)
         {
-            _urlsCache = new(64);
             _settings = settings;
             _defaultUrl = settings.defaultUrl;
             _token = settings.defaultToken;
@@ -84,7 +82,7 @@
                 error = NotSupportedError,
                 data = null,
                 success = true,
-                Id = contractType.Name,
+                id = contractType.Name,
             };
             
             if (!_contractsMap.TryGetValue(contractType, out var endPoint))
@@ -119,7 +117,8 @@
             var payload = contract.Payload;
             var url = string.IsNullOrEmpty(endPoint.url) 
                 ? _defaultUrl : endPoint.url;
-            url = GetServerUrl(url, endPoint.path);
+            url = _webRequestBuilder.GetServerUrl(url, endPoint.path);
+            
             var token = _token;
 
             if (contract is IWebRequestContract webRequestContract)
@@ -181,7 +180,7 @@
         public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data)
         {
             var result = await ExecuteAsync(data.contract);
-            result.Id = data.contractName;
+            result.id = data.contractName;
             return result;
         }
 
@@ -212,22 +211,5 @@
             _lifeTime.Release();
         }
 
-        public string GetServerUrl(string serverUrl,string path)
-        {
-            if(_urlsCache.TryGetValue(path, out var url))
-                return url;
-
-            var server = serverUrl;
-            path = string.IsNullOrEmpty(path) ? string.Empty : path;
-            
-            var uriBuilder = new UriBuilder(server)
-            {
-                Path = path
-            };
-            
-            var result = uriBuilder.Uri.ToString();
-            _urlsCache[path] = result;
-            return result;
-        }
     }
 }
