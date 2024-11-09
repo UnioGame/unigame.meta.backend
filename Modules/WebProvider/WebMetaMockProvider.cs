@@ -31,6 +31,7 @@
 
         public WebMetaMockProvider(WebMetaProviderSettings settings)
         {
+            _settings = settings;
             _contractsMap = settings.contracts
                 .ToDictionary(x => (Type)x.contract);
         }
