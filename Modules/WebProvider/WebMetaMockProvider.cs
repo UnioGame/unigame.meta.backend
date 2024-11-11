@@ -91,6 +91,12 @@
             return result;
         }
 
+        public bool TryDequeue(out RemoteMetaResult result)
+        {
+            result = default;
+            return false;
+        }
+
         public async UniTask<MetaConnectionResult> ConnectAsync()
         {
             return new MetaConnectionResult()

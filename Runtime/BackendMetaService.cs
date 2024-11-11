@@ -5,6 +5,7 @@
     using Cysharp.Threading.Tasks;
     using Extensions;
     using Game.Modules.ModelMapping;
+    using Newtonsoft.Json;
     using Shared;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
@@ -130,6 +131,43 @@
             _defaultMetaProvider = GetProvider(providerId);
         }
 
+        public bool TryDequeueMetaRequest(IRemoteMetaContract contract, out MetaDataResult result)
+        {
+            try
+            {
+                var meta = FindMetaData(contract);
+                result = null;
+                if (meta == RemoteMetaData.Empty)
+                {
+                    return false;
+                }
+
+                var provider = GetProvider(meta.provider);
+                if (!provider.TryDequeue(out var request))
+                {
+                    return false;
+                }
+
+                request.data = JsonConvert.DeserializeObject((string)request.data, meta.contract.OutputType); 
+                var contractData = new MetaContractData()
+                {
+                    id = meta.id,
+                    metaData = meta,
+                    contract = contract,
+                    provider = provider,
+                    contractName = meta.method,
+                };
+                
+                result = RegisterRemoteResult(contractData, request);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+        
         public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract)
         {
             var meta = FindMetaData(contract);
@@ -149,7 +187,7 @@
             
             return await ExecuteAsync(contractData);
         }
-        
+
         private async UniTask<MetaDataResult> ExecuteAsync(MetaContractData contractData)
         {
             try

@@ -14,5 +14,6 @@
         bool IsContractSupported(IRemoteMetaContract command);
         
         UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData);
+        bool TryDequeue(out RemoteMetaResult result);
     }
 }

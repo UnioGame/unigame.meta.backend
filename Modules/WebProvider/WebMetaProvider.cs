@@ -184,6 +184,12 @@
             return result;
         }
 
+        public bool TryDequeue(out RemoteMetaResult result)
+        {
+            result = default;
+            return false;
+        }
+
         public Dictionary<string, string> SerializeToQuery(object payload)
         {
             if (payload == null) return EmptyQuery;

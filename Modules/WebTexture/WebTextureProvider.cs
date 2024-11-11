@@ -121,6 +121,12 @@
             return result;
         }
 
+        public bool TryDequeue(out RemoteMetaResult result)
+        {
+            result = default;
+            return false;
+        }
+
         public void AddToCache(string url,string name, Object asset, ILifeTime lifeTime)
         {
             if(_cache.TryGetValue(url,out var item))

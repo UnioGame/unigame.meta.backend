@@ -80,6 +80,12 @@
             return UniTask.FromResult(resultValue);
         }
 
+        public bool TryDequeue(out RemoteMetaResult result)
+        {
+            result = default;
+            return false;
+        }
+
         public ConnectionState GetConnectionState()
         {
             return _connectionState.Value;
