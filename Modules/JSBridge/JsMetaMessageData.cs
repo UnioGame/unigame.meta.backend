@@ -2,7 +2,6 @@
 {
     public struct JsMetaMessageData
     {
-        public int Type;
-        public object Message;
+        public string Message;
     }
 }

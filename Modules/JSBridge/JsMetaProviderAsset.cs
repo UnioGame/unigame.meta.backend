@@ -17,10 +17,14 @@
         [InlineProperty]
         [HideLabel]
         public JsMetaContractConfig config;
+
+        [InlineProperty]
+        [HideLabel]
+        public JsBridgeAgentBase bridgePrefab;
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
-            var jsMetaService = new JsMetaProvider(config);
+            var jsMetaService = new JsMetaProvider(config, bridgePrefab);
             return jsMetaService;
         }
     }
