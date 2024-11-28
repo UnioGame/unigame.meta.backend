@@ -21,26 +21,25 @@
         
         public bool enabled = true;
         public string method;
-        [ShowIf(nameof(enabled))]
         public int id = 0;
+
+        public bool overrideProvider = false;
         
-        [ShowIf(nameof(enabled))]
+        [ShowIf(nameof(overrideProvider))]
         public BackendTypeId provider = BackendTypeId.Empty;
         
-        [ShowIf(nameof(enabled))]
         [BoxGroup(nameof(contract))]
         [HideLabel]
         [InlineProperty]
         [SerializeReference]
         public IRemoteMetaContract contract;
         
-        [ShowIf(nameof(enabled))]
         [BoxGroup(nameof(converter))]
         public bool overriderDataConverter;
         
-        [ShowIf(nameof(enabled))]
         [BoxGroup(nameof(converter))]
         [ShowIf(nameof(overriderDataConverter))]
+        [SerializeReference]
         public IRemoteDataConverter converter;
 
         public bool IsMatch(string searchString)

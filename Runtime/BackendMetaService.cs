@@ -20,6 +20,7 @@
     {
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
+        private BackendTypeId _defaultProviderId;
         private IDictionary<int, IRemoteMetaProvider> _metaProviders;
         private Dictionary<int,MetaDataResult> _responceCache;
         private Dictionary<int,RemoteMetaData> _metaIdCache;
@@ -28,7 +29,7 @@
         private List<IMetaContractHandler> _contractHandlers = new();
         private string _connectionId = string.Empty;
 
-        public BackendMetaService(IRemoteMetaProvider defaultMetaProvider,
+        public BackendMetaService(BackendTypeId defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
             IRemoteMetaDataConfiguration metaDataConfiguration)
         {
@@ -40,7 +41,9 @@
             _dataStream = new Subject<MetaDataResult>().AddTo(LifeTime);
             
             _metaDataConfiguration = metaDataConfiguration;
-            _defaultMetaProvider = defaultMetaProvider;
+            
+            _defaultProviderId = defaultMetaProvider;
+            _defaultMetaProvider = metaProviders[defaultMetaProvider];
             _metaProviders = metaProviders;
 
             InitializeCache();
@@ -70,7 +73,7 @@
             var contract = data.contract;
             var contractType = contract.GetType();
             var meta = data.metaData;
-            var providerId = meta.provider;
+            var providerId = meta.overrideProvider ? meta.provider : _defaultProviderId;
             
             if(_contractsCache.TryGetValue(contractType,out var provider))
                 return provider;
@@ -174,7 +177,9 @@
             if (meta == RemoteMetaData.Empty) 
                 return MetaDataResult.Empty;
 
-            var provider = GetProvider(meta.provider);
+            var provider = meta.overrideProvider 
+                ? GetProvider(meta.provider)
+                : _defaultMetaProvider;
             
             var contractData = new MetaContractData()
             {
