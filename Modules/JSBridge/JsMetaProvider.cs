@@ -23,7 +23,7 @@
         private readonly JsMetaContractConfig _config;
         private readonly JsBridgeAgentBase _bridgePrefab;
         
-        private JsBridgeAgentBase _metaMonoAgent;
+        private JsBridgeAgentBase _metaAgent;
         private Queue<JsMetaMessageData> _incomingRequestsQueue;
         private LifeTime _lifeTime = new();
         private Dictionary<string, JsMetaContractData> _jsContracts = new(16);
@@ -57,11 +57,11 @@
                 });    
             }
             
-            _metaMonoAgent = Object.Instantiate(_bridgePrefab);
-            _metaMonoAgent.gameObject.name = JsBridgeName;
-            Object.DontDestroyOnLoad(_metaMonoAgent.gameObject);
+            _metaAgent = Object.Instantiate(_bridgePrefab);
+            _metaAgent.gameObject.name = JsBridgeName;
+            Object.DontDestroyOnLoad(_metaAgent.gameObject);
             
-            _metaMonoAgent.MessageStream
+            _metaAgent.MessageStream
                 .Subscribe(MessageReceivedCallback)
                 .AddTo(LifeTime);
 
@@ -77,8 +77,8 @@
 
         public UniTask DisconnectAsync()
         {
-            _metaMonoAgent.Dispose();
-            Object.Destroy(_metaMonoAgent.gameObject);
+            _metaAgent.Dispose();
+            Object.Destroy(_metaAgent.gameObject);
             return UniTask.CompletedTask;
         }
         
@@ -114,7 +114,7 @@
             
             var contractId = contractConfig.id;
             var message = JsonConvert.SerializeObject(contractData.contract.Payload);
-            var messageResult = SendMessageToJs(contractId, message);
+            var messageResult = _metaAgent.SendMessage(contractId, message);
             
             var result = new RemoteMetaResult
             {
@@ -124,15 +124,6 @@
                 id = contractData.contractName
             };
 
-            return result;
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public object SendMessageToJs(int contractId, string message)
-        {
-            var payloadBytes = Encoding.Default.GetBytes(message);
-            var utf8StringPayload = Encoding.UTF8.GetString(payloadBytes);
-            var result = JsMetaUnityBridge.ReceiveMessageFromUnity(contractId, utf8StringPayload);
             return result;
         }
 

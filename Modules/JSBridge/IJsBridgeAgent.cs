@@ -8,5 +8,6 @@
         
         void Dispose();
         void InvokeReceiveMessage(string message);
+        object SendMessage(int contractId, string message);
     }
 }
