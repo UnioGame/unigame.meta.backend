@@ -6,7 +6,9 @@
     using Sirenix.OdinInspector;
     using UniModules.UniCore.Runtime.Utils;
     using UnityEngine;
-
+#if UNITY_EDITOR
+    using UniModules.Editor;
+#endif
     [Serializable]
     public class RemoteMetaData : ISearchFilterable
     {
@@ -19,6 +21,14 @@
             overriderDataConverter = false,
         };
         
+#if UNITY_EDITOR
+#if ODIN_INSPECTOR
+        [InlineButton(nameof(OpenScript),label:"Open Contract",icon:SdfIconType.Folder2Open)]
+#endif
+#if TRI_INSPECTOR || ODIN_INSPECTOR
+        [GUIColor("GetButtonColor")]
+#endif
+#endif
         public bool enabled = true;
         public string method;
         public int id = 0;
@@ -66,6 +76,26 @@
             return false;
         }
 
+#if UNITY_EDITOR
+        
+#if TRI_INSPECTOR
+        [Button]
+#endif
+        public void OpenScript()
+        {
+            if(contract == null) return;
+            contract.GetType().OpenScript();
+        }
+        
+        private Color GetButtonColor()
+        {
+            return enabled ? 
+                new Color(0.2f, 1f, 0.2f) : 
+                new Color(1, 0.6f, 0.4f);
+            return Color.green;
+        }
+        
+#endif
     }
     
 }

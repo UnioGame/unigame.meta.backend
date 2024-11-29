@@ -25,6 +25,7 @@
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
             var jsMetaService = new JsMetaProvider(config, bridgePrefab);
+            context.Publish<IRemoteMetaJsProvider>(jsMetaService);
             return jsMetaService;
         }
     }
@@ -40,8 +41,9 @@
     {
         public int id;
 
+        [LabelText(text:"@Name")]
         [ValueDropdown(nameof(GetContracts))]
-        public SType contract;
+        public SType contract = new();
         
         public static IEnumerable<ValueDropdownItem<SType>> GetContracts()
         {

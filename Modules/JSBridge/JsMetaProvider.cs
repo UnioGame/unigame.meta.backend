@@ -12,39 +12,61 @@
     using UniGame.Core.Runtime;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
+    using UniModules.UniCore.Runtime.DataFlow;
     using UniRx;
     using Object = UnityEngine.Object;
 
-    public class JsMetaProvider : IRemoteMetaProvider
+    public class JsMetaProvider : IRemoteMetaJsProvider
     {
+        public const string JsBridgeName = "JsBridge_Agent";
+        
         private readonly JsMetaContractConfig _config;
         private readonly JsBridgeAgentBase _bridgePrefab;
         
         private JsBridgeAgentBase _metaMonoAgent;
         private Queue<JsMetaMessageData> _incomingRequestsQueue;
-        
-        public ILifeTime LifeTime { get; }
-
+        private LifeTime _lifeTime = new();
+        private Dictionary<string, JsMetaContractData> _jsContracts = new(16);
         private ReactiveProperty<ConnectionState> _state;
+        
+        public ILifeTime LifeTime => _lifeTime;
+        
         public IReadOnlyReactiveProperty<ConnectionState> State => _state;
 
         public JsMetaProvider(JsMetaContractConfig config, JsBridgeAgentBase bridgeAgentBase)
         {
+            _lifeTime = new LifeTime();
             _config = config;
-            _state = new ReactiveProperty<ConnectionState>();
+            _state = new ReactiveProperty<ConnectionState>()
+                .AddTo(LifeTime);
+            
             _incomingRequestsQueue = new Queue<JsMetaMessageData>();
             _bridgePrefab = bridgeAgentBase;
+            _jsContracts = config.contracts.ToDictionary(x => x.contract.Name);
         }
         
         public UniTask<MetaConnectionResult> ConnectAsync()
         {
+            if (_state.Value == ConnectionState.Connected)
+            {
+                return UniTask.FromResult(new MetaConnectionResult
+                {
+                    Success = true,
+                    Error = string.Empty,
+                    State = ConnectionState.Connected
+                });    
+            }
+            
             _metaMonoAgent = Object.Instantiate(_bridgePrefab);
-            _metaMonoAgent.gameObject.name = "JsBridge_Agent";
+            _metaMonoAgent.gameObject.name = JsBridgeName;
             Object.DontDestroyOnLoad(_metaMonoAgent.gameObject);
             
-            _metaMonoAgent.OnReceiveMessage += MessageReceivedCallback;
+            _metaMonoAgent.MessageStream
+                .Subscribe(MessageReceivedCallback)
+                .AddTo(LifeTime);
 
             _state.Value = ConnectionState.Connected;
+            
             return UniTask.FromResult(new MetaConnectionResult
             {
                 Success = true,
@@ -55,39 +77,69 @@
 
         public UniTask DisconnectAsync()
         {
-            _metaMonoAgent.OnReceiveMessage -= MessageReceivedCallback;
+            _metaMonoAgent.Dispose();
             Object.Destroy(_metaMonoAgent.gameObject);
             return UniTask.CompletedTask;
         }
         
         public bool IsContractSupported(IRemoteMetaContract command)
         {
-            return IsContractSupported(command.MethodName, out var contractData);
+            var methodName = command.MethodName;
+            if (_jsContracts.TryGetValue(methodName, out var contractData)) return true;
+            GameLog.LogError($"No js meta contract config with method: {methodName}");
+            return false;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsContractSupported(string command,out JsMetaContractData contractData)
+        {
+            var methodName = command;
+            if (_jsContracts.TryGetValue(methodName, out contractData)) return true;
+            GameLog.LogError($"No js meta contract config with method: {methodName}");
+            return false;
         }
 
-        public UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
+        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
         {
-            var contractConfig = _config.contracts
-                .FirstOrDefault(x => x.contract.Name == contractData.contractName);
-
+            if (!IsContractSupported(contractData.contractName, out var contractConfig))
+            {
+                return new RemoteMetaResult()
+                {
+                    success = false,
+                    error = "contract not supported",
+                    id = contractData.contractName,
+                    data = null
+                };
+            }
+            
             var contractId = contractConfig.id;
-            var payloadBytes = Encoding.Default.GetBytes(JsonConvert.SerializeObject(contractData.contract.Payload));
-            var utf8StringPayload = Encoding.UTF8.GetString(payloadBytes);
-
+            var message = JsonConvert.SerializeObject(contractData.contract.Payload);
+            var messageResult = SendMessageToJs(contractId, message);
+            
             var result = new RemoteMetaResult
             {
-                data = JsMetaUnityBridge.ReceiveMessageFromUnity(contractId, utf8StringPayload),
+                data = messageResult,
                 error = null,
                 success = true,
                 id = contractData.contractName
             };
 
-            return UniTask.FromResult(result);
+            return result;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public object SendMessageToJs(int contractId, string message)
+        {
+            var payloadBytes = Encoding.Default.GetBytes(message);
+            var utf8StringPayload = Encoding.UTF8.GetString(payloadBytes);
+            var result = JsMetaUnityBridge.ReceiveMessageFromUnity(contractId, utf8StringPayload);
+            return result;
         }
 
         public bool TryDequeue(out RemoteMetaResult result)
         {
-            if (!(_incomingRequestsQueue.TryDequeue(out var request) && IsContractSupported(request, out var contract, out var message)))
+            if (!(_incomingRequestsQueue.TryDequeue(out var request) && 
+                  IsContractSupported(request, out var contract, out var message)))
             {
                 result = default;
                 return false;
@@ -104,19 +156,7 @@
 
         public void Dispose()
         {
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsContractSupported(string methodName, out JsMetaContractData contractData)
-        {
-            contractData = _config.contracts.FirstOrDefault(x => x.contract.Name == methodName);
-            if (contractData == default)
-            {
-                GameLog.LogError($"No js meta contract config with method: {methodName}");
-                return false;
-            }
-
-            return true;
+            _lifeTime.Release();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
