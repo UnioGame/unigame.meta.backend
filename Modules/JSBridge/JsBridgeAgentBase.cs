@@ -61,10 +61,5 @@
         {
             InvokeReceiveMessage(message);
         }
-        
-        public void SendMessageToJs(string message)
-        {
-           
-        }
     }
 }
