@@ -50,6 +50,5 @@
             var id = HashCode.Combine(contractType, inputType, outputType);
             return id;
         }
-        
     }
 }

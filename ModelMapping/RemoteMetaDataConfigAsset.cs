@@ -17,8 +17,7 @@
     using UnityEditor;
 #endif
     
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Remote Meta Data Config", 
-        fileName = "RemoteMetaDataConfiguration")]
+    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Remote Meta Data Config")]
     public class RemoteMetaDataConfigAsset : ScriptableObject
     {
         [PropertyOrder(-1)]

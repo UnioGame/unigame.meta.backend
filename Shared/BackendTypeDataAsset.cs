@@ -8,40 +8,35 @@
     using UniModules;
     using UnityEngine;
 
-#if UNITY_EDITOR
-    using UniModules.Editor;
-    using UnityEditor;
-#endif
-    
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Backend Type Data Asset", fileName = "Backend Type Data Asset")]
+    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Backend Type Data Asset")]
     public class BackendTypeDataAsset : ScriptableObject
     {
-        public const string IdsType = "BackendTypeIds";
-        public const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
-        public const string FileName = "BackendTypeIds.Generated.cs";
-        
         [InlineProperty]
-        public List<BackendType> Types = new List<BackendType>();
+        public List<BackendType> Types = new();
 
         #region IdGenerator
 
 #if UNITY_EDITOR
+        private const string IdsType = "BackendTypeIds";
+        private const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
+        private const string FileName = "BackendTypeIds.Generated.cs";
+
         [Button("Generate Static Properties")]
         public void GenerateProperties()
         {
             GenerateStaticProperties(this);
         }
 
-        public static void GenerateStaticProperties(BackendTypeDataAsset dataAsset)
+        private static void GenerateStaticProperties(BackendTypeDataAsset dataAsset)
         {
             var idType = typeof(BackendTypeId);
             var idsTypeName = IdsType;
             var outputPath = DefaultDirectory
                 .ToProjectPath()
                 .FixUnityPath();
-            
+
             var filePath = outputPath.CombinePath(FileName);
-            
+
             if (!Directory.Exists(outputPath))
             {
                 Directory.CreateDirectory(outputPath);
@@ -73,13 +68,11 @@
                 writer.WriteLine("}");
             }
 
-            AssetDatabase.Refresh();
+            UnityEditor.AssetDatabase.Refresh();
             Debug.Log("Partial class with static properties generated successfully.");
         }
 
 #endif
-
         #endregion
-
     }
 }
