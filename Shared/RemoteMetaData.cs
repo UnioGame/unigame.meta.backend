@@ -31,7 +31,7 @@
 #endif
         public bool enabled = true;
         public string method;
-        public int id = 0;
+        public int id = -1;
 
         public bool overrideProvider = false;
         
