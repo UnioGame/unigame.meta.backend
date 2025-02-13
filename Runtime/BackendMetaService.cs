@@ -314,7 +314,7 @@
                 
             if (!response.success)
             {
-                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error}");
+                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.MethodName}");
             }
             
             return result;
