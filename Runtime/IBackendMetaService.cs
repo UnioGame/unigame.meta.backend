@@ -12,17 +12,13 @@
         ILifeTimeContext
     {
         public bool AddContractHandler(IMetaContractHandler handler);
-        
         public bool RemoveContractHandler<T>() where T : IMetaContractHandler;
-        
         IRemoteMetaDataConfiguration MetaDataConfiguration { get; }
-        
         IObservable<MetaDataResult> DataStream { get; }
-        
         void SwitchProvider(int providerId);
-        
         UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract payload);
         bool TryDequeueMetaRequest(IRemoteMetaContract contract, out MetaDataResult result);
+        IRemoteMetaProvider GetProviderById(int id);
     }
 
 }

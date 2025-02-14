@@ -9,14 +9,13 @@
     using Shared;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
-    using UniCore.Runtime.ProfilerTools;
     using UniGame.UniNodes.GameFlow.Runtime;
     using UniModules.UniCore.Runtime.DateTime;
     using UniRx;
     using UnityEngine;
 
     [Serializable]
-    public class BackendMetaService : GameService,IBackendMetaService
+    public class BackendMetaService : GameService, IBackendMetaService
     {
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
@@ -170,7 +169,14 @@
                 throw;
             }
         }
-        
+
+        public IRemoteMetaProvider GetProviderById(int id)
+        {
+            _metaProviders.TryGetValue(id, out var provider);
+
+            return provider;
+        }
+
         public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract)
         {
             var meta = FindMetaData(contract);
