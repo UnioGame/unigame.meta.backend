@@ -3,6 +3,8 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
+    using System.Text.RegularExpressions;
     using Cysharp.Threading.Tasks;
     using Game.Runtime.Services.WebService;
     using MetaService.Runtime;
@@ -16,17 +18,25 @@
     using UniModules.UniGame.Core.Runtime.Rx;
     using UniRx;
     using UnityEngine;
+    using UnityEngine.Serialization;
 
     [Serializable]
     public class WebMetaProvider : IWebMetaProvider
     {
         public const string NotSupportedError = "Not supported";
 
+        public static Regex UrlPatternRegex = new Regex("{([a-zA-Z0-9_]+)}");
+
         public static readonly Dictionary<string,string> EmptyQuery = new();
         public static readonly JsonSerializerSettings JsonSettings = new()
         {
             TypeNameHandling = TypeNameHandling.None,
         };
+        
+        private BindingFlags _bindingFlags = BindingFlags.Public | BindingFlags.Instance 
+                                                                 | BindingFlags.NonPublic 
+                                                                 | BindingFlags.IgnoreCase;
+
         
         private WebMetaProviderSettings _settings;
         private string _defaultUrl;
@@ -145,6 +155,8 @@
             }
 #endif
             
+            url = UpdateUrlPattern(contract,url);
+            
             var requestResult = new WebServerResult();
             
             switch (endPoint.requestType)
@@ -159,6 +171,52 @@
             }
 
             return requestResult;
+        }
+
+        public string UpdateUrlPattern(object source,string url)
+        {
+            var matches = UrlPatternRegex.Matches(url);
+            var result = url;
+            
+            foreach (Match match in matches)
+            {
+                result = UpdatePattern(source,match, result);
+            }
+
+            return result;
+        }
+        
+        public string UpdatePattern(object source,Match match,string url)
+        {
+            var matchValue = match.Value;
+            var thisType = source.GetType();
+            var result = url;
+            if(match.Groups.Count < 2) return result;
+        
+            var group = match.Groups[1];
+        
+            var value = group.Value;
+            var field = thisType.GetField(value, _bindingFlags);
+            var replaceValue = string.Empty;
+            
+            if (field != null)
+            {
+                var fieldValue = field.GetValue(this);
+                if (fieldValue != null)
+                    replaceValue = fieldValue.ToString();
+            }
+            
+            var property = thisType.GetProperty(value, _bindingFlags);
+            if (property != null)
+            {
+                var propertyValue = property.GetValue(this);
+                if (propertyValue != null)
+                    replaceValue = propertyValue.ToString();
+            }
+            
+            result = result.Replace(matchValue, replaceValue);
+
+            return result;
         }
         
         public WebServerResult ExecuteDebugAsync(WebApiEndPoint endPoint)
