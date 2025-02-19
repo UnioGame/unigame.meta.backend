@@ -201,7 +201,7 @@
             
             if (field != null)
             {
-                var fieldValue = field.GetValue(this);
+                var fieldValue = field.GetValue(source);
                 if (fieldValue != null)
                     replaceValue = fieldValue.ToString();
             }
@@ -209,7 +209,7 @@
             var property = thisType.GetProperty(value, _bindingFlags);
             if (property != null)
             {
-                var propertyValue = property.GetValue(this);
+                var propertyValue = property.GetValue(source);
                 if (propertyValue != null)
                     replaceValue = propertyValue.ToString();
             }
