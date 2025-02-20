@@ -9,7 +9,7 @@ Game Meta Backend service provider
 
 If you need to pass dynamic arguments to the url path, you can use the following syntax:
 
-Demo Url: `api/store/{id}/{product}/buy`
+Demo Url: `api/store/{id}/{number}/{product}/buy`
 
 When you just need to add into you contract field or property with the same name as the path argument.
 
@@ -20,6 +20,8 @@ public class DemoContract : RemoteCallContract<TInput, TOutput>
 {
     public string id = "123";
     
+    public int number = 65;
+    
     public string Product { get; set; } = "demo_product";
     
     ...
@@ -27,4 +29,4 @@ public class DemoContract : RemoteCallContract<TInput, TOutput>
 
 ```
 
-result url: `api/store/123/demo_product/buy`
+result url: `api/store/123/65/demo_product/buy`
