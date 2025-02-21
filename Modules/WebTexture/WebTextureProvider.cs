@@ -84,6 +84,17 @@
                 : _settings.url.MergeUrl(path);
 
             var name = isUrl ? string.Empty : path;
+
+#if UNITY_EDITOR
+            if (isUrl && string.IsNullOrEmpty(name))
+            {
+                var startIndex = url.LastIndexOf("/", StringComparison.OrdinalIgnoreCase);
+                var nameIndex = startIndex + 1;
+                if(startIndex >= 0 && nameIndex < url.Length)
+                    name = url.Substring(nameIndex);
+            }
+#endif
+            
             var lifeTimeContext = contract as ILifeTimeContext;
             var resourceLifeTime = lifeTimeContext?.LifeTime ?? _defaultLifeTime;
             var outputType = contract.OutputType;
@@ -110,7 +121,8 @@
             if (outputType == typeof(Texture2D))
             {
                 var textureResult = await LoadWebTextureAsync(url,name,resourceLifeTime);
-                result.data = textureResult.texture;
+                var texture = textureResult.texture;
+                result.data = texture;
                 result.success = textureResult.success;
                 result.error = textureResult.error;
             }
@@ -129,7 +141,7 @@
             var result = new WebServerSpriteResult()
             {
                 sprite = null,
-                error = String.Empty,
+                error = string.Empty,
                 success = false,
             };
             
@@ -145,8 +157,8 @@
             var texture = cacheItem.texture;
             if (cacheItem.texture != null)
             {
-                cacheItem.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
-                result.sprite = cacheItem.sprite;
+                var createdSprite = CreateSpriteByTexture(cacheItem,texture);
+                result.sprite = createdSprite;
                 result.success = true;
                 return result;
             }
@@ -186,6 +198,7 @@
             
             result = await _webRequestBuilder.GetTextureAsync(url);
             var texture = result.texture;
+            texture.name = name;
             cacheItem.texture = texture;
             cacheItem.loaded = true;
             return result;
@@ -240,8 +253,11 @@
                     result.success = true;
                     return result;
                 }
+                
                 if (item.sprite == null) return new TextureCacheResult();
+                
                 item.texture = item.sprite.texture;
+                item.texture.name = item.name;
                 
                 result.asset = item.texture;
                 result.success = true;
@@ -258,14 +274,24 @@
                 }
                 if (item.texture == null) return result;
                 var texture = item.texture;
-                item.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
                 
-                result.asset = item.sprite;
+                var sprite = CreateSpriteByTexture(item,texture);
+                
+                result.asset = sprite;
                 result.success = true;
                 return result;
             }
 
             return result;
+        }
+        
+        public Sprite CreateSpriteByTexture(TextureCacheItem item,Texture2D texture)
+        {
+            if(item.sprite!=null) return item.sprite;
+            var sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
+            sprite.name = item.name;
+            item.sprite = sprite;
+            return sprite;
         }
         
         public void Dispose()
