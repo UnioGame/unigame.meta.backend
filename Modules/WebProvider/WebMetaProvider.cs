@@ -110,8 +110,12 @@
             }
 #endif
 
+            var requestData = string.Empty;
+            if(requestResult.data is string data)
+                requestData = data;
+            
             var resultData = requestResult.success 
-                ? JsonConvert.DeserializeObject(requestResult.data,contract.OutputType) 
+                ? JsonConvert.DeserializeObject(requestData,contract.OutputType) 
                 : null;
             
             result.data = resultData;

@@ -88,7 +88,8 @@
             var resourceLifeTime = lifeTimeContext?.LifeTime ?? _defaultLifeTime;
             var outputType = contract.OutputType;
             
-            var cached = LoadFromCache(url,outputType,resourceLifeTime);
+            var cached = await LoadFromCacheAsync(url,outputType,resourceLifeTime);
+            
             if (cached.success)
             {
                 result.data = cached.asset;
@@ -99,7 +100,8 @@
             
             if (outputType == typeof(Sprite))
             {
-                var spriteResult = await _webRequestBuilder.GetSpriteAsync(url);
+                var spriteResult = await LoadWebSpriteAsync(url,name,resourceLifeTime);
+                
                 result.data = spriteResult.sprite;
                 result.success = spriteResult.success;
                 result.error = spriteResult.error;
@@ -107,17 +109,12 @@
 
             if (outputType == typeof(Texture2D))
             {
-                var textureResult = await _webRequestBuilder.GetTextureAsync(url);
+                var textureResult = await LoadWebTextureAsync(url,name,resourceLifeTime);
                 result.data = textureResult.texture;
                 result.success = textureResult.success;
                 result.error = textureResult.error;
             }
             
-            if (result.success)
-            {
-                AddToCache(url,name,result.data as Object, resourceLifeTime);
-            }
-
             return result;
         }
 
@@ -127,48 +124,113 @@
             return false;
         }
 
-        public void AddToCache(string url,string name, Object asset, ILifeTime lifeTime)
+        public async UniTask<WebServerSpriteResult> LoadWebSpriteAsync(string url,string name,ILifeTime lifeTime)
+        {
+            var result = new WebServerSpriteResult()
+            {
+                sprite = null,
+                error = String.Empty,
+                success = false,
+            };
+            
+            var cacheItem = AddToCache(url,name,lifeTime);
+
+            if (cacheItem.sprite != null)
+            {
+                result.sprite = cacheItem.sprite;
+                result.success = true;
+                return result;
+            }
+
+            var texture = cacheItem.texture;
+            if (cacheItem.texture != null)
+            {
+                cacheItem.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
+                result.sprite = cacheItem.sprite;
+                result.success = true;
+                return result;
+            }
+            
+            result = await _webRequestBuilder.GetSpriteAsync(url);
+            var sprite = result.sprite;
+            cacheItem.sprite = sprite;
+            cacheItem.loaded = true;
+            
+            return result;
+        }
+        
+        public async UniTask<WebServerTexture2DResult> LoadWebTextureAsync(string url,string name,ILifeTime lifeTime)
+        {
+            var result = new WebServerTexture2DResult()
+            {
+                texture = null,
+                error = string.Empty,
+                success = false,
+            };
+            
+            var cacheItem = AddToCache(url,name,lifeTime);
+
+            if (cacheItem.texture != null)
+            {
+                result.texture = cacheItem.texture;
+                result.success = true;
+                return result;
+            }
+
+            if (cacheItem.sprite != null)
+            {
+                result.texture = cacheItem.texture;
+                result.success = true;
+                return result;
+            }
+            
+            result = await _webRequestBuilder.GetTextureAsync(url);
+            var texture = result.texture;
+            cacheItem.texture = texture;
+            cacheItem.loaded = true;
+            return result;
+        }
+        
+        public TextureCacheItem AddToCache(string url,string name, ILifeTime lifeTime)
         {
             if(_cache.TryGetValue(url,out var item))
             {
                 item.counter++;
                 lifeTime.AddDispose(item);
-                return;
+                return item;
             }
             
-            var texture = asset as Texture2D;
-            var sprite = asset as Sprite;
-
-            if (texture != null)
-            {
-                sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
-            }
-            else if (sprite != null)
-            {
-                texture = sprite.texture;
-            }
-
-            _cache[url] = new TextureCacheItem
+            var cacheItem = new TextureCacheItem
             {
                 counter = 1,
                 name = name,
-                texture = texture,
-                sprite = sprite,
+                texture = null,
+                sprite = null,
                 url = url,
                 isAlive = true,
+                loaded = false,
             }.AddTo(lifeTime);
+
+            _cache[url] = cacheItem;
+            return cacheItem;
         }
         
-        public TextureCacheResult LoadFromCache(string url,Type assetType,ILifeTime lifeTime)
+        public async UniTask<TextureCacheResult> LoadFromCacheAsync(string url,Type assetType,ILifeTime lifeTime)
         {
             var result = new TextureCacheResult();
             if (!_cache.TryGetValue(url, out var item))
                 return result;
+            
             if(item.isAlive == false)
                 return result;
             
             item.counter++;
             lifeTime.AddDispose(item);
+            
+            if(!item.loaded) {
+                await UniTask.WaitWhile(item,x => x.loaded == false)
+                .AttachExternalCancellation(lifeTime.Token);
+            }
             
             if (assetType == typeof(Texture2D))
             {

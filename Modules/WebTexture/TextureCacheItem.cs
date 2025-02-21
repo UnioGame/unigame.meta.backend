@@ -1,6 +1,7 @@
 ﻿namespace Modules.WebTexture
 {
     using System;
+    using Cysharp.Threading.Tasks;
     using UnityEngine;
     using Object = UnityEngine.Object;
 
@@ -13,6 +14,7 @@
         public Sprite sprite;
         public int counter;
         public bool isAlive = true;
+        public bool loaded;
 
         public void Dispose()
         {
@@ -29,6 +31,7 @@
             isAlive = false;
             name = string.Empty;
             url = string.Empty;
+            loaded = false;
         }
     }
 }
