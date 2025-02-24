@@ -31,13 +31,13 @@
         
         
         [Button]
-        public void SaveSettingsToSreaming()
+        public void SaveSettingsToStreamingAsset()
         {
             StreamingAssetsUtils.SaveToStreamingAssets(settings.streamingAssetsFileName,settings);
         }
         
         [Button]
-        public void LoadSettingsFromStreaming()
+        public void LoadSettingsFromStreamingAsset()
         {
             LoadSettingsDataFromStreaming().Forget();
             async UniTask LoadSettingsDataFromStreaming()
