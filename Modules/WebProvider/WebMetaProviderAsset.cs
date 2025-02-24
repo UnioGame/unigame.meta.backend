@@ -1,5 +1,6 @@
 ﻿namespace Modules.WebServer
 {
+    using System;
     using Cysharp.Threading.Tasks;
     using Game.Runtime.Tools;
     using Sirenix.OdinInspector;
@@ -20,7 +21,13 @@
         {
             var webSettings = settings;
             if (settings.useStreamingSettings)
-                webSettings = await LoadFromStreamingAssets();
+            {
+                var settingsStreamingAsset = await LoadFromStreamingAssets();
+                if (settingsStreamingAsset != null)
+                {
+                    webSettings.defaultUrl = settingsStreamingAsset.webUrl;
+                }
+            }
             
             GameLog.Log($"WebMetaProvider: {webSettings.defaultUrl}",Color.green);
             
@@ -33,7 +40,12 @@
         [Button]
         public void SaveSettingsToStreamingAsset()
         {
-            StreamingAssetsUtils.SaveToStreamingAssets(settings.streamingAssetsFileName,settings);
+            var webSettings = new WebMetaStreamingAsset()
+            {
+                webUrl = settings.defaultUrl,
+            };
+            
+            StreamingAssetsUtils.SaveToStreamingAssets(settings.streamingAssetsFileName,webSettings);
         }
         
         [Button]
@@ -43,19 +55,26 @@
             async UniTask LoadSettingsDataFromStreaming()
             {
                 var settingsValue = await LoadFromStreamingAssets();
-                settings = settingsValue;
+                
+                var validData = settingsValue != null;
+                if(validData)
+                    settings.defaultUrl = settingsValue.webUrl;
             }
         }
         
-        public async UniTask<WebMetaProviderSettings> LoadFromStreamingAssets()
+        public async UniTask<WebMetaStreamingAsset> LoadFromStreamingAssets()
         {
             var result = await StreamingAssetsUtils
-                .LoadDataFromWeb<WebMetaProviderSettings>(settings.streamingAssetsFileName);
-            return result is { success: true, data: not null } 
-                ? result.data 
-                : settings;
+                .LoadDataFromWeb<WebMetaStreamingAsset>(settings.streamingAssetsFileName);
+            return result.success ? result.data : null;
         }
         
+        
+        [Serializable]
+        public class WebMetaStreamingAsset
+        {
+            public string webUrl = string.Empty;
+        }
         
     }
 }
