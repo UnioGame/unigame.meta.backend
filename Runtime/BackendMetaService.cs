@@ -170,13 +170,6 @@
             }
         }
 
-        public IRemoteMetaProvider GetProviderById(int id)
-        {
-            _metaProviders.TryGetValue(id, out var provider);
-
-            return provider;
-        }
-
         public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract)
         {
             var meta = FindMetaData(contract);

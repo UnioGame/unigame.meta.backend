@@ -18,7 +18,6 @@
         void SwitchProvider(int providerId);
         UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract payload);
         bool TryDequeueMetaRequest(IRemoteMetaContract contract, out MetaDataResult result);
-        IRemoteMetaProvider GetProviderById(int id);
+        IRemoteMetaProvider GetProvider(int id);
     }
-
 }
