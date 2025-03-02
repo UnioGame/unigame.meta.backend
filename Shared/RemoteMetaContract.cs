@@ -10,6 +10,7 @@ namespace UniGame.MetaBackend.Shared
         public Type output;
         public Type input;
 
+        
         public object Payload => payload;
         public Type OutputType => output;
         public Type InputType => input;

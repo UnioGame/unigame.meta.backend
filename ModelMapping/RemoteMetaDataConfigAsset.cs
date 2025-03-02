@@ -5,6 +5,7 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using Meta.Runtime;
     using MetaService.Runtime;
     using NUnit.Framework;
     using UniGame.MetaBackend.Shared;
@@ -48,58 +49,22 @@
             }
         }
 
-        [PropertyOrder(-1)]
-        [Button(icon: SdfIconType.Hammer)]
-        [ButtonGroup("Providers")]
-        public void FillRemoteMetaData()
-        {
-            var remoteItems = LoadRemoteMetaData();
-
-            var newMetaDatas = new List<RemoteMetaData>();
-            var itemForUpdate = new List<RemoteMetaData>();
-
-            foreach (var remoteItem in remoteItems.Values)
-            {
-                var contains = false;
-                
-                foreach (var data in configuration.remoteMetaData)
-                {
-                    if ($"{remoteItem.method}Contract" != data.method) continue;
-                    
-                    contains = true;
-                    break;
-                }
-
-                if (!contains)
-                {
-                    itemForUpdate.Add(remoteItem);
-                }
-            }
-
-            newMetaDatas = configuration.remoteMetaData.ToList();
-            newMetaDatas.AddRange(itemForUpdate);
-            configuration.remoteMetaData = newMetaDatas.ToArray();
-            UpdateRemoteMetas(itemForUpdate);
-
-            this.MarkDirty();
-
-            AssetDatabase.SaveAssets();
-        }
-
         [Button(icon: SdfIconType.ArrowClockwise, "Update Remote Meta Data")]
         [PropertyOrder(-1)]
+        [ButtonGroup("Providers")]
         public void UpdateRemoteMetaData()
         {
+            
             var remoteItems = LoadRemoteMetaData();
-            var sourceItems = configuration
-                .remoteMetaData
+
+            var metas = configuration.remoteMetaData
+                .Where(x => x.contract != null);
+            
+            var sourceItems = metas
                 .ToDictionary(x => x.id);
 
             foreach (var item in remoteItems)
-            {
-                if (sourceItems.ContainsKey(item.Key)) continue;
-                sourceItems[item.Key] = item.Value;
-            }
+                sourceItems.TryAdd(item.Key, item.Value);
 
             configuration.remoteMetaData = sourceItems.Values.ToArray();
 
@@ -110,14 +75,12 @@
             AssetDatabase.SaveAssets();
         }
 
-        private void UpdateRemoteMetas(List<RemoteMetaData> datas)
+        private void UpdateRemoteMetas(List<RemoteMetaData> data)
         {
-            foreach (var metaCallData in datas)
+            foreach (var metaCallData in data)
             {
-                var method = metaCallData.contract.MethodName;
-                metaCallData.method = string.IsNullOrEmpty(method)
-                    ? metaCallData.contract.GetType().Name
-                    : method;
+                var method = BackendMetaTools.GetContractName(metaCallData.contract);
+                metaCallData.method = method;
             }
         }
 
@@ -174,6 +137,7 @@
         {
             var idType = typeof(RemoteMetaId);
             var typeName = nameof(RemoteMetaId);
+            
             var outputPath = $"/UniGame.Generated/RemoteMetaService/"
                 .FixUnityPath()
                 .ToProjectPath();
