@@ -16,6 +16,7 @@
     using UniRx;
     using UnityEngine;
     using Debug = UnityEngine.Debug;
+    using Object = UnityEngine.Object;
 
     [Serializable]
     public class NakamaMetaService : IRemoteMetaProvider
@@ -48,6 +49,9 @@
                 _connectionData.retryCount,
                 RetryLogging);
 
+            var adapter = UnityWebRequestAdapter.Instance;
+            Object.DontDestroyOnLoad(adapter.gameObject);
+            adapter.gameObject.DestroyWith(LifeTime);
 
             _client = new Client(
                 scheme: _connectionData.scheme,
