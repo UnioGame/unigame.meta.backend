@@ -42,10 +42,11 @@
             _metaDataConfiguration = metaDataConfiguration;
             
             _defaultProviderId = defaultMetaProvider;
+
             _defaultMetaProvider = metaProviders[defaultMetaProvider];
             _metaProviders = metaProviders;
 
-            InitializeCache();
+            UpdateMetaCache();
         }
 
         public IObservable<MetaDataResult> DataStream => _dataStream;
@@ -111,7 +112,8 @@
         
         public bool RegisterProvider(int providerId,IRemoteMetaProvider provider)
         {
-            return _metaProviders.TryAdd(providerId, provider);
+            _metaProviders[providerId] = provider;
+            return true;
         }
         
         public async UniTask<MetaConnectionResult> ConnectAsync()
@@ -235,8 +237,7 @@
             }
         }
         
-        public RemoteMetaData FindMetaData<TContract>(TContract contract)
-            where TContract : IRemoteMetaContract
+        public RemoteMetaData FindMetaData(IRemoteMetaContract contract)
         {
             foreach (var meta in _metaDataConfiguration.RemoteMetaData)
             {
@@ -319,13 +320,16 @@
             return result;
         }
         
-        
-        private void InitializeCache()
+        private void UpdateMetaCache()
         {
+            _metaIdCache.Clear();
+            
             var items = _metaDataConfiguration.RemoteMetaData;
             foreach (var metaData in items)
             {
-                AddRemoteMetaCache(metaData);
+                if(_metaIdCache.TryGetValue((RemoteMetaId)metaData.id,out var _))
+                    continue;
+                _metaIdCache[(RemoteMetaId)metaData.id] = metaData;
             }
         }
 
@@ -342,14 +346,5 @@
             };
         }
 
-        private bool AddRemoteMetaCache(RemoteMetaData metaCallData)
-        {
-            if(_metaIdCache.TryGetValue((RemoteMetaId)metaCallData.id,out var _))
-                return false;
-
-            _metaIdCache[(RemoteMetaId)metaCallData.id] = metaCallData;
-
-            return true;
-        }
     }
 }

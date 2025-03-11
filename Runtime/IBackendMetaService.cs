@@ -19,5 +19,6 @@
         UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract payload);
         bool TryDequeueMetaRequest(IRemoteMetaContract contract, out MetaDataResult result);
         IRemoteMetaProvider GetProvider(int id);
+        RemoteMetaData FindMetaData(IRemoteMetaContract contract);
     }
 }

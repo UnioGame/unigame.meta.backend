@@ -5,12 +5,12 @@
     using Backend.Data;
     using Cysharp.Threading.Tasks;
     using global::Nakama;
-    using MetaService.Shared;
-    using MetaService.Shared.Data;
-    using Modules.ModelMapping;
+    using MetaService.Runtime;
     using Newtonsoft.Json;
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime;
+    using UniGame.MetaBackend.Shared;
+    using UniGame.MetaBackend.Shared.Data;
     using UniModules.UniCore.Runtime.DataFlow;
     using UniModules.UniGame.Core.Runtime.Rx;
     using UniRx;
@@ -42,72 +42,92 @@
             _connectionData = connectionData;
             _connectionState = new ReactiveValue<ConnectionState>(ConnectionState.Disconnected)
                 .AddTo(_lifeTime);
-            
+
             _retryConfiguration = new RetryConfiguration(
                 _connectionData.retryDelayMs,
                 _connectionData.retryCount,
                 RetryLogging);
 
-            
+
             _client = new Client(
-                scheme:_connectionData.scheme, 
-                host:_connectionData.host,
-                port:_connectionData.port, 
-                serverKey:_connectionData.serverKey,
-                autoRefreshSession:_connectionData.autoRefreshSession,
-                adapter:UnityWebRequestAdapter.Instance) 
+                scheme: _connectionData.scheme,
+                host: _connectionData.host,
+                port: _connectionData.port,
+                serverKey: _connectionData.serverKey,
+                autoRefreshSession: _connectionData.autoRefreshSession,
+                adapter: UnityWebRequestAdapter.Instance)
             {
                 Timeout = connectionData.requestTimeoutSec,
                 GlobalRetryConfiguration = _retryConfiguration,
                 Logger = new UnityLogger(),
             };
-            
+
             _socket = _client.NewSocket(useMainThread: connectionData.useSocketMainThread);
 
             _sessionUpdated = Observable
                 .FromEvent<ISession>(handler => _client.ReceivedSessionUpdated += handler,
-                        handler => _client.ReceivedSessionUpdated -= handler);
+                    handler => _client.ReceivedSessionUpdated -= handler);
 
 #if GAME_DEBUG
             _connectionState
                 .Subscribe(x => LogConnectionState(x))
                 .AddTo(_lifeTime);
 #endif
-            
+
             _socketConnected = Observable
                 .FromEvent(handler => _socket.Connected += handler,
                     handler => _socket.Connected -= handler);
-            
+
             _socketClosed = Observable.FromEvent(handler => _socket.Closed += handler,
-                    handler => _socket.Closed -= handler);
-                
+                handler => _socket.Closed -= handler);
+
             _socketClosed.Subscribe(OnSocketClosed)
                 .AddTo(_lifeTime);
-            
+
             _socketConnected
                 .Subscribe(OnSocketConnected)
                 .AddTo(_lifeTime);
-            
+
             _sessionUpdated
                 .Subscribe(OnSessionUpdated)
                 .AddTo(_lifeTime);
         }
-        
+
         public IReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
-        
+
         public ILifeTime LifeTime => _lifeTime;
+
+        public bool IsContractSupported(IRemoteMetaContract command)
+        {
+            return true;
+        }
+        
+        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
+        {
+            var contract = contractData.contract;
+            var data = contract.Payload;
+            var method = contract.MethodName;
+            method = string.IsNullOrEmpty(method) ? contract.MethodName : method;
+            return await CallRemoteAsync(method, data.ToString());
+        }
+
+        public bool TryDequeue(out RemoteMetaResult result)
+        {
+            result = default;
+            return false;
+        }
 
         public async UniTask<RemoteMetaResult> CallRemoteAsync(string method, string data)
         {
             var result = new RemoteMetaResult();
-            result.Error = string.Empty;
-            result.Success = false;
-            result.Data = string.Empty;
-            result.Id = string.Empty;
+            result.id = string.Empty;
+            result.success = false;
+            result.data = string.Empty;
+            result.error = string.Empty;
             
             if(State.Value != ConnectionState.Connected)
             {
-                result.Error = NakamaMessages.NotValidSessionState;
+                result.error = NakamaMessages.NotValidSessionState;
                 return result;
             }
             
@@ -117,20 +137,25 @@
                 
                 LogApiRpc(response);
 
-                result.Data = response.Payload;
-                result.Success = true;
-                result.Error = string.Empty;
-                result.Id = response.Id;
+                result.data = response.Payload;
+                result.success = true;
+                result.error = string.Empty;
+                result.id = response.Id;
                 
                 return result;
             }
             catch (ApiResponseException ex)
             {
-                result.Data = default;
-                result.Error = $"Nakama ApiResponseException {ex.StatusCode} : {ex.Message} Inner Data: {ex.InnerException}";
-                result.Success = false;
+                result.data = default;
+                result.error = $"Nakama ApiResponseException {ex.StatusCode} : {ex.Message} Inner Data: {ex.InnerException}";
+                result.success = false;
                 return result;
             }
+        }
+        
+        public UniTask<MetaConnectionResult> ConnectAsync()
+        {
+            return ConnectAsync(SystemInfo.deviceUniqueIdentifier);
         }
         
         public async UniTask<MetaConnectionResult> ConnectAsync(string deviceId)

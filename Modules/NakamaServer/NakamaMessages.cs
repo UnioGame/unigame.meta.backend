@@ -1,7 +1,7 @@
 ﻿namespace Game.Runtime.Services.Backend.Nakama.Data
 {
-    using MetaService.Shared;
-    using MetaService.Shared.Data;
+    using UniGame.MetaBackend.Shared;
+    using UniGame.MetaBackend.Shared.Data;
 
     public class NakamaMessages
     {

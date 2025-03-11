@@ -1,6 +1,7 @@
 ﻿namespace Game.Modules.ModelMapping
 {
     using System;
+    using Meta.Runtime;
     using UniGame.MetaBackend.Shared;
     using Sirenix.OdinInspector;
     using UnityEngine;
@@ -26,13 +27,7 @@
         
         public string GetRemoteMethodName(IRemoteMetaContract contract)
         {
-            if (string.IsNullOrEmpty(contract.MethodName) == false)
-                return contract.MethodName;
-            
-            var contractType = contract.GetType();
-            var contractName = contractType.Name;
-            contractName = contractName.Replace(RemoteMetaConstants.ContractRemove, string.Empty);
-            return contractName;
+            return BackendMetaTools.GetContractName(contract);
         }
 
         public bool IsEmptyType(Type type)
@@ -44,11 +39,7 @@
         
         public int CalculateMetaId(IRemoteMetaContract contract)
         {
-            var contractType = contract.GetType().Name;
-            var inputType = contract.InputType?.GetHashCode() ?? 0;
-            var outputType = contract.OutputType?.GetHashCode() ?? 0;
-            var id = HashCode.Combine(contractType, inputType, outputType);
-            return id;
+            return BackendMetaTools.CalculateMetaId(contract);
         }
     }
 }
