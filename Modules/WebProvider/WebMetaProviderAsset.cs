@@ -20,12 +20,15 @@
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
             var webSettings = settings;
-            if (settings.useStreamingSettings)
+            var useStreaming = settings.useStreamingSettings && 
+                               (settings.useStreamingUnderEditor || !Application.isEditor);
+            if (useStreaming)
             {
                 var settingsStreamingAsset = await LoadFromStreamingAssets();
                 if (settingsStreamingAsset != null)
                 {
                     webSettings.defaultUrl = settingsStreamingAsset.webUrl;
+                    webSettings.requestTimeout = settingsStreamingAsset.requestTimeout;
                 }
             }
             
@@ -74,6 +77,7 @@
         public class WebMetaStreamingAsset
         {
             public string webUrl = string.Empty;
+            public int requestTimeout = 30;
         }
         
     }
