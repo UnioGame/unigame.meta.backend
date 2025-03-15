@@ -24,6 +24,7 @@
     public class WebMetaProvider : IWebMetaProvider
     {
         public const string NotSupportedError = "Not supported";
+        public const int DefaultTimeout = 10;
 
         public static Regex UrlPatternRegex = new Regex("{([a-zA-Z0-9_]+)}");
 
@@ -147,30 +148,75 @@
             
             _webRequestBuilder.SetToken(token);
             
-            var serializedPayload = payload == null 
-                ? string.Empty 
-                : JsonConvert.SerializeObject(payload, JsonSettings);
-
 #if UNITY_EDITOR
             if (_settings.enableLogs)
             {
+                var serializedPayload = payload == null 
+                    ? string.Empty 
+                    : JsonConvert.SerializeObject(payload, JsonSettings);
+                
                 var color = Color.green;
                 GameLog.Log($"[WebMetaProvider] request [{endPoint.requestType}] : {contract.GetType().Name} : {endPoint.url} : {serializedPayload}",color);
             }
 #endif
             
             url = UpdateUrlPattern(contract,url);
+            var retryCounter = 0;
+            var retryLimit = _settings.requestRetry;
+
+            var requestResult = WebServerResult.NotResponse;
+            var startTime = Time.realtimeSinceStartup;
+            var timeoutOut = _settings.timeout;
             
-            var requestResult = new WebServerResult();
+            do
+            {
+                requestResult = await SendEndPointRequestAsync(endPoint, url, payload);
+                if (requestResult.success) return requestResult;
+                
+                var elapsedTime = Time.realtimeSinceStartup - startTime;
+                if (timeoutOut > 0 && elapsedTime > timeoutOut)
+                {
+                    return new WebServerResult()
+                    {
+                        error = $"Request timeout with retry {retryLimit} of {retryLimit} | elapsed time: {elapsedTime}",
+                        success = false,
+                        responseCode = 500,
+                        data = string.Empty,
+                    };
+                }
+                
+                retryCounter++;
+            } while (retryCounter <= retryLimit);
+            
+            return requestResult;
+        }
+
+        public async UniTask<WebServerResult> SendEndPointRequestAsync(WebApiEndPoint endPoint,string url,object payload)
+        {
+            var requestResult = new WebServerResult()
+            {
+                success = false,
+                error = string.Empty,
+            };
+
+            var timeout = _settings.requestTimeout;
+            timeout = timeout > 0 ? timeout : DefaultTimeout;
             
             switch (endPoint.requestType)
             {
                 case WebRequestType.Post:
-                    requestResult = await _webRequestBuilder.PostAsync(url, serializedPayload);
+                    
+                    var serializedPayload = payload == null 
+                        ? string.Empty 
+                        : JsonConvert.SerializeObject(payload, JsonSettings);
+
+                    requestResult = await _webRequestBuilder
+                        .PostAsync(url, serializedPayload,timeout:timeout);
+                    
                     break;
                 case WebRequestType.Get:
                     var query = SerializeToQuery(payload);
-                    requestResult = await _webRequestBuilder.GetAsync(url,query);
+                    requestResult = await _webRequestBuilder.GetAsync(url,query,timeout:timeout);
                     break;
             }
 
