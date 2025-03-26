@@ -12,7 +12,7 @@
         public ILifeTime lifeTime;
         
         public object Payload => name;
-        public string MethodName => name;
+        public string Path => name;
         public Type OutputType => typeof(Sprite);
         public Type InputType => typeof(string);
         public ILifeTime LifeTime => lifeTime;

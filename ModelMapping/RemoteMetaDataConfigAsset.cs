@@ -17,7 +17,6 @@
 #if UNITY_EDITOR
     using UniModules.Editor;
     using UnityEditor;
-    using UnityEngine.UIElements;
 #endif
 
     [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Remote Meta Data Config")]

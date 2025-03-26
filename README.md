@@ -2,10 +2,89 @@
 
 Game Meta Backend service provider
 
+## Core Components
 
-# Web Provider - REST API
+### WebProvider
 
-## Settings
+Main component for working with REST API. Allows configuring base URL, headers, and request parameters.
+
+### RemoteCallContract
+
+Base abstract class for creating request contracts. Supports dynamic URL parameter substitution.
+
+### IRemoteMetaContract
+
+Interface that must be implemented by all meta contracts. Provides:
+- Contract validation
+- Data transformation
+- Meta information handling
+- Contract lifecycle management
+
+Available base abstract implementations:
+- `RemoteCallContract<TInput, TOutput>` - Generic base contract for request/response pattern
+- `RemoteCallContract<TInput>` - Base contract for requests without response data
+- `RemoteCallContract<TOutput>` - Base contract for requests without input data
+- `RemoteCallContract` - Base contract for requests without input/output data
+
+Simple concrete implementations:
+- `SimpleMetaContract<TInput, TOutput>` - Simple implementation of full request/response contract
+- `SimpleInputContract<TInput>` - Simple implementation for requests without response data (inherits from `SimpleMetaContract<TInput, string>`)
+- `SimpleOutputContract<TOutput>` - Simple implementation for requests without input data (inherits from `SimpleMetaContract<string, TOutput>`)
+
+Example of inheritance:
+```csharp
+// Using abstract base contract
+public class UserProfileContract : RemoteCallContract<UserProfileInput, UserProfileOutput>, IRemoteMetaContract
+{
+    // Implementation
+}
+
+// Using simple concrete contract
+public class SimpleUserProfileContract : SimpleMetaContract<UserProfileInput, UserProfileOutput>
+{
+    // Implementation
+}
+
+// Request-only contract using simple implementation
+public class SimpleUpdateStatusContract : SimpleInputContract<UpdateStatusInput>
+{
+    // Implementation
+}
+
+// Response-only contract using simple implementation
+public class SimpleGetConfigContract : SimpleOutputContract<ConfigOutput>
+{
+    // Implementation
+}
+
+// Simple contract without data
+public class PingContract : RemoteCallContract, IRemoteMetaContract
+{
+    // Implementation
+}
+```
+
+### BackendMetaService
+
+Core service implementation that handles all backend communication. Provides methods for:
+
+- Authentication and authorization
+- Data synchronization
+- Remote data management
+- Error handling and retry logic
+
+### BackendMetaSource
+
+Configuration source for backend service. Supports multiple configuration sources:
+- Unity ScriptableObject
+- StreamingAssets
+- Runtime configuration
+
+## Setup and Configuration
+
+### Web Provider - REST API
+
+#### Settings
 
 **pic with settings window ^^**
 
@@ -18,6 +97,121 @@ now you can edit settings in StreamingAssets folder - "web_meta_provider_setting
 
 when you initialize web provider it will load settings from StreamingAssets folder if it's enabled.
 
+## Data Mapping and Configuration
+
+### RemoteMetaDataConfig
+
+Configuration system for remote data mapping. Supports:
+- Custom data type mapping
+- Field name mapping
+- Validation rules
+- Default values
+
+### RemoteMetaId
+
+System for handling remote entity IDs with support for:
+- ID generation
+- ID validation
+- ID format conversion
+- ID persistence
+
+### JsonRemoteDataConverter
+
+Built-in JSON converter for remote data with features:
+- Custom serialization rules
+- Type conversion
+- Null handling
+- Default value handling
+
+## Usage Examples
+
+### Creating a Request Contract
+
+```csharp
+[Serializable]
+public class UserProfileContract : RemoteCallContract<UserProfileInput, UserProfileOutput>, IRemoteMetaContract
+{
+    public string userId;
+    public string token;
+
+    public void Validate()
+    {
+        if (string.IsNullOrEmpty(userId))
+            throw new ValidationException("UserId cannot be empty");
+    }
+
+    public void OnBeforeSend()
+    {
+        // Prepare data before sending
+    }
+
+    public void OnAfterReceive()
+    {
+        // Process received data
+    }
+}
+
+[Serializable]
+public class UserProfileInput
+{
+    public string name;
+    public int age;
+}
+
+[Serializable]
+public class UserProfileOutput
+{
+    public string id;
+    public string name;
+    public int age;
+    public string email;
+}
+```
+
+### Executing a Request
+
+```csharp
+var contract = new UserProfileContract 
+{
+    userId = "123",
+    token = "auth_token"
+};
+
+var result = await webProvider.CallAsync(contract);
+```
+
+### Using BackendMetaService
+
+```csharp
+// Initialize the service
+var backendService = new BackendMetaService(config);
+
+// Authenticate
+await backendService.AuthenticateAsync(credentials);
+
+// Sync data
+await backendService.SyncDataAsync();
+
+// Get remote data
+var data = await backendService.GetRemoteDataAsync<RemoteDataType>();
+```
+
+## Error Handling
+
+When errors occur during request execution, the service returns a `RemoteCallError` object:
+
+```csharp
+try 
+{
+    var result = await webProvider.CallAsync(contract);
+}
+catch (RemoteCallException ex)
+{
+    Debug.LogError($"Request error: {ex.Error.Message}");
+    // Error handling
+}
+```
+
 ## Dynamic Url Path and Arguments
 
 If you need to pass dynamic arguments to the url path, you can use the following syntax:
@@ -27,7 +221,6 @@ Demo Url: `api/store/{id}/{number}/{product}/buy`
 When you just need to add into you contract field or property with the same name as the path argument.
 
 ```csharp
-
 [Serializable]
 public class DemoContract : RemoteCallContract<TInput, TOutput>
 {
@@ -39,8 +232,41 @@ public class DemoContract : RemoteCallContract<TInput, TOutput>
     
     ...
 }
-
 ```
 
 result url: `api/store/123/65/demo_product/buy`
 
+## Additional Features
+
+### Caching
+The service supports response caching for performance optimization. Caching configuration is available through WebProvider parameters.
+
+### Retry Policy
+Configurable retry policy for handling request failures.
+
+### Timeouts
+Ability to configure timeouts for different types of requests.
+
+### Data Synchronization
+Built-in support for data synchronization with features:
+- Incremental sync
+- Conflict resolution
+- Sync status tracking
+- Background sync
+
+### Authentication
+Comprehensive authentication system with support for:
+- Token-based auth
+- Session management
+- Auto-refresh tokens
+- Multiple auth providers
+
+## Requirements
+
+- Unity 2020.3 or higher
+- .NET Framework 4.7.1 or higher
+- Newtonsoft.Json for serialization/deserialization
+
+## License
+
+This module is licensed under the terms specified in the LICENSE file.

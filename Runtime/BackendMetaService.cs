@@ -314,7 +314,7 @@
                 
             if (!response.success)
             {
-                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.MethodName}");
+                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.Path}");
             }
             
             return result;
@@ -335,7 +335,7 @@
 
         private RemoteMetaData CreateNewRemoteMeta(string methodName)
         {
-            var contract = new SimpleMetaCallContract<string, string>();
+            var contract = new SimpleMetaContract<string, string>();
             var id = _metaDataConfiguration.CalculateMetaId(contract);
             
             return new RemoteMetaData()

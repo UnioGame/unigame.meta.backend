@@ -84,7 +84,7 @@
         
         public bool IsContractSupported(IRemoteMetaContract command)
         {
-            var methodName = command.MethodName;
+            var methodName = command.Path;
             if (_jsContracts.TryGetValue(methodName, out var contractData)) return true;
             GameLog.LogError($"No js meta contract config with method: {methodName}");
             return false;

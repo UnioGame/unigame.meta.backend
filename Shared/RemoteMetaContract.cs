@@ -14,7 +14,7 @@ namespace UniGame.MetaBackend.Shared
         public object Payload => payload;
         public Type OutputType => output;
         public Type InputType => input;
-        public virtual string MethodName => GetType().Name;
+        public virtual string Path => GetType().Name;
     }
     
     [Serializable]
@@ -32,7 +32,7 @@ namespace UniGame.MetaBackend.Shared
         public Type InputType => typeof(TInput);
         
         [JsonIgnore]
-        public virtual string MethodName => GetType().Name;
+        public virtual string Path => GetType().Name;
     }
     
     [Serializable]
@@ -48,7 +48,7 @@ namespace UniGame.MetaBackend.Shared
         public Type InputType => GetType();
         
         [JsonIgnore]
-        public virtual string MethodName => GetType().Name;
+        public virtual string Path => GetType().Name;
     }
     
 }

@@ -12,7 +12,8 @@
     /// <summary>
     /// Represents a class that provides backend meta data for the game.
     /// </summary>
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Backend Meta Source", fileName = "Backend Meta Source")]
+    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Backend Meta Source", 
+        fileName = "Backend Meta Source")]
     public class BackendMetaSource : DataSourceAsset<IBackendMetaService>
     {
         [InlineProperty]

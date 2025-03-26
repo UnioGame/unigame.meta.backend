@@ -11,8 +11,8 @@ namespace Game.Modules.Meta.Runtime
         {
             
             if(contract == null) return string.Empty;
-            if(!string.IsNullOrEmpty(contract.MethodName))
-                return contract.MethodName;
+            if(!string.IsNullOrEmpty(contract.Path))
+                return contract.Path;
             
             var typeName = contract.GetType().Name;
             if (typeName.EndsWith(ContractKey, StringComparison.OrdinalIgnoreCase) && 

@@ -26,18 +26,12 @@
         public const string NotSupportedError = "Not supported";
         public const int DefaultTimeout = 10;
 
-        public static Regex UrlPatternRegex = new Regex("{([a-zA-Z0-9_]+)}");
-
         public static readonly Dictionary<string,string> EmptyQuery = new();
         public static readonly JsonSerializerSettings JsonSettings = new()
         {
             TypeNameHandling = TypeNameHandling.None,
         };
         
-        private BindingFlags _bindingFlags = BindingFlags.Public | BindingFlags.Instance 
-                                                                 | BindingFlags.NonPublic 
-                                                                 | BindingFlags.IgnoreCase;
-
         
         private WebMetaProviderSettings _settings;
         private string _defaultUrl;
@@ -160,7 +154,8 @@
             }
 #endif
             
-            url = UpdateUrlPattern(contract,url);
+            url = url.UpdateUrlPattern(contract);
+            
             var retryCounter = 0;
             var retryLimit = _settings.requestRetry;
 
@@ -223,52 +218,6 @@
             return requestResult;
         }
 
-        public string UpdateUrlPattern(object source,string url)
-        {
-            var matches = UrlPatternRegex.Matches(url);
-            var result = url;
-            
-            foreach (Match match in matches)
-            {
-                result = UpdatePattern(source,match, result);
-            }
-
-            return result;
-        }
-        
-        public string UpdatePattern(object source,Match match,string url)
-        {
-            var matchValue = match.Value;
-            var thisType = source.GetType();
-            var result = url;
-            if(match.Groups.Count < 2) return result;
-        
-            var group = match.Groups[1];
-        
-            var value = group.Value;
-            var field = thisType.GetField(value, _bindingFlags);
-            var replaceValue = string.Empty;
-            
-            if (field != null)
-            {
-                var fieldValue = field.GetValue(source);
-                if (fieldValue != null)
-                    replaceValue = fieldValue.ToString();
-            }
-            
-            var property = thisType.GetProperty(value, _bindingFlags);
-            if (property != null)
-            {
-                var propertyValue = property.GetValue(source);
-                if (propertyValue != null)
-                    replaceValue = propertyValue.ToString();
-            }
-            
-            result = result.Replace(matchValue, replaceValue);
-
-            return result;
-        }
-        
         public WebServerResult ExecuteDebugAsync(WebApiEndPoint endPoint)
         {
             var debugResult = endPoint.debugResult;

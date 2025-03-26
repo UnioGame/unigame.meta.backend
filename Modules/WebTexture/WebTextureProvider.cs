@@ -77,12 +77,14 @@
             };
             
             var contract = contractData.contract;
-            var path = contract.MethodName;
+            var path = contract.Path;
             var isUrl = path.StartsWith(Scheme);
             var url = isUrl
                 ? path
                 : _settings.url.MergeUrl(path);
 
+            url = url.UpdateUrlPattern(contract);
+            
             var name = isUrl ? string.Empty : path;
 
 #if UNITY_EDITOR

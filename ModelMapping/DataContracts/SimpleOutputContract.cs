@@ -6,22 +6,21 @@
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime.SerializableType;
     using UniModules.UniCore.Runtime.Utils;
-    using UnityEngine;
 
     [Serializable]
-    public class SimpleResultMetaCallContract<TOutput> : SimpleMetaCallContract<string, TOutput>
+    public class SimpleOutputContract<TOutput> : SimpleMetaContract<string, TOutput>
     {
     }
     
     [Serializable]
-    public class SimpleMetaCallContract<TInput> : SimpleMetaCallContract<TInput, string>
+    public class SimpleInputContract<TInput> : SimpleMetaContract<TInput, string>
     {
     }
     
     [Serializable]
-    public class SimpleMetaCallContract<TInput, TOutput> : RemoteCallContract<TInput, TOutput>
+    public class SimpleMetaContract<TInput, TOutput> : RemoteCallContract<TInput, TOutput>
     {
-        public string method = string.Empty;
+        public string path = string.Empty;
 
 #if UNITY_EDITOR && ODIN_INSPECTOR
         [GUIColor(0f, 1f, 0f, 1f)]
@@ -37,15 +36,15 @@
 
         public override Type InputType => input;
         public override Type OutputType => output;
-        public override string MethodName => method;
+        public override string Path => path;
 
-        public SimpleMetaCallContract(string method)
+        public SimpleMetaContract(string path)
             : this()
         {
-            this.method = method;
+            this.path = path;
         }
         
-        public SimpleMetaCallContract()
+        public SimpleMetaContract()
         {
             input = typeof(TInput);
             output = typeof(TOutput);
