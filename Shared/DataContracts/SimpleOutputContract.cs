@@ -20,6 +20,7 @@
     [Serializable]
     public class SimpleMetaContract<TInput, TOutput> : RemoteCallContract<TInput, TOutput>
     {
+        public TInput inputData = default(TInput);
         public string path = string.Empty;
 
 #if UNITY_EDITOR && ODIN_INSPECTOR
@@ -37,6 +38,7 @@
         public override Type InputType => input;
         public override Type OutputType => output;
         public override string Path => path;
+        public override object Payload => inputData;
 
         public SimpleMetaContract(string path)
             : this()

@@ -1,15 +1,23 @@
 ﻿namespace Modules.WebServer
 {
     using System;
+    using System.Linq;
     using Cysharp.Threading.Tasks;
+    using Game.Runtime.Services.WebService;
     using Game.Runtime.Tools;
     using Sirenix.OdinInspector;
     using UniCore.Runtime.ProfilerTools;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using UniGame.Core.Runtime;
+    using UniModules.UniCore.Runtime.Utils;
     using UnityEngine;
-
+    using Game.Modules.Meta.Runtime;
+    
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
+    
     [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Backend Provider", fileName = "Web Backend Provider")]
     public class WebMetaProviderAsset : BackendMetaServiceAsset
     {
@@ -39,8 +47,58 @@
             return service;
         }
         
+        [Button]
+        [PropertyOrder(-1)]
+        public void LoadContracts()
+        {
+#if UNITY_EDITOR
+            var contracts = settings.contracts;
+            var webContractTypes = TypeCache.GetTypesDerivedFrom<IWebRequestContract>();
+            foreach (var contractType in webContractTypes)
+            {
+                if (contractType.IsAbstract||contractType.IsInterface)continue;
+                var targetContact =
+                    contracts.FirstOrDefault(x => x.contract == contractType);
+                if(targetContact !=null) continue;
+
+                var path = string.Empty;
+                var url = string.Empty;
+                
+                if (contractType.HasDefaultConstructor())
+                {
+                    if (contractType.CreateWithDefaultConstructor() is IWebRequestContract contractInstance)
+                    {
+                        path = contractInstance.Path;
+                        url = contractInstance.Url;
+                    }
+                }
+                
+                var contractName = BackendMetaTools.GetContractName(contractType);
+                var webMethod = WebRequestType.Get;
+                if (contractName.StartsWith(WebRequestType.Get.ToStringFromCache(),StringComparison.OrdinalIgnoreCase))
+                {
+                    webMethod = WebRequestType.Get;
+                }
+                if (contractName.StartsWith(WebRequestType.Post.ToStringFromCache(),StringComparison.OrdinalIgnoreCase))
+                {
+                    webMethod = WebRequestType.Post;
+                }
+                
+                contracts.Add(new WebApiEndPoint()
+                {
+                    contract = contractType,
+                    name = contractName,
+                    requestType = webMethod,
+                    path = path,
+                    url = url,
+                });
+                
+            }
+#endif
+        }
         
         [Button]
+        [PropertyOrder(-1)]
         public void SaveSettingsToStreamingAsset()
         {
             var webSettings = new WebMetaStreamingAsset()
@@ -52,6 +110,7 @@
         }
         
         [Button]
+        [PropertyOrder(-1)]
         public void LoadSettingsFromStreamingAsset()
         {
             LoadSettingsDataFromStreaming().Forget();

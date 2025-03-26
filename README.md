@@ -2,17 +2,17 @@
 
 Game Meta Backend service provider
 
+## Configuration
+
+**pic with settings window ^^**
+
+You can create configuration of module with menu: "Assets/UniGame/Meta Service/Create Configuration"
+
+
 ## Core Components
 
-### WebProvider
+### Base Contract concept
 
-Main component for working with REST API. Allows configuring base URL, headers, and request parameters.
-
-### RemoteCallContract
-
-Base abstract class for creating request contracts. Supports dynamic URL parameter substitution.
-
-### IRemoteMetaContract
 
 Interface that must be implemented by all meta contracts. Provides:
 - Contract validation
@@ -57,12 +57,20 @@ public class SimpleGetConfigContract : SimpleOutputContract<ConfigOutput>
     // Implementation
 }
 
-// Simple contract without data
-public class PingContract : RemoteCallContract, IRemoteMetaContract
-{
-    // Implementation
-}
 ```
+
+### WebProvider - REST API
+
+Main component for working with REST API. Allows configuring base URL, headers, and request parameters.
+
+
+For details data of WebRequest your contract can implement interface `IWebRequestContract`
+
+**pic with rest config window**
+
+### Mock WebProvider
+
+Allows to mock requests and responses for testing purposes.
 
 ### BackendMetaService
 

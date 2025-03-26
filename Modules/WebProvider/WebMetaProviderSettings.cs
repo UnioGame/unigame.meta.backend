@@ -5,7 +5,6 @@
     using Game.Runtime.Services.WebService;
     using Sirenix.OdinInspector;
     using UnityEngine;
-    using UnityEngine.Serialization;
 
     [Serializable]
     public class WebMetaProviderSettings

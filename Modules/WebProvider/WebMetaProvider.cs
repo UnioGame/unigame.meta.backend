@@ -93,7 +93,7 @@
             if (!_contractsMap.TryGetValue(contractType, out var endPoint))
                 return result;
 
-            var requestResult  = _debugMode 
+            var requestResult  = _debugMode || endPoint.debugMode
                 ? ExecuteDebugAsync(endPoint) 
                 : await ExecuteWebRequest(contract, endPoint);
             

@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using Sirenix.OdinInspector;
     using UniGame.Core.Runtime.SerializableType;
+    using UnityEngine.Serialization;
 
 #if UNITY_EDITOR
     using UniGame.MetaBackend.Shared;
@@ -21,6 +22,9 @@
         [ValueDropdown(nameof(GetContracts))]
         public SType contract = new();
 
+        [FormerlySerializedAs("activateDebug")]
+        [BoxGroup("debug")]
+        public bool debugMode = false;
         [BoxGroup("debug")]
         public DebugApiResult debugResult = new();
 

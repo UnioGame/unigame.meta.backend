@@ -9,12 +9,18 @@ namespace Game.Modules.Meta.Runtime
         
         public static string GetContractName(IRemoteMetaContract contract)
         {
-            
             if(contract == null) return string.Empty;
             if(!string.IsNullOrEmpty(contract.Path))
                 return contract.Path;
-            
-            var typeName = contract.GetType().Name;
+
+            var typeName = GetContractName(contract.GetType());
+            return typeName;
+        }
+        
+        public static string GetContractName(Type contractType)
+        {
+            if(contractType == null) return string.Empty;
+            var typeName = contractType.Name;
             if (typeName.EndsWith(ContractKey, StringComparison.OrdinalIgnoreCase) && 
                 typeName.Length > ContractKey.Length)
             {
