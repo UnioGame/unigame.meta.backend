@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using Game.Runtime.Services.WebService;
+using Newtonsoft.Json;
 
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
@@ -70,6 +71,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 sb.AppendLine("using UniGame.MetaBackend;");
                 sb.AppendLine("using Game.Modules.WebProvider.Contracts.DTO;");
                 sb.AppendLine("using Game.Runtime.Services.WebService;");
+                sb.AppendLine("using Newtonsoft.Json;");
                 sb.AppendLine();
                 
                 // Add namespace
@@ -196,6 +198,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 // Add usings
                 sb.AppendLine("using System;");
                 sb.AppendLine("using System.Collections.Generic;");
+                sb.AppendLine("using Newtonsoft.Json;");
                 sb.AppendLine();
                 
                 // Add namespace
@@ -234,6 +237,12 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                             sb.AppendLine($"        /// Required: true");
                         }
                         sb.AppendLine($"        /// </summary>");
+                        
+                        // Добавить атрибут JsonProperty с оригинальным именем, если имя отличается от PascalCase
+                        if (propName != property.Key)
+                        {
+                            sb.AppendLine($"        [JsonProperty(\"{property.Key}\")]");
+                        }
                         
                         // Add property
                         sb.AppendLine($"        public {propType} {propName} {{ get; set; }}");
@@ -472,6 +481,31 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             // Для имен с подчеркиванием и дефисами форматируем правильно в PascalCase
             return ToPascalCase(operationId);
+        }
+
+        private string GenerateProperty(string propertyName, SwaggerProperty property, Dictionary<string, string> schemaToClassName)
+        {
+            string typeName = GetPropertyTypeName(property);
+            string pascalCaseName = ToPascalCase(propertyName);
+            
+            var sb = new StringBuilder();
+            
+            // Добавляем атрибут JsonProperty, если оригинальное имя отличается от Pascal Case
+            if (!string.IsNullOrEmpty(property.OriginalName) && property.OriginalName != pascalCaseName)
+            {
+                sb.AppendLine($"        [JsonProperty(\"{property.OriginalName}\")]");
+            }
+            
+            if (!string.IsNullOrEmpty(property.Description))
+            {
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// {property.Description}");
+                sb.AppendLine($"        /// </summary>");
+            }
+            
+            sb.AppendLine($"        public {typeName} {pascalCaseName} {{ get; set; }}");
+            
+            return sb.ToString();
         }
     }
 } 

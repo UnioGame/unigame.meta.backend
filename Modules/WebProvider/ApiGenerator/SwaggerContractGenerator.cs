@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using System.Text.RegularExpressions;
+using System.Text;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -352,7 +353,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 {
                     Type = param.Type,
                     Format = param.Format,
-                    Description = param.Description
+                    Description = param.Description,
+                    // Сохраняем оригинальное имя свойства для JsonProperty
+                    OriginalName = param.Name
                 };
 
                 if (param.Required)
@@ -597,6 +600,115 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             
             Debug.Log($"Found {usedDefinitions.Count} used definitions out of {allDefinitions.Count} total");
             return usedDefinitions;
+        }
+
+        private string GenerateOperationDtoClass(string operationId, string dtoType, List<SwaggerParameter> parameters)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"using System;");
+            sb.AppendLine($"using System.Collections.Generic;");
+            sb.AppendLine($"using Newtonsoft.Json;");
+            sb.AppendLine();
+            sb.AppendLine($"namespace {_settings.ContractNamespace}.Dto");
+            sb.AppendLine($"{{");
+            sb.AppendLine($"    public class {operationId}{dtoType}");
+            sb.AppendLine($"    {{");
+            
+            foreach (var param in parameters)
+            {
+                string propertyType = GetParameterType(param);
+                string propertyName = ToPascalCase(param.Name);
+                
+                // Добавляем JsonProperty атрибут, если имя свойства в API отличается от имени свойства в C#
+                if (!string.IsNullOrEmpty(param.OriginalName) && param.OriginalName != propertyName)
+                {
+                    sb.AppendLine($"        [JsonProperty(\"{param.OriginalName}\")]");
+                }
+                
+                if (!string.IsNullOrEmpty(param.Description))
+                {
+                    sb.AppendLine($"        /// <summary>");
+                    sb.AppendLine($"        /// {param.Description}");
+                    sb.AppendLine($"        /// </summary>");
+                }
+                
+                sb.AppendLine($"        public {propertyType} {propertyName} {{ get; set; }}");
+            }
+            
+            sb.AppendLine($"    }}");
+            sb.AppendLine($"}}");
+            
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Определяет тип параметра для использования в свойствах DTO
+        /// </summary>
+        private string GetParameterType(SwaggerParameter param)
+        {
+            if (param.Schema != null)
+            {
+                if (!string.IsNullOrEmpty(param.Schema.Reference))
+                {
+                    return _schemaToClassNameMap.TryGetValue(param.Schema.Reference, out var className) 
+                        ? className 
+                        : param.Schema.Reference;
+                }
+                
+                if (param.Schema.Type == "array")
+                {
+                    if (param.Schema.Items != null && !string.IsNullOrEmpty(param.Schema.Items.Reference))
+                    {
+                        string itemType = _schemaToClassNameMap.TryGetValue(param.Schema.Items.Reference, out var className) 
+                            ? className 
+                            : param.Schema.Items.Reference;
+                        return $"List<{itemType}>";
+                    }
+                    return $"List<{MapSwaggerTypeToCs(param.Schema.Items?.Type, param.Schema.Items?.Format)}>";
+                }
+                
+                return MapSwaggerTypeToCs(param.Schema.Type, param.Schema.Format);
+            }
+            
+            return MapSwaggerTypeToCs(param.Type, param.Format);
+        }
+
+        /// <summary>
+        /// Преобразует Swagger типы в C# типы
+        /// </summary>
+        private string MapSwaggerTypeToCs(string type, string format)
+        {
+            if (string.IsNullOrEmpty(type))
+                return "object";
+            
+            switch (type.ToLower())
+            {
+                case "string":
+                    if (format == "date-time")
+                        return "DateTime";
+                    if (format == "date")
+                        return "DateTime";
+                    if (format == "byte")
+                        return "byte[]";
+                    return "string";
+                case "integer":
+                    if (format == "int64")
+                        return "long";
+                    return "int";
+                case "number":
+                    if (format == "float")
+                        return "float";
+                    if (format == "double")
+                        return "double";
+                    return "decimal";
+                case "boolean":
+                    return "bool";
+                case "array":
+                    return "List<object>";
+                case "object":
+                default:
+                    return "object";
+            }
         }
     }
 } 

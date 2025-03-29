@@ -133,28 +133,29 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             var result = new List<SwaggerParameter>();
 
-            foreach (var paramToken in parameters)
+            foreach (var parameterToken in parameters)
             {
-                var param = new SwaggerParameter();
-                var paramObj = paramToken as JObject;
+                var parameter = new SwaggerParameter();
+                parameter.Name = (string)parameterToken["name"];
+                parameter.In = (string)parameterToken["in"];
+                parameter.Description = (string)parameterToken["description"];
+                parameter.Required = (bool?)parameterToken["required"] ?? false;
                 
-                if (paramObj != null)
+                var schema = parameterToken["schema"];
+                if (schema != null)
                 {
-                    param.Name = paramObj["name"]?.ToString();
-                    param.In = paramObj["in"]?.ToString();
-                    param.Description = paramObj["description"]?.ToString();
-                    param.Required = paramObj["required"]?.ToObject<bool>() ?? false;
-                    param.Type = paramObj["type"]?.ToString();
-                    
-                    // Handle schema reference
-                    var schemaObj = paramObj["schema"] as JObject;
-                    if (schemaObj != null)
-                    {
-                        param.Schema = ParseSchema(schemaObj);
-                    }
+                    parameter.Schema = ParseSchema((JObject)schema);
                 }
-
-                result.Add(param);
+                else
+                {
+                    parameter.Type = (string)parameterToken["type"];
+                    parameter.Format = (string)parameterToken["format"];
+                }
+                
+                // Сохраняем оригинальное имя параметра
+                parameter.OriginalName = parameter.Name;
+                
+                result.Add(parameter);
             }
 
             return result;
@@ -261,72 +262,45 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             var result = new Dictionary<string, SwaggerDefinition>();
 
-            foreach (var definitionProperty in definitions.Properties())
+            if (definitions == null)
             {
-                string name = definitionProperty.Name;
-                var definition = new SwaggerDefinition();
+                return result;
+            }
 
-                var definitionObj = definitionProperty.Value as JObject;
-                if (definitionObj != null)
+            foreach (var definitionPair in definitions)
+            {
+                var definitionName = definitionPair.Key;
+                var definitionObject = (JObject)definitionPair.Value;
+
+                var definition = new SwaggerDefinition
                 {
-                    definition.Type = definitionObj["type"]?.ToString();
-                    definition.Title = definitionObj["title"]?.ToString();
-                    
-                    // Parse properties
-                    var properties = definitionObj["properties"] as JObject;
-                    if (properties != null)
+                    Name = definitionName
+                };
+
+                if (definitionObject["title"] != null)
+                {
+                    definition.Title = (string)definitionObject["title"];
+                }
+
+                var properties = definitionObject["properties"];
+                if (properties != null)
+                {
+                    definition.Properties = new Dictionary<string, SwaggerProperty>();
+
+                    foreach (var propertyPair in (JObject)properties)
                     {
-                        definition.Properties = new Dictionary<string, SwaggerProperty>();
+                        var propertyName = propertyPair.Key;
+                        var propertyObject = (JObject)propertyPair.Value;
+
+                        var property = ParsePropertyObject(propertyObject);
+                        // Сохраняем оригинальное имя свойства
+                        property.OriginalName = propertyName;
                         
-                        foreach (var property in properties.Properties())
-                        {
-                            var prop = new SwaggerProperty();
-                            var propObj = property.Value as JObject;
-                            
-                            if (propObj != null)
-                            {
-                                prop.Type = propObj["type"]?.ToString();
-                                prop.Format = propObj["format"]?.ToString();
-                                prop.Description = propObj["description"]?.ToString();
-                                
-                                // Handle reference
-                                var reference = propObj["$ref"]?.ToString();
-                                if (!string.IsNullOrEmpty(reference))
-                                {
-                                    prop.Reference = NormalizeReference(reference);
-                                }
-                                
-                                // Handle array
-                                if (prop.Type == "array")
-                                {
-                                    var items = propObj["items"] as JObject;
-                                    if (items != null)
-                                    {
-                                        prop.Items = new SwaggerProperty();
-                                        prop.Items.Type = items["type"]?.ToString();
-                                        
-                                        var itemsRef = items["$ref"]?.ToString();
-                                        if (!string.IsNullOrEmpty(itemsRef))
-                                        {
-                                            prop.Items.Reference = NormalizeReference(itemsRef);
-                                        }
-                                    }
-                                }
-                                
-                                definition.Properties.Add(property.Name, prop);
-                            }
-                        }
-                    }
-                    
-                    // Parse required fields
-                    var required = definitionObj["required"] as JArray;
-                    if (required != null)
-                    {
-                        definition.Required = required.ToObject<List<string>>();
+                        definition.Properties.Add(propertyName, property);
                     }
                 }
 
-                result.Add(name, definition);
+                result.Add(definitionName, definition);
             }
 
             return result;
@@ -345,6 +319,41 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 return reference.Substring("#/components/schemas/".Length);
             }
             return reference;
+        }
+
+        private SwaggerProperty ParsePropertyObject(JObject propertyObject)
+        {
+            var property = new SwaggerProperty();
+            
+            property.Type = (string)propertyObject["type"];
+            property.Format = (string)propertyObject["format"];
+            property.Description = (string)propertyObject["description"];
+            
+            // Обработка ссылок на объекты
+            var reference = (string)propertyObject["$ref"];
+            if (!string.IsNullOrEmpty(reference))
+            {
+                property.Reference = NormalizeReference(reference);
+            }
+            
+            // Обработка массивов
+            if (property.Type == "array")
+            {
+                var items = propertyObject["items"] as JObject;
+                if (items != null)
+                {
+                    property.Items = new SwaggerProperty();
+                    property.Items.Type = (string)items["type"];
+                    
+                    var itemsRef = (string)items["$ref"];
+                    if (!string.IsNullOrEmpty(itemsRef))
+                    {
+                        property.Items.Reference = NormalizeReference(itemsRef);
+                    }
+                }
+            }
+            
+            return property;
         }
     }
 } 

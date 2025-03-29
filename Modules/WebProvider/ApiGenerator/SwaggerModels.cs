@@ -47,6 +47,11 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public string Type { get; set; }
         public string Format { get; set; }
         public SwaggerSchema Schema { get; set; }
+        
+        /// <summary>
+        /// Исходное имя параметра в API (для JsonProperty)
+        /// </summary>
+        public string OriginalName { get; set; }
     }
 
     /// <summary>
@@ -77,6 +82,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
     {
         public string Type { get; set; }
         public string Title { get; set; }
+        public string Name { get; set; }
         public Dictionary<string, SwaggerProperty> Properties { get; set; } = new Dictionary<string, SwaggerProperty>();
         public List<string> Required { get; set; } = new List<string>();
     }
@@ -91,5 +97,10 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public string Description { get; set; }
         public string Reference { get; set; }
         public SwaggerProperty Items { get; set; }
+        
+        /// <summary>
+        /// Исходное имя свойства в API (для JsonProperty)
+        /// </summary>
+        public string OriginalName { get; set; }
     }
 } 

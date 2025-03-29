@@ -27,6 +27,11 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public string dtoOutFolder = "Assets/UniGame.Generated/WebContracts/DTO/";
         
         /// <summary>
+        /// Namespace for generated contracts and DTOs
+        /// </summary>
+        public string ContractNamespace = "Game.Generated.WebContracts";
+        
+        /// <summary>
         /// Template for API URL path
         /// </summary>
         public string apiTemplate = "api/{0}";
