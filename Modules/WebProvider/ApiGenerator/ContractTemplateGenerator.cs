@@ -37,6 +37,22 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             { "uuid", "Guid" }
         };
 
+        // Словарь для преобразования имен схем в имена классов DTO (с учетом title)
+        private Dictionary<string, string> _schemaToClassNameMap;
+        
+        public ContractTemplateGenerator(Dictionary<string, string> schemaMap = null)
+        {
+            _schemaToClassNameMap = schemaMap ?? new Dictionary<string, string>();
+        }
+        
+        // Метод для получения имени класса по имени схемы
+        public string GetClassNameForSchema(string schemaName)
+        {
+            return _schemaToClassNameMap.TryGetValue(schemaName, out var className) 
+                ? className 
+                : schemaName;
+        }
+
         /// <summary>
         /// Generates a contract class for a specific endpoint
         /// </summary>
@@ -271,8 +287,8 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 {
                     if (!string.IsNullOrEmpty(bodyParam.Schema.Reference))
                     {
-                        // Use referenced model as input type
-                        return bodyParam.Schema.Reference;
+                        // Используем маппинг для получения имени класса с учетом title
+                        return GetClassNameForSchema(bodyParam.Schema.Reference);
                     }
                     else if (bodyParam.Schema.Type == "array")
                     {
@@ -283,6 +299,12 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                             return $"List<{itemType}>";
                         }
                         return "List<object>";
+                    }
+                    else if (bodyParam.Schema.Type == "object" && bodyParam.Schema.Properties != null)
+                    {
+                        // Для объектов без прямой ссылки, используем DTO на основе operationId
+                        string operationId = operation.OperationId ?? $"{operation.Summary}";
+                        return $"{CleanOperationName(operationId)}Input";
                     }
                 }
             }
@@ -308,8 +330,8 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             {
                 if (!string.IsNullOrEmpty(successResponse.Schema.Reference))
                 {
-                    // Use referenced model as output type
-                    return successResponse.Schema.Reference;
+                    // Используем маппинг для получения имени класса с учетом title
+                    return GetClassNameForSchema(successResponse.Schema.Reference);
                 }
                 else if (successResponse.Schema.Type == "array")
                 {
@@ -323,7 +345,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 }
                 else if (successResponse.Schema.Type == "object" && successResponse.Schema.Properties != null)
                 {
-                    // For object types, create a custom output DTO
+                    // Для объектных типов без прямой ссылки, создаем кастомный DTO
                     string operationId = operation.OperationId ?? $"{operation.Summary}";
                     return $"{CleanOperationName(operationId)}Output";
                 }
@@ -341,8 +363,8 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             if (!string.IsNullOrEmpty(schema.Reference))
             {
-                // Use the referenced type
-                return schema.Reference;
+                // Используем маппинг для получения имени класса с учетом title
+                return GetClassNameForSchema(schema.Reference);
             }
             
             if (schema.Type == "array")
@@ -362,8 +384,8 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             if (!string.IsNullOrEmpty(property.Reference))
             {
-                // Use the referenced type
-                return property.Reference;
+                // Use the referenced type with mapping for title
+                return GetClassNameForSchema(property.Reference);
             }
             
             if (property.Type == "array")

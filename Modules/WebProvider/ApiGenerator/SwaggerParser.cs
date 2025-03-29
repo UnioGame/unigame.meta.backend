@@ -31,11 +31,34 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     definition.Paths = ParsePaths(paths);
                 }
 
-                // Parse definitions (schemas)
+                // Parse definitions (schemas) - Swagger 2.0
                 var definitions = jsonObject["definitions"] as JObject;
                 if (definitions != null)
                 {
                     definition.Definitions = ParseDefinitions(definitions);
+                }
+                
+                // Parse components.schemas (OpenAPI 3.0)
+                var components = jsonObject["components"] as JObject;
+                if (components != null)
+                {
+                    var schemas = components["schemas"] as JObject;
+                    if (schemas != null)
+                    {
+                        // Если определения уже есть, добавим новые
+                        if (definition.Definitions == null)
+                        {
+                            definition.Definitions = ParseDefinitions(schemas);
+                        }
+                        else
+                        {
+                            var componentDefinitions = ParseDefinitions(schemas);
+                            foreach (var kvp in componentDefinitions)
+                            {
+                                definition.Definitions[kvp.Key] = kvp.Value;
+                            }
+                        }
+                    }
                 }
 
                 return definition;
@@ -151,11 +174,29 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 {
                     response.Description = responseObj["description"]?.ToString();
                     
-                    // Parse schema
+                    // Пробуем получить схему напрямую (Swagger 2.0)
                     var schema = responseObj["schema"] as JObject;
                     if (schema != null)
                     {
                         response.Schema = ParseSchema(schema);
+                    }
+                    else
+                    {
+                        // Пробуем получить схему из content (OpenAPI 3.0)
+                        var content = responseObj["content"] as JObject;
+                        if (content != null)
+                        {
+                            // Ищем application/json
+                            var jsonContent = content["application/json"] as JObject;
+                            if (jsonContent != null)
+                            {
+                                var contentSchema = jsonContent["schema"] as JObject;
+                                if (contentSchema != null)
+                                {
+                                    response.Schema = ParseSchema(contentSchema);
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -229,6 +270,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 if (definitionObj != null)
                 {
                     definition.Type = definitionObj["type"]?.ToString();
+                    definition.Title = definitionObj["title"]?.ToString();
                     
                     // Parse properties
                     var properties = definitionObj["properties"] as JObject;
@@ -292,10 +334,15 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
 
         private string NormalizeReference(string reference)
         {
-            // Convert "#/definitions/Model" to "Model"
+            // Convert "#/definitions/Model" to "Model" (Swagger 2.0)
             if (reference.StartsWith("#/definitions/"))
             {
                 return reference.Substring("#/definitions/".Length);
+            }
+            // Convert "#/components/schemas/Model" to "Model" (OpenAPI 3.0)
+            else if (reference.StartsWith("#/components/schemas/"))
+            {
+                return reference.Substring("#/components/schemas/".Length);
             }
             return reference;
         }

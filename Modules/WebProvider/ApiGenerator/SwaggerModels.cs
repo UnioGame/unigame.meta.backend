@@ -76,6 +76,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
     public class SwaggerDefinition
     {
         public string Type { get; set; }
+        public string Title { get; set; }
         public Dictionary<string, SwaggerProperty> Properties { get; set; } = new Dictionary<string, SwaggerProperty>();
         public List<string> Required { get; set; } = new List<string>();
     }

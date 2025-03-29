@@ -19,6 +19,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         private readonly SwaggerParser _parser;
         private readonly ContractTemplateGenerator _templateGenerator;
         
+        // Словарь для маппинга внутренних имен схем на имена классов с учетом Title
+        private readonly Dictionary<string, string> _schemaToClassNameMap = new Dictionary<string, string>();
+        
         // Counters for statistics
         private int _newDtoFiles = 0;
         private int _overwrittenDtoFiles = 0;
@@ -29,18 +32,19 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             _settings = settings;
             _parser = new SwaggerParser();
-            _templateGenerator = new ContractTemplateGenerator();
+            _templateGenerator = new ContractTemplateGenerator(_schemaToClassNameMap);
         }
 
         public void GenerateContracts()
         {
             try
             {
-                // Reset counters
+                // Reset counters and mappings
                 _newDtoFiles = 0;
                 _overwrittenDtoFiles = 0;
                 _newContractFiles = 0;
                 _overwrittenContractFiles = 0;
+                _schemaToClassNameMap.Clear();
                 
                 // Validate settings
                 if (string.IsNullOrEmpty(_settings.apiJsonPath))
@@ -78,8 +82,18 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 // Filter paths by allowed paths
                 apiDefinition.Paths = FilterPathsByAllowedPaths(apiDefinition.Paths);
 
-                // Generate DTO classes from definitions
-                var dtoFiles = GenerateDtoClasses(apiDefinition.Definitions);
+                // Собираем все используемые схемы данных из отфильтрованных путей
+                var usedDefinitions = CollectUsedDefinitions(apiDefinition.Paths, apiDefinition.Definitions);
+
+                // Подготавливаем словарь маппинга имен схем на имена классов
+                foreach (var def in apiDefinition.Definitions)
+                {
+                    string className = !string.IsNullOrEmpty(def.Value.Title) ? def.Value.Title : def.Key;
+                    _schemaToClassNameMap[def.Key] = className;
+                }
+
+                // Generate DTO classes only for definitions that are actually used
+                var dtoFiles = GenerateDtoClasses(usedDefinitions);
 
                 // Generate DTO classes for requests and responses
                 var operationDtoFiles = GenerateOperationDtoClasses(apiDefinition.Paths);
@@ -152,7 +166,14 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
 
             foreach (var definition in definitions)
             {
-                string dtoName = definition.Key;
+                // Используем Title как имя класса DTO, если он указан, иначе используем имя схемы
+                string dtoName = !string.IsNullOrEmpty(definition.Value.Title) 
+                    ? definition.Value.Title 
+                    : definition.Key;
+                    
+                // Запоминаем маппинг имени схемы на имя класса
+                _schemaToClassNameMap[definition.Key] = dtoName;
+                    
                 string dtoCode = _templateGenerator.GenerateDto(dtoName, definition.Value);
 
                 if (!string.IsNullOrEmpty(dtoCode))
@@ -280,6 +301,15 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
 
         private bool NeedsInputDto(SwaggerOperation operation)
         {
+            // Проверяем, есть ли параметр body со ссылкой на схему
+            var bodyParam = operation.Parameters.FirstOrDefault(p => p.In == "body");
+            if (bodyParam?.Schema != null && !string.IsNullOrEmpty(bodyParam.Schema.Reference))
+            {
+                // Если у параметра тела запроса есть прямая ссылка на схему,
+                // используем её напрямую и не создаем Input DTO
+                return false;
+            }
+
             // Check if we need to generate an Input DTO
             var pathParams = operation.Parameters.Where(p => p.In == "path").ToList();
             var queryParams = operation.Parameters.Where(p => p.In == "query").ToList();
@@ -292,6 +322,12 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             // Check if we need to generate an Output DTO
             var successResponse = operation.Responses.FirstOrDefault(r => r.Key == "200" || r.Key == "201").Value;
+            
+            // Если у ответа есть прямая ссылка на схему, то не создаем Output DTO
+            if (successResponse?.Schema != null && !string.IsNullOrEmpty(successResponse.Schema.Reference))
+            {
+                return false;
+            }
             
             // If there's a success response with a schema of type object with properties, we need an Output DTO
             return successResponse?.Schema?.Type == "object" && 
@@ -477,6 +513,90 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             {
                 Debug.LogError($"Error cleaning output directories: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Собирает все определения схем данных, которые используются в эндпоинтах API
+        /// </summary>
+        private Dictionary<string, SwaggerDefinition> CollectUsedDefinitions(
+            Dictionary<string, SwaggerPathItem> paths,
+            Dictionary<string, SwaggerDefinition> allDefinitions)
+        {
+            if (allDefinitions == null || allDefinitions.Count == 0) 
+                return new Dictionary<string, SwaggerDefinition>();
+
+            // Создаем результирующий словарь и набор для отслеживания обработанных схем
+            var usedDefinitions = new Dictionary<string, SwaggerDefinition>();
+            var processedReferences = new HashSet<string>();
+            var pendingReferences = new HashSet<string>();
+
+            // Шаг 1: Собираем прямые ссылки из параметров запросов и ответов
+            foreach (var path in paths)
+            {
+                foreach (var method in path.Value.Methods)
+                {
+                    var operation = method.Value;
+                    
+                    // Собираем ссылки из параметров запроса
+                    foreach (var param in operation.Parameters)
+                    {
+                        if (param.Schema != null && !string.IsNullOrEmpty(param.Schema.Reference))
+                        {
+                            pendingReferences.Add(param.Schema.Reference);
+                        }
+                    }
+                    
+                    // Собираем ссылки из ответов
+                    foreach (var response in operation.Responses.Values)
+                    {
+                        if (response.Schema != null && !string.IsNullOrEmpty(response.Schema.Reference))
+                        {
+                            pendingReferences.Add(response.Schema.Reference);
+                        }
+                    }
+                }
+            }
+
+            // Шаг 2: Рекурсивный сбор зависимых схем
+            while (pendingReferences.Count > 0)
+            {
+                var currentRef = pendingReferences.First();
+                pendingReferences.Remove(currentRef);
+                
+                if (processedReferences.Contains(currentRef))
+                    continue;
+                
+                processedReferences.Add(currentRef);
+                
+                if (allDefinitions.TryGetValue(currentRef, out var definition))
+                {
+                    usedDefinitions[currentRef] = definition;
+                    
+                    // Ищем зависимости внутри схемы
+                    if (definition.Properties != null)
+                    {
+                        foreach (var prop in definition.Properties.Values)
+                        {
+                            // Проверяем прямые ссылки
+                            if (!string.IsNullOrEmpty(prop.Reference) && !processedReferences.Contains(prop.Reference))
+                            {
+                                pendingReferences.Add(prop.Reference);
+                            }
+                            
+                            // Проверяем массивы с ссылками
+                            if (prop.Type == "array" && prop.Items != null && 
+                                !string.IsNullOrEmpty(prop.Items.Reference) && 
+                                !processedReferences.Contains(prop.Items.Reference))
+                            {
+                                pendingReferences.Add(prop.Items.Reference);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Debug.Log($"Found {usedDefinitions.Count} used definitions out of {allDefinitions.Count} total");
+            return usedDefinitions;
         }
     }
 } 
