@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
+    using global::Modules.WebServer;
+    
+#if UNITY_EDITOR
+    using UniModules.Editor;
+#endif
+    
     /// <summary>
     /// Settings for web API contract generation
     /// </summary>
@@ -53,6 +59,16 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public void GenerateContracts()
         {
             WebApiGenerator.GenerateContracts(this);
+            
+#if UNITY_EDITOR
+            var webProviders = AssetEditorTools
+                .GetAssets<WebMetaProviderAsset>();
+            foreach (var providerAsset in webProviders)
+            {
+                providerAsset.LoadContracts();
+                providerAsset.MarkDirty();
+            }
+#endif
         }
     }
 }
