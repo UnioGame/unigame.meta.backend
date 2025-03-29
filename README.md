@@ -278,3 +278,44 @@ Comprehensive authentication system with support for:
 ## License
 
 This module is licensed under the terms specified in the LICENSE file.
+
+## API Contract Generation
+
+The module provides functionality to automatically generate C# contracts from swagger.json API definitions.
+
+### Using the API Contract Generator
+
+1. Open the generator window from menu: **UniGame/Meta Service/Generate API Contracts**
+2. Configure the following settings:
+   - **Swagger JSON Path**: Path to your swagger.json file
+   - **Output Folder**: Directory where contract files will be generated
+   - **API URL Template**: Template for URL paths (default: `api/{0}`)
+   - **API Allowed Paths** (optional): Filter to include only specific API paths
+   - **Clean Up On Generate** (optional): If enabled, existing files in output folders will be deleted before generation
+3. Click **Generate Contracts** button
+
+### Generated Contracts
+
+The generator creates C# contract classes implementing `IWebRequestContract` interface. Contracts are automatically mapped to the appropriate base contract type:
+
+- `SimpleMetaContract<TInput, TOutput>`: For endpoints with both request and response data
+- `SimpleInputContract<TInput>`: For endpoints with only request data
+- `SimpleOutputContract<TOutput>`: For endpoints with only response data
+- `RemoteCallContract`: For endpoints without request or response data
+
+### Configuration via Code
+
+You can also generate contracts programmatically:
+
+```csharp
+var settings = new WebApiSettings
+{
+    apiJsonPath = "path/to/swagger.json",
+    contractsOutFolder = "Assets/Generated/Contracts/",
+    apiTemplate = "api/{0}",
+    apiAllowedPaths = new[] { "/client/" },
+    cleanUpOnGenerate = true // Optional: clean up output folders before generation
+};
+
+ApiContractGenerator.GenerateContracts(settings);
+```

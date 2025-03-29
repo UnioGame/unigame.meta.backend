@@ -209,6 +209,15 @@
                         .PostAsync(url, serializedPayload,timeout:timeout);
                     
                     break;
+                case WebRequestType.Patch:
+                    
+                    var pathPayload = payload == null 
+                        ? string.Empty 
+                        : JsonConvert.SerializeObject(payload, JsonSettings);
+                    requestResult = await _webRequestBuilder
+                        .PatchAsync(url, pathPayload,timeout:timeout);
+                    
+                    break;
                 case WebRequestType.Get:
                     var query = SerializeToQuery(payload);
                     requestResult = await _webRequestBuilder.GetAsync(url,query,timeout:timeout);

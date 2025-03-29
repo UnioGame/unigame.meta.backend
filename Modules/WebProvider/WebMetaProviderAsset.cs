@@ -16,6 +16,7 @@
     
 #if UNITY_EDITOR
     using UnityEditor;
+    using UniModules.Editor;
 #endif
     
     [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Backend Provider", fileName = "Web Backend Provider")]
@@ -64,10 +65,13 @@
                 var path = string.Empty;
                 var url = string.Empty;
                 
+                IWebRequestContract contractItem = null;
+                
                 if (contractType.HasDefaultConstructor())
                 {
                     if (contractType.CreateWithDefaultConstructor() is IWebRequestContract contractInstance)
                     {
+                        contractItem = contractInstance;
                         path = contractInstance.Path;
                         url = contractInstance.Url;
                     }
@@ -83,6 +87,13 @@
                 {
                     webMethod = WebRequestType.Post;
                 }
+                if (contractName.StartsWith(WebRequestType.Patch.ToStringFromCache(),StringComparison.OrdinalIgnoreCase))
+                {
+                    webMethod = WebRequestType.Patch;
+                }
+
+                if (contractItem != null && contractItem.RequestType != WebRequestType.None)
+                    webMethod = contractItem.RequestType;
                 
                 contracts.Add(new WebApiEndPoint()
                 {
@@ -94,6 +105,8 @@
                 });
                 
             }
+
+            this.MarkDirty();
 #endif
         }
         

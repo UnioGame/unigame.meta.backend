@@ -80,7 +80,9 @@
     {
         Get,
         Post,
-        //Put,
-        //Delete,
+        Put,
+        Delete,
+        Patch,
+        None,
     }
 }
