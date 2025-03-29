@@ -72,21 +72,6 @@ For details data of WebRequest your contract can implement interface `IWebReques
 
 Allows to mock requests and responses for testing purposes.
 
-### BackendMetaService
-
-Core service implementation that handles all backend communication. Provides methods for:
-
-- Authentication and authorization
-- Data synchronization
-- Remote data management
-- Error handling and retry logic
-
-### BackendMetaSource
-
-Configuration source for backend service. Supports multiple configuration sources:
-- Unity ScriptableObject
-- StreamingAssets
-- Runtime configuration
 
 ## Setup and Configuration
 
@@ -115,22 +100,6 @@ Configuration system for remote data mapping. Supports:
 - Validation rules
 - Default values
 
-### RemoteMetaId
-
-System for handling remote entity IDs with support for:
-- ID generation
-- ID validation
-- ID format conversion
-- ID persistence
-
-### JsonRemoteDataConverter
-
-Built-in JSON converter for remote data with features:
-- Custom serialization rules
-- Type conversion
-- Null handling
-- Default value handling
-
 ## Usage Examples
 
 ### Creating a Request Contract
@@ -139,24 +108,7 @@ Built-in JSON converter for remote data with features:
 [Serializable]
 public class UserProfileContract : RemoteCallContract<UserProfileInput, UserProfileOutput>, IRemoteMetaContract
 {
-    public string userId;
-    public string token;
 
-    public void Validate()
-    {
-        if (string.IsNullOrEmpty(userId))
-            throw new ValidationException("UserId cannot be empty");
-    }
-
-    public void OnBeforeSend()
-    {
-        // Prepare data before sending
-    }
-
-    public void OnAfterReceive()
-    {
-        // Process received data
-    }
 }
 
 [Serializable]
@@ -188,38 +140,6 @@ var contract = new UserProfileContract
 var result = await webProvider.CallAsync(contract);
 ```
 
-### Using BackendMetaService
-
-```csharp
-// Initialize the service
-var backendService = new BackendMetaService(config);
-
-// Authenticate
-await backendService.AuthenticateAsync(credentials);
-
-// Sync data
-await backendService.SyncDataAsync();
-
-// Get remote data
-var data = await backendService.GetRemoteDataAsync<RemoteDataType>();
-```
-
-## Error Handling
-
-When errors occur during request execution, the service returns a `RemoteCallError` object:
-
-```csharp
-try 
-{
-    var result = await webProvider.CallAsync(contract);
-}
-catch (RemoteCallException ex)
-{
-    Debug.LogError($"Request error: {ex.Error.Message}");
-    // Error handling
-}
-```
-
 ## Dynamic Url Path and Arguments
 
 If you need to pass dynamic arguments to the url path, you can use the following syntax:
@@ -246,28 +166,8 @@ result url: `api/store/123/65/demo_product/buy`
 
 ## Additional Features
 
-### Caching
-The service supports response caching for performance optimization. Caching configuration is available through WebProvider parameters.
-
-### Retry Policy
-Configurable retry policy for handling request failures.
-
-### Timeouts
-Ability to configure timeouts for different types of requests.
-
-### Data Synchronization
-Built-in support for data synchronization with features:
-- Incremental sync
-- Conflict resolution
-- Sync status tracking
-- Background sync
-
-### Authentication
-Comprehensive authentication system with support for:
-- Token-based auth
-- Session management
-- Auto-refresh tokens
-- Multiple auth providers
+- Configurable retry policy for handling request failures.
+- Ability to configure timeouts for different types of requests.
 
 ## Requirements
 
