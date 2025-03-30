@@ -33,16 +33,8 @@ namespace Game.Modules.Editor
             
             var metaDataConfig = ScriptableObject.CreateInstance<RemoteMetaDataConfigAsset>();
             metaDataConfig = metaDataConfig.SaveAsset(metaDataConfig.GetType().Name,path);
-            
-            var typeDataAsset = ScriptableObject.CreateInstance<BackendTypeDataAsset>();
-            typeDataAsset = typeDataAsset.SaveAsset(typeDataAsset.GetType().Name,path);
 
-            source.backendMetaConfiguration = new BackendMetaConfiguration()
-            {
-                backend = typeDataAsset,
-                meta = metaDataConfig,
-            };
-
+            metaDataConfig.MarkDirty();
             source.MarkDirty();
             
             var providersTypes = TypeCache.GetTypesDerivedFrom<BackendMetaServiceAsset>();
@@ -57,15 +49,13 @@ namespace Game.Modules.Editor
                 providers.Add(provider);
             }
             
-            typeDataAsset.Types = providers
+            metaDataConfig.settings.backendTypes = providers
                 .Select(x => new BackendType()
                 {
                     Name = x.GetType().Name,
                     Provider = x
                 }).ToList();
-            
-            typeDataAsset.MarkDirty();
-                
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }

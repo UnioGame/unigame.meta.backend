@@ -1,21 +1,25 @@
-﻿namespace UniGame.MetaBackend.Shared.Data
+namespace MetaService.Runtime
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Reflection;
     using System.Text;
     using Sirenix.OdinInspector;
+    using UniGame.MetaBackend.Shared.Data;
     using UniModules;
     using UnityEngine;
+    using UnityEngine.Serialization;
 
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Backend Type Data Asset")]
-    public class BackendTypeDataAsset : ScriptableObject
+    [Serializable]
+    public class BackendMetaSettings
     {
+        public BackendTypeId backendType;
+        
         [InlineProperty]
-        public List<BackendType> Types = new();
-
-        #region IdGenerator
-
+        public List<BackendType> backendTypes = new();
+        
+#region IdGenerator
 #if UNITY_EDITOR
         private const string IdsType = "BackendTypeIds";
         private const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
@@ -27,7 +31,7 @@
             GenerateStaticProperties(this);
         }
 
-        private static void GenerateStaticProperties(BackendTypeDataAsset dataAsset)
+        private static void GenerateStaticProperties(BackendMetaSettings dataAsset)
         {
             var idType = typeof(BackendTypeId);
             var idsTypeName = IdsType;
@@ -51,11 +55,11 @@
                 writer.WriteLine($"    public struct {idsTypeName}");
                 writer.WriteLine("    {");
 
-                var typesField = typeof(BackendTypeDataAsset).GetField("Types",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var typesField = dataAsset.backendTypes;
+                
                 if (typesField != null)
                 {
-                    var types = (List<BackendType>)typesField.GetValue(dataAsset);
+                    var types = typesField;
                     foreach (var type in types)
                     {
                         var propertyName = type.Name.Replace(" ", "");
@@ -73,6 +77,6 @@
         }
 
 #endif
-        #endregion
+#endregion
     }
 }

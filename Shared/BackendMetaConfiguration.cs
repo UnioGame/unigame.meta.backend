@@ -1,37 +1,34 @@
-﻿namespace Game.Modules.ModelMapping
+namespace MetaService.Runtime
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text;
-    using Meta.Runtime;
-    using MetaService.Runtime;
-    using UniGame.MetaBackend.Shared;
+    using Game.Modules.Meta.Runtime;
+    using Game.Modules.ModelMapping;
     using Sirenix.OdinInspector;
+    using UniGame.MetaBackend.Shared;
     using UniModules;
     using UniModules.UniCore.Runtime.Utils;
+    using UnityEditor;
     using UnityEngine;
 
-#if UNITY_EDITOR
-    using UniModules.Editor;
-    using UnityEditor;
-#endif
-
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Remote Meta Data Config")]
-    public class RemoteMetaDataConfigAsset : ScriptableObject
+    [Serializable]
+    public class BackendMetaConfiguration
     {
-        [PropertyOrder(-1)]
-        [BoxGroup(nameof(settings))]
-        [InlineProperty]
-        [HideLabel]
-        public BackendMetaSettings settings = new();
-
-        [BoxGroup(nameof(settings))]
+        
+        [TabGroup("meta contracts")]
         [HideLabel]
         [InlineProperty]
         public RemoteMetaDataConfig configuration = new();
 
+        [TabGroup(nameof(settings))]
+        [InlineProperty]
+        [HideLabel]
+        public BackendMetaSettings settings = new();
+
+        
         #region IdGenerator
 
 #if UNITY_EDITOR
@@ -75,9 +72,7 @@
             configuration.remoteMetaData = sourceItems.Values.ToArray();
 
             UpdateRemoteMetas(configuration.remoteMetaData);
-
-            this.MarkDirty();
-
+            
             AssetDatabase.SaveAssets();
         }
 
@@ -139,7 +134,7 @@
             GenerateStaticProperties(this);
         }
 
-        public static void GenerateStaticProperties(RemoteMetaDataConfigAsset dataAsset)
+        public static void GenerateStaticProperties(BackendMetaConfiguration dataAsset)
         {
             var idType = typeof(RemoteMetaId);
             var typeName = nameof(RemoteMetaId);
@@ -189,5 +184,6 @@
 #endif
 
         #endregion
+        
     }
 }

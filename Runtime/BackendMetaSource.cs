@@ -16,17 +16,16 @@
         fileName = "Backend Meta Source")]
     public class BackendMetaSource : DataSourceAsset<IBackendMetaService>
     {
-        [InlineProperty]
+        [InlineEditor]
         [HideLabel]
-        public BackendMetaConfiguration backendMetaConfiguration = new();
+        public RemoteMetaDataConfigAsset backendMetaConfiguration = new();
         
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
         {
-            var meta = backendMetaConfiguration.meta;
-            var backend = meta.settings;
-            var data = backendMetaConfiguration.backend;
-            var remoteMetaAsset = Instantiate(backendMetaConfiguration.meta);
-            var remoteMeta = remoteMetaAsset.configuration;
+            var asset = Instantiate(backendMetaConfiguration);
+            
+            var backend = asset.settings;
+            var remoteMeta = asset.configuration;
 
             context.Publish<IRemoteMetaDataConfiguration>(remoteMeta);
             
@@ -34,7 +33,7 @@
             IRemoteMetaProvider defaultProvider = null;
             var providers = new Dictionary<int,IRemoteMetaProvider>();
 
-            foreach (var backendType in data.Types)
+            foreach (var backendType in backend.backendTypes)
             {
                 var providerSource = Instantiate(backendType.Provider);
                 var metaProvider = await providerSource.CreateAsync(context);

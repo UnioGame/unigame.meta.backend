@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Game.Modules.ModelMapping;
     using Sirenix.OdinInspector;
     using UnityEngine;
 
@@ -21,13 +22,14 @@
 
         #region static editor data
 
-        private static BackendTypeDataAsset _dataAsset;
+        private static RemoteMetaDataConfigAsset _dataAsset;
 
         public static IEnumerable<ValueDropdownItem<BackendTypeId>> GetBackendTypes()
         {
 #if UNITY_EDITOR
-            _dataAsset ??= AssetEditorTools.GetAsset<BackendTypeDataAsset>();
-            var types = _dataAsset;
+            _dataAsset ??= AssetEditorTools.GetAsset<RemoteMetaDataConfigAsset>();
+            var types = _dataAsset.settings.backendTypes;
+            
             if (types == null)
             {
                 yield return new ValueDropdownItem<BackendTypeId>()
@@ -38,7 +40,7 @@
                 yield break;
             }
 
-            foreach (var type in types.Types)
+            foreach (var type in types)
             {
                 yield return new ValueDropdownItem<BackendTypeId>()
                 {
