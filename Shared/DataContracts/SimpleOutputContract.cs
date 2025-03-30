@@ -6,6 +6,7 @@
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime.SerializableType;
     using UniModules.UniCore.Runtime.Utils;
+    using UnityEngine;
 
     [Serializable]
     public class SimpleOutputContract<TOutput> : SimpleMetaContract<string, TOutput>
@@ -20,7 +21,9 @@
     [Serializable]
     public class SimpleMetaContract<TInput, TOutput> : RemoteCallContract<TInput, TOutput>
     {
+        [SerializeReference]
         public TInput inputData = default(TInput);
+        
         public string path = string.Empty;
 
 #if UNITY_EDITOR && ODIN_INSPECTOR

@@ -199,6 +199,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 sb.AppendLine("using System;");
                 sb.AppendLine("using System.Collections.Generic;");
                 sb.AppendLine("using Newtonsoft.Json;");
+                sb.AppendLine("using UnityEngine;");
                 sb.AppendLine();
                 
                 // Add namespace
@@ -243,6 +244,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                         {
                             sb.AppendLine($"        [JsonProperty(\"{property.Key}\")]");
                         }
+                        
+                        // Добавляем атрибут SerializeField для отображения в Unity Inspector
+                        sb.AppendLine($"        [field: SerializeField]");
                         
                         // Add property
                         sb.AppendLine($"        public {propType} {propName} {{ get; set; }}");

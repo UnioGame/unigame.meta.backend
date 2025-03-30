@@ -1,14 +1,25 @@
 namespace Game.Modules.WebProvider.Contracts
 {
+    using System;
     using global::Modules.WebServer;
     using Newtonsoft.Json;
     using Runtime.Services.WebService;
+    using Sirenix.OdinInspector;
     using UniGame.MetaBackend.Shared;
+    using UnityEngine;
 
+    [Serializable]
     public abstract class RestContract<TInput,TOutput> : 
-        SimpleMetaContract<TInput,TOutput>,
+        RemoteCallContract<TInput,TOutput>,
         IWebRequestContract
     {
+        [SerializeField]
+        [InlineProperty]
+        [HideLabel]
+        public TInput input;
+
+        [JsonIgnore]
+        public override object Payload => input;
         [JsonIgnore]
         public virtual WebRequestType RequestType => WebRequestType.None;
         [JsonIgnore]

@@ -346,17 +346,41 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 Required = new List<string>()
             };
 
-            // Add path parameters
+            // Add path and query parameters
             foreach (var param in operation.Parameters.Where(p => p.In == "path" || p.In == "query"))
             {
-                inputDefinition.Properties[param.Name] = new SwaggerProperty
+                // Используем тип из Schema, если она есть
+                SwaggerProperty property = new SwaggerProperty
                 {
-                    Type = param.Type,
-                    Format = param.Format,
                     Description = param.Description,
-                    // Сохраняем оригинальное имя свойства для JsonProperty
                     OriginalName = param.Name
                 };
+                
+                if (param.Schema != null)
+                {
+                    // Свойства из схемы имеют приоритет
+                    property.Type = param.Schema.Type;
+                    property.Format = param.Schema.Format;
+                    property.Reference = param.Schema.Reference;
+                    
+                    if (param.Schema.Items != null)
+                    {
+                        property.Items = new SwaggerProperty
+                        {
+                            Type = param.Schema.Items.Type,
+                            Format = param.Schema.Items.Format,
+                            Reference = param.Schema.Items.Reference
+                        };
+                    }
+                }
+                else
+                {
+                    // Используем свойства из самого параметра, если нет схемы
+                    property.Type = param.Type;
+                    property.Format = param.Format;
+                }
+                
+                inputDefinition.Properties[param.Name] = property;
 
                 if (param.Required)
                 {
@@ -608,9 +632,11 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             sb.AppendLine($"using System;");
             sb.AppendLine($"using System.Collections.Generic;");
             sb.AppendLine($"using Newtonsoft.Json;");
+            sb.AppendLine($"using UnityEngine;");
             sb.AppendLine();
             sb.AppendLine($"namespace {_settings.ContractNamespace}.Dto");
             sb.AppendLine($"{{");
+            sb.AppendLine($"    [Serializable]");
             sb.AppendLine($"    public class {operationId}{dtoType}");
             sb.AppendLine($"    {{");
             
@@ -629,10 +655,20 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 {
                     sb.AppendLine($"        /// <summary>");
                     sb.AppendLine($"        /// {param.Description}");
+                    
+                    if (param.Required)
+                    {
+                        sb.AppendLine($"        /// Required: true");
+                    }
+                    
                     sb.AppendLine($"        /// </summary>");
                 }
                 
+                // Добавляем атрибут SerializeField для отображения в Unity Inspector
+                sb.AppendLine($"        [field: SerializeField]");
+                
                 sb.AppendLine($"        public {propertyType} {propertyName} {{ get; set; }}");
+                sb.AppendLine();
             }
             
             sb.AppendLine($"    }}");
