@@ -15,6 +15,7 @@
     using Game.Modules.Meta.Runtime;
     
 #if UNITY_EDITOR
+    using Game.Modules.ModelMapping;
     using UnityEditor;
     using UniModules.Editor;
 #endif
@@ -106,6 +107,14 @@
                 
             }
 
+            var serviceConfigs = AssetEditorTools
+                .GetAssets<RemoteMetaDataConfigAsset>();
+
+            foreach (var serviceConfig in serviceConfigs)
+            {
+                serviceConfig.UpdateRemoteMetaData();
+            }
+            
             this.MarkDirty();
 #endif
         }

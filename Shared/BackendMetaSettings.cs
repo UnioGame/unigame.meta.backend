@@ -14,6 +14,10 @@ namespace MetaService.Runtime
     [Serializable]
     public class BackendMetaSettings
     {
+        private const string IdsType = "BackendTypeIds";
+        private const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
+        private const string FileName = "BackendTypeIds.Generated.cs";
+        
         public BackendTypeId backendType;
         
         [InlineProperty]
@@ -21,10 +25,7 @@ namespace MetaService.Runtime
         
 #region IdGenerator
 #if UNITY_EDITOR
-        private const string IdsType = "BackendTypeIds";
-        private const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
-        private const string FileName = "BackendTypeIds.Generated.cs";
-
+        
         [Button("Generate Static Properties")]
         public void GenerateProperties()
         {

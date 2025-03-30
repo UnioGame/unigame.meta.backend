@@ -18,7 +18,7 @@
     {
         [InlineEditor]
         [HideLabel]
-        public RemoteMetaDataConfigAsset backendMetaConfiguration = new();
+        public RemoteMetaDataConfigAsset backendMetaConfiguration;
         
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
         {

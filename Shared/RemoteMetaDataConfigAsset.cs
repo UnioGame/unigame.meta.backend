@@ -76,8 +76,8 @@
 
             UpdateRemoteMetas(configuration.remoteMetaData);
 
-            this.MarkDirty();
-
+            this.SaveAsset();
+            
             AssetDatabase.SaveAssets();
         }
 
