@@ -52,30 +52,36 @@
         [ButtonGroup("Providers")]
         public void UpdateRemoteMetaData()
         {
-            
             var remoteItems = LoadRemoteMetaData();
-
-            var metas = configuration.remoteMetaData
-                .Where(x => x.contract != null)
-                .Where(x => x.contract.OutputType!= null)
-                .Where(x => x.contract.InputType!= null);
+            var sourceItems = new Dictionary<int, RemoteMetaData>();
             
-            var sourceItems = metas
-                .ToDictionary(x => x.id);
-
+            foreach (var metaData in configuration.remoteMetaData)
+            {
+                var contract = metaData.contract;
+                
+                if(contract == null) continue;
+                if(contract.OutputType == null) continue;
+                if(contract.InputType == null) continue;
+                
+                var id = configuration.CalculateMetaId(contract);
+                metaData.id = id;
+                
+                sourceItems[metaData.id] = metaData;
+            }
+            
             foreach (var item in remoteItems)
                 sourceItems.TryAdd(item.Key, item.Value);
 
             configuration.remoteMetaData = sourceItems.Values.ToArray();
 
-            UpdateRemoteMetas(configuration.remoteMetaData.ToList());
+            UpdateRemoteMetas(configuration.remoteMetaData);
 
             this.MarkDirty();
 
             AssetDatabase.SaveAssets();
         }
 
-        private void UpdateRemoteMetas(List<RemoteMetaData> data)
+        private void UpdateRemoteMetas(IEnumerable<RemoteMetaData> data)
         {
             foreach (var metaCallData in data)
             {

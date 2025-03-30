@@ -181,13 +181,13 @@ This module is licensed under the terms specified in the LICENSE file.
 
 ## API Contract Generation
 
-The module provides functionality to automatically generate C# contracts from swagger.json API definitions.
+The module provides functionality to automatically generate C# contracts from Swagger 2.0 and OpenAPI 3.0 JSON definitions.
 
 ### Using the API Contract Generator
 
 1. Open the generator window from menu: **UniGame/Meta Service/Generate API Contracts**
 2. Configure the following settings:
-   - **Swagger JSON Path**: Path to your swagger.json file
+   - **Swagger JSON Path**: Path to your Swagger/OpenAPI JSON file
    - **Output Folder**: Directory where contract files will be generated
    - **API URL Template**: Template for URL paths (default: `api/{0}`)
    - **API Allowed Paths** (optional): Filter to include only specific API paths
@@ -203,6 +203,79 @@ The generator creates C# contract classes implementing `IWebRequestContract` int
 - `SimpleOutputContract<TOutput>`: For endpoints with only response data
 - `RemoteCallContract`: For endpoints without request or response data
 
+### OpenAPI 3.0 Support
+
+The generator fully supports OpenAPI 3.0 format with the following features:
+
+- Handling `requestBody` section for POST/PUT/PATCH methods
+- Processing content types from `content.application/json`
+- Proper reference resolution from `#/components/schemas/`
+- Support for schema titles in DTO naming
+- Original property names preservation with `[JsonProperty]` attributes
+
+Example of an OpenAPI 3.0 endpoint with requestBody:
+
+```json
+{
+  "paths": {
+    "/client/profile/currency": {
+      "patch": {
+        "operationId": "patchClientProfileCurrency",
+        "requestBody": {
+          "description": "Currency update data",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCurrencyRequestDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateCurrencyResponseDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+This will generate:
+
+```csharp
+public class PatchClientProfileCurrencyContract : RestContract<UpdateCurrencyRequestDTO, UpdateCurrencyResponseDTO>
+{
+    // Implementation
+}
+```
+
+### Schema Title Support
+
+If a schema in the API definition includes a `title` property, it will be used as the class name:
+
+```json
+"UpdateCurrencyRequestDTO": {
+  "title": "ClientCurrencyUpdateRequest",
+  "properties": {
+    "currency_id": {
+      "type": "string"
+    }
+  }
+}
+```
+
+This will generate a class named `ClientCurrencyUpdateRequest` instead of `UpdateCurrencyRequestDTO`.
+
 ### Configuration via Code
 
 You can also generate contracts programmatically:
@@ -210,8 +283,10 @@ You can also generate contracts programmatically:
 ```csharp
 var settings = new WebApiSettings
 {
-    apiJsonPath = "path/to/swagger.json",
+    apiJsonPath = "path/to/openapi.json",
     contractsOutFolder = "Assets/Generated/Contracts/",
+    dtoOutFolder = "Assets/Generated/Contracts/DTO/",
+    ContractNamespace = "Game.Generated.WebContracts",
     apiTemplate = "api/{0}",
     apiAllowedPaths = new[] { "/client/" },
     cleanUpOnGenerate = true // Optional: clean up output folders before generation
