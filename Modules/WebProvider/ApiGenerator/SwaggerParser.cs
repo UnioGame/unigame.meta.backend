@@ -115,6 +115,13 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                         operation.Parameters = ParseParameters(parameters);
                     }
 
+                    // Parse requestBody (OpenAPI 3.0)
+                    var requestBody = operationObj["requestBody"] as JObject;
+                    if (requestBody != null)
+                    {
+                        operation.RequestBody = ParseRequestBody(requestBody);
+                    }
+
                     // Parse responses
                     var responses = operationObj["responses"] as JObject;
                     if (responses != null)
@@ -124,6 +131,36 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 }
 
                 result.Add(method, operation);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Парсит requestBody из OpenAPI 3.0
+        /// </summary>
+        private SwaggerRequestBody ParseRequestBody(JObject requestBody)
+        {
+            var result = new SwaggerRequestBody
+            {
+                Description = requestBody["description"]?.ToString(),
+                Required = (bool?)requestBody["required"] ?? false
+            };
+
+            // Получаем схему из content.application/json
+            var content = requestBody["content"] as JObject;
+            if (content != null)
+            {
+                // Ищем application/json
+                var jsonContent = content["application/json"] as JObject;
+                if (jsonContent != null)
+                {
+                    var schema = jsonContent["schema"] as JObject;
+                    if (schema != null)
+                    {
+                        result.Schema = ParseSchema(schema);
+                    }
+                }
             }
 
             return result;
@@ -306,18 +343,26 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             return result;
         }
 
+        /// <summary>
+        /// Нормализует ссылки на определения, удаляя префиксы
+        /// </summary>
         private string NormalizeReference(string reference)
         {
-            // Convert "#/definitions/Model" to "Model" (Swagger 2.0)
+            if (string.IsNullOrEmpty(reference))
+                return reference;
+        
+            // Обработка ссылок из Swagger 2.0
             if (reference.StartsWith("#/definitions/"))
             {
                 return reference.Substring("#/definitions/".Length);
             }
-            // Convert "#/components/schemas/Model" to "Model" (OpenAPI 3.0)
-            else if (reference.StartsWith("#/components/schemas/"))
+        
+            // Обработка ссылок из OpenAPI 3.0
+            if (reference.StartsWith("#/components/schemas/"))
             {
                 return reference.Substring("#/components/schemas/".Length);
             }
+        
             return reference;
         }
 

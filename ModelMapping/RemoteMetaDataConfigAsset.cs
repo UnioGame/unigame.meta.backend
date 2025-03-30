@@ -56,7 +56,9 @@
             var remoteItems = LoadRemoteMetaData();
 
             var metas = configuration.remoteMetaData
-                .Where(x => x.contract != null);
+                .Where(x => x.contract != null)
+                .Where(x => x.contract.OutputType!= null)
+                .Where(x => x.contract.InputType!= null);
             
             var sourceItems = metas
                 .ToDictionary(x => x.id);

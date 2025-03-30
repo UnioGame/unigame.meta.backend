@@ -302,7 +302,18 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
 
         private bool NeedsInputDto(SwaggerOperation operation)
         {
-            // Проверяем, есть ли параметр body со ссылкой на схему
+            // Проверяем requestBody (OpenAPI 3.0)
+            if (operation.RequestBody?.Schema != null)
+            {
+                // Если у тела запроса есть прямая ссылка на схему,
+                // используем её напрямую и не создаем Input DTO
+                if (!string.IsNullOrEmpty(operation.RequestBody.Schema.Reference))
+                {
+                    return false;
+                }
+            }
+
+            // Проверяем параметр body (Swagger 2.0)
             var bodyParam = operation.Parameters.FirstOrDefault(p => p.In == "body");
             if (bodyParam?.Schema != null && !string.IsNullOrEmpty(bodyParam.Schema.Reference))
             {
@@ -388,7 +399,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 }
             }
 
-            // Add body parameter if it's not already a referenced type
+            // Add body parameter if it's not already a referenced type (Swagger 2.0)
             var bodyParam = operation.Parameters.FirstOrDefault(p => p.In == "body");
             if (bodyParam?.Schema != null && string.IsNullOrEmpty(bodyParam.Schema.Reference) && 
                 bodyParam.Schema.Type == "object" && bodyParam.Schema.Properties != null)
@@ -399,8 +410,55 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     {
                         Type = prop.Value.Type,
                         Format = prop.Value.Format,
-                        Description = "From body: " + (prop.Value.Reference ?? "")
+                        Description = "From body: " + (prop.Value.Reference ?? ""),
+                        OriginalName = prop.Key
                     };
+                    
+                    // Если свойство в схеме ссылается на другой объект, также сохраняем ссылку
+                    if (!string.IsNullOrEmpty(prop.Value.Reference))
+                    {
+                        inputDefinition.Properties[prop.Key].Reference = prop.Value.Reference;
+                    }
+                }
+            }
+            
+            // Add requestBody if it's not already a referenced type (OpenAPI 3.0)
+            if (operation.RequestBody?.Schema != null && 
+                string.IsNullOrEmpty(operation.RequestBody.Schema.Reference) && 
+                operation.RequestBody.Schema.Type == "object" && 
+                operation.RequestBody.Schema.Properties != null)
+            {
+                Debug.Log($"Adding properties from requestBody for operation {operationId}");
+                foreach (var prop in operation.RequestBody.Schema.Properties)
+                {
+                    inputDefinition.Properties[prop.Key] = new SwaggerProperty
+                    {
+                        Type = prop.Value.Type,
+                        Format = prop.Value.Format,
+                        Description = $"From requestBody: {prop.Key}",
+                        OriginalName = prop.Key
+                    };
+                    
+                    // Если свойство в схеме ссылается на другой объект, также сохраняем ссылку
+                    if (!string.IsNullOrEmpty(prop.Value.Reference))
+                    {
+                        inputDefinition.Properties[prop.Key].Reference = prop.Value.Reference;
+                    }
+                    
+                    // Если это массив с ссылкой, также сохраняем её
+                    if (prop.Value.Type == "array" && prop.Value.Items != null &&
+                        !string.IsNullOrEmpty(prop.Value.Items.Reference))
+                    {
+                        inputDefinition.Properties[prop.Key].Items = new SwaggerProperty
+                        {
+                            Reference = prop.Value.Items.Reference
+                        };
+                    }
+                    
+                    if (operation.RequestBody.Required)
+                    {
+                        inputDefinition.Required.Add(prop.Key);
+                    }
                 }
             }
 
@@ -557,6 +615,8 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             var processedReferences = new HashSet<string>();
             var pendingReferences = new HashSet<string>();
 
+            Debug.Log($"Starting to collect used definitions from {paths.Count} paths, total definitions: {allDefinitions.Count}");
+            
             // Шаг 1: Собираем прямые ссылки из параметров запросов и ответов
             foreach (var path in paths)
             {
@@ -570,6 +630,22 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                         if (param.Schema != null && !string.IsNullOrEmpty(param.Schema.Reference))
                         {
                             pendingReferences.Add(param.Schema.Reference);
+                            Debug.Log($"Added parameter schema reference: {param.Schema.Reference} from {method.Key} {path.Key}");
+                        }
+                    }
+                    
+                    // Собираем ссылки из requestBody (OpenAPI 3.0)
+                    if (operation.RequestBody?.Schema != null && !string.IsNullOrEmpty(operation.RequestBody.Schema.Reference))
+                    {
+                        string reference = operation.RequestBody.Schema.Reference;
+                        pendingReferences.Add(reference);
+                        Debug.Log($"Added requestBody reference: {reference} from {method.Key} {path.Key}");
+                        
+                        // Если это определение с нужным именем, дополнительно проверим его
+                        if (reference.Contains("UpdateCurrencyRequestDTO"))
+                        {
+                            Debug.Log($"Found UpdateCurrencyRequestDTO reference in requestBody: {reference}");
+                            Debug.Log($"Exists in allDefinitions: {allDefinitions.ContainsKey(reference)}");
                         }
                     }
                     
@@ -579,9 +655,24 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                         if (response.Schema != null && !string.IsNullOrEmpty(response.Schema.Reference))
                         {
                             pendingReferences.Add(response.Schema.Reference);
+                            Debug.Log($"Added response schema reference: {response.Schema.Reference} from {method.Key} {path.Key}");
                         }
                     }
                 }
+            }
+
+            // Выведем все ожидающие обработки ссылки
+            Debug.Log($"Pending references count: {pendingReferences.Count}");
+            foreach (var reference in pendingReferences)
+            {
+                Debug.Log($"Pending reference: {reference}");
+            }
+
+            // Выведем список всех доступных определений
+            Debug.Log("Available definitions:");
+            foreach (var def in allDefinitions.Keys)
+            {
+                Debug.Log($"Definition: {def}, Title: {allDefinitions[def].Title}");
             }
 
             // Шаг 2: Рекурсивный сбор зависимых схем
@@ -598,6 +689,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 if (allDefinitions.TryGetValue(currentRef, out var definition))
                 {
                     usedDefinitions[currentRef] = definition;
+                    Debug.Log($"Added definition to used: {currentRef}, Title: {definition.Title}");
                     
                     // Ищем зависимости внутри схемы
                     if (definition.Properties != null)
@@ -608,6 +700,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                             if (!string.IsNullOrEmpty(prop.Reference) && !processedReferences.Contains(prop.Reference))
                             {
                                 pendingReferences.Add(prop.Reference);
+                                Debug.Log($"Added property reference dependency: {prop.Reference} from {currentRef}");
                             }
                             
                             // Проверяем массивы с ссылками
@@ -616,9 +709,14 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                                 !processedReferences.Contains(prop.Items.Reference))
                             {
                                 pendingReferences.Add(prop.Items.Reference);
+                                Debug.Log($"Added array item reference dependency: {prop.Items.Reference} from {currentRef}");
                             }
                         }
                     }
+                }
+                else
+                {
+                    Debug.LogWarning($"Referenced schema not found in definitions: {currentRef}");
                 }
             }
             

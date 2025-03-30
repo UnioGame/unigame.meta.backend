@@ -33,6 +33,21 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public List<string> Tags { get; set; } = new List<string>();
         public List<SwaggerParameter> Parameters { get; set; } = new List<SwaggerParameter>();
         public Dictionary<string, SwaggerResponse> Responses { get; set; } = new Dictionary<string, SwaggerResponse>();
+        
+        /// <summary>
+        /// Тело запроса (requestBody) для OpenAPI 3.0
+        /// </summary>
+        public SwaggerRequestBody RequestBody { get; set; }
+    }
+    
+    /// <summary>
+    /// Represents a request body in OpenAPI 3.0
+    /// </summary>
+    public class SwaggerRequestBody
+    {
+        public string Description { get; set; }
+        public bool Required { get; set; }
+        public SwaggerSchema Schema { get; set; }
     }
 
     /// <summary>

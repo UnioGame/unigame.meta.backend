@@ -292,7 +292,28 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
 
         private string GetInputType(SwaggerOperation operation)
         {
-            // For POST, PUT, PATCH methods, typically use the body parameter as input
+            // Checking for requestBody (OpenAPI 3.0)
+            if (operation.RequestBody?.Schema != null)
+            {
+                // Если у тела запроса есть прямая ссылка на схему
+                if (!string.IsNullOrEmpty(operation.RequestBody.Schema.Reference))
+                {
+                    // Используем маппинг для получения имени класса с учетом title
+                    return GetClassNameForSchema(operation.RequestBody.Schema.Reference);
+                }
+                else if (operation.RequestBody.Schema.Type == "array")
+                {
+                    // Handle array types
+                    if (operation.RequestBody.Schema.Items != null)
+                    {
+                        string itemType = GetPropertyTypeName(operation.RequestBody.Schema.Items);
+                        return $"List<{itemType}>";
+                    }
+                    return "List<object>";
+                }
+            }
+            
+            // For POST, PUT, PATCH methods, typically use the body parameter as input (Swagger 2.0)
             if (operation.Parameters.Any(p => p.In == "body"))
             {
                 var bodyParam = operation.Parameters.FirstOrDefault(p => p.In == "body");
