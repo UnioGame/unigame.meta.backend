@@ -34,6 +34,8 @@ namespace Game.Modules.Editor
             var metaDataConfig = ScriptableObject.CreateInstance<RemoteMetaDataConfigAsset>();
             metaDataConfig = metaDataConfig.SaveAsset(metaDataConfig.GetType().Name,path);
 
+            source.configuration = metaDataConfig;
+            
             metaDataConfig.MarkDirty();
             source.MarkDirty();
             

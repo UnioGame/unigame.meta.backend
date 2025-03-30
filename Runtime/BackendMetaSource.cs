@@ -8,6 +8,7 @@
     using UniGame.Core.Runtime;
     using UniGame.GameFlow.Runtime.Services;
     using UnityEngine;
+    using UnityEngine.Serialization;
 
     /// <summary>
     /// Represents a class that provides backend meta data for the game.
@@ -16,13 +17,14 @@
         fileName = "Backend Meta Source")]
     public class BackendMetaSource : DataSourceAsset<IBackendMetaService>
     {
+        [FormerlySerializedAs("backendMetaConfiguration")]
         [InlineEditor]
         [HideLabel]
-        public RemoteMetaDataConfigAsset backendMetaConfiguration;
+        public RemoteMetaDataConfigAsset configuration;
         
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
         {
-            var asset = Instantiate(backendMetaConfiguration);
+            var asset = Instantiate(configuration);
             
             var backend = asset.settings;
             var remoteMeta = asset.configuration;
