@@ -34,6 +34,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             _settings = settings;
             _parser = new SwaggerParser();
             _templateGenerator = new ContractTemplateGenerator(_schemaToClassNameMap);
+            
+            // Debug-логирование для проверки настроек
+            Debug.Log($"[DEBUG] SwaggerContractGenerator settings: useResponseDataContainer={settings.useResponseDataContainer}, responseDataField={settings.responseDataField}");
         }
 
         public void GenerateContracts()
@@ -66,6 +69,10 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     return;
                 }
 
+                // ОТЛАДКА: Принудительно включаем использование контейнера ответов
+                _settings.useResponseDataContainer = true;
+                Debug.Log($"[DEBUG] FORCED useResponseDataContainer=true, responseDataField={_settings.responseDataField}");
+
                 // Ensure output directories exist
                 Directory.CreateDirectory(_settings.contractsOutFolder);
                 Directory.CreateDirectory(_settings.dtoOutFolder);
@@ -91,6 +98,15 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 {
                     string className = !string.IsNullOrEmpty(def.Value.Title) ? def.Value.Title : def.Key;
                     _schemaToClassNameMap[def.Key] = className;
+                }
+                
+                // Если нужно использовать контейнер ответа, создаем ResponseDataDTO
+                if (_settings.useResponseDataContainer)
+                {
+                    string responseDataWrapperCode = _templateGenerator.GenerateResponseDataWrapper(_settings.responseDataField);
+                    string responseDataWrapperPath = Path.Combine(_settings.dtoOutFolder, "ResponseDataDTO.cs");
+                    WriteFileWithTracking(responseDataWrapperPath, responseDataWrapperCode, isDto: true);
+                    Debug.Log($"*** Generated response data container: ResponseDataDTO<T> with field {_settings.responseDataField} ***");
                 }
 
                 // Generate DTO classes only for definitions that are actually used
@@ -199,20 +215,28 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 foreach (var method in path.Value.Methods)
                 {
                     var operation = method.Value;
-                    string operationId = operation.OperationId ?? 
-                        CleanOperationName(method.Key + "_" + string.Join("_", 
-                            path.Key.Split('/').Where(p => !string.IsNullOrEmpty(p))));
+                    if (string.IsNullOrEmpty(operation.OperationId))
+                    {
+                        // Пропускаем операции без ID
+                        continue;
+                    }
+                    
+                    // Нормализуем ID операции в правильный PascalCase
+                    string operationId = CleanOperationName(operation.OperationId);
+                    
+                    // Формируем имена классов DTO с корректным регистром
+                    string inputDtoClassName = $"{operationId}Input"; 
+                    string outputDtoClassName = $"{operationId}Output";
 
                     // Generate Input DTO if needed
-                    if (NeedsInputDto(operation) && !processedOperations.Contains(operationId + "Input"))
+                    if (NeedsInputDto(operation) && !processedOperations.Contains(inputDtoClassName))
                     {
-                        processedOperations.Add(operationId + "Input");
+                        processedOperations.Add(inputDtoClassName);
                         var inputDto = GenerateOperationInputDto(operationId, operation);
                         
                         if (!string.IsNullOrEmpty(inputDto))
                         {
-                            string dtoClassName = $"{CleanOperationName(operationId)}Input";
-                            string fileName = $"{dtoClassName}.cs";
+                            string fileName = $"{inputDtoClassName}.cs";
                             string filePath = Path.Combine(_settings.dtoOutFolder, fileName);
                             WriteFileWithTracking(filePath, inputDto, isDto: true);
                             generatedFiles.Add(filePath);
@@ -220,15 +244,14 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     }
 
                     // Generate Output DTO if needed
-                    if (NeedsOutputDto(operation) && !processedOperations.Contains(operationId + "Output"))
+                    if (NeedsOutputDto(operation) && !processedOperations.Contains(outputDtoClassName))
                     {
-                        processedOperations.Add(operationId + "Output");
+                        processedOperations.Add(outputDtoClassName);
                         var outputDto = GenerateOperationOutputDto(operationId, operation);
                         
                         if (!string.IsNullOrEmpty(outputDto))
                         {
-                            string dtoClassName = $"{CleanOperationName(operationId)}Output";
-                            string fileName = $"{dtoClassName}.cs";
+                            string fileName = $"{outputDtoClassName}.cs";
                             string filePath = Path.Combine(_settings.dtoOutFolder, fileName);
                             WriteFileWithTracking(filePath, outputDto, isDto: true);
                             generatedFiles.Add(filePath);
@@ -243,25 +266,104 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         private List<string> GenerateContractClasses(Dictionary<string, SwaggerPathItem> paths)
         {
             var generatedFiles = new List<string>();
+            var processedOperations = new HashSet<string>();
 
             foreach (var path in paths)
             {
                 foreach (var method in path.Value.Methods)
                 {
-                    string contractCode = _templateGenerator.GenerateContract(
-                        path.Key,
-                        method.Key,
-                        method.Value,
-                        _settings.apiTemplate
-                    );
-
-                    if (!string.IsNullOrEmpty(contractCode))
+                    var operation = method.Value;
+                    if (string.IsNullOrEmpty(operation.OperationId))
                     {
-                        string fileName = _templateGenerator.GetContractName(path.Key, method.Key) + ".cs";
-                        string filePath = Path.Combine(_settings.contractsOutFolder, fileName);
-                        WriteFileWithTracking(filePath, contractCode, isDto: false);
-                        generatedFiles.Add(filePath);
+                        Debug.LogWarning($"Operation ID is missing for {method.Key.ToUpper()} {path.Key}. Skipping...");
+                        continue;
                     }
+
+                    // Нормализуем ID операции, обеспечивая корректный PascalCase
+                    string operationId = CleanOperationName(operation.OperationId);
+                    
+                    // Skip if this operation ID has already been processed
+                    if (processedOperations.Contains(operationId))
+                    {
+                        Debug.LogWarning($"Duplicate operation ID found: {operationId}. Skipping...");
+                        continue;
+                    }
+                    
+                    processedOperations.Add(operationId);
+                    
+                    // Определяем входной и выходной типы данных
+                    bool needsInputDto = NeedsInputDto(operation);
+                    bool needsOutputDto = NeedsOutputDto(operation);
+                    
+                    // Формируем имена DTO файлов с корректным регистром
+                    string inputDtoClassName = $"{operationId}Input"; 
+                    string outputDtoClassName = $"{operationId}Output";
+                    
+                    // Генерируем код для input и output DTO, если нужно
+                    if (needsInputDto)
+                    {
+                        string inputDtoCode = GenerateOperationInputDto(operationId, operation);
+                        if (!string.IsNullOrEmpty(inputDtoCode))
+                        {
+                            string fileName = $"{inputDtoClassName}.cs";
+                            string filePath = Path.Combine(_settings.dtoOutFolder, fileName);
+                            WriteFileWithTracking(filePath, inputDtoCode, isDto: true);
+                        }
+                    }
+                    
+                    if (needsOutputDto)
+                    {
+                        string outputDtoCode = GenerateOperationOutputDto(operationId, operation);
+                        if (!string.IsNullOrEmpty(outputDtoCode))
+                        {
+                            string fileName = $"{outputDtoClassName}.cs";
+                            string filePath = Path.Combine(_settings.dtoOutFolder, fileName);
+                            WriteFileWithTracking(filePath, outputDtoCode, isDto: true);
+                        }
+                    }
+                    
+                    // Получаем типы для контракта с учетом имен DTO с корректным регистром
+                    string inputType = needsInputDto ? inputDtoClassName : _templateGenerator.GetInputType(operation);
+                    string outputType = needsOutputDto ? outputDtoClassName : _templateGenerator.GetOutputType(operation);
+                    
+                    // Отладочный лог для отслеживания значений
+                    Debug.Log($"[DEBUG] Contract: {operationId}, useResponseDataContainer: {_settings.useResponseDataContainer}, outputType: {outputType}");
+                    
+                    // Если нужно использовать контейнер для ответа и есть какой-то вывод кроме void или object
+                    string contractOutputType = outputType;
+                    if (_settings.useResponseDataContainer && outputType != "object" && outputType != "void")
+                    {
+                        // Получаем обернутый тип для ответа
+                        contractOutputType = _templateGenerator.GetResponseContainerType(outputType);
+                        Debug.Log($"*** Using response data container for {operationId}: OUTPUT={outputType} → WRAPPED={contractOutputType} ***");
+                    }
+                    else
+                    {
+                        Debug.Log($"NOT using container for {operationId} because: useResponseDataContainer={_settings.useResponseDataContainer}, outputType={outputType}");
+                    }
+                    
+                    // Генерируем код контракта с полным URL и типами напрямую
+                    string apiUrl = string.Format(_settings.apiTemplate, path.Key.TrimStart('/'));
+
+                    Debug.Log($"[DEBUG] Calling GenerateContract with inputType='{inputType}', contractOutputType='{contractOutputType}'");
+                    
+                    string contractCode = _templateGenerator.GenerateContract(path.Key, method.Key, operation, apiUrl, inputType, contractOutputType);
+                    
+                    // Проверка на наличие незамененных шаблонов
+                    if (contractCode.Contains("{INPUT_TYPE}") || contractCode.Contains("{OUTPUT_TYPE}"))
+                    {
+                        Debug.LogError($"Contract still contains template placeholders for {operationId}!");
+                    }
+                    
+                    // Записываем контракт в файл
+                    string contractFileName = $"{operationId}Contract.cs";
+                    string contractFilePath = Path.Combine(_settings.contractsOutFolder, contractFileName);
+                    WriteFileWithTracking(contractFilePath, contractCode, isDto: false);
+                    
+                    // Отладочный лог - вывод имени файла контракта и типа вывода
+                    Debug.Log($"[DEBUG] Generated contract file: {contractFileName} with output type: {contractOutputType}");
+                    
+                    generatedFiles.Add(contractFilePath);
                 }
             }
 
@@ -465,7 +567,11 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             // Generate DTO if there are any properties
             if (inputDefinition.Properties.Any())
             {
-                return _templateGenerator.GenerateDto($"{CleanOperationName(operationId)}Input", inputDefinition);
+                // Важно: используем уже нормализованное имя операции - operationId, 
+                // которое приходит в метод, а не вызываем CleanOperationName снова
+                string className = $"{operationId}Input";
+                Debug.Log($"Generating input DTO class: {className}");
+                return _templateGenerator.GenerateDto(className, inputDefinition);
             }
 
             return null;
@@ -494,14 +600,18 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                         Type = prop.Value.Type,
                         Format = prop.Value.Format,
                         Reference = prop.Value.Reference,
-                        Description = $"Response property: {prop.Key}"
+                        Description = $"Response property: {prop.Key}",
+                        OriginalName = prop.Key
                     };
                 }
 
                 // Generate DTO if there are any properties
                 if (outputDefinition.Properties.Any())
                 {
-                    return _templateGenerator.GenerateDto($"{CleanOperationName(operationId)}Output", outputDefinition);
+                    // Важно: используем уже нормализованное имя операции
+                    string className = $"{operationId}Output";
+                    Debug.Log($"Generating output DTO class: {className}");
+                    return _templateGenerator.GenerateDto(className, outputDefinition);
                 }
             }
 
@@ -562,8 +672,58 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// </summary>
         private string CleanOperationName(string operationId)
         {
+            if (string.IsNullOrEmpty(operationId))
+                return string.Empty;
+            
             // Для имен с подчеркиванием и дефисами форматируем правильно в PascalCase
-            return ToPascalCase(operationId);
+            string pascalCase = ToPascalCase(operationId);
+            
+            // Специальная обработка распространенных префиксов методов
+            string[] commonPrefixes = new[] { "get", "post", "put", "delete", "patch" };
+            
+            foreach (var prefix in commonPrefixes)
+            {
+                // Если operationId начинается с [prefix][rest], например getClientProfile, 
+                // преобразуем в Get[Rest] => GetClientProfile
+                if (pascalCase.Length > prefix.Length && 
+                    pascalCase.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                    char.IsUpper(pascalCase[prefix.Length]))
+                {
+                    string prefixProperCase = char.ToUpperInvariant(prefix[0]) + prefix.Substring(1).ToLowerInvariant();
+                    string restOfName = pascalCase.Substring(prefix.Length);
+                    
+                    // Убедимся, что первая буква restOfName уже заглавная
+                    if (char.IsUpper(restOfName[0]))
+                    {
+                        pascalCase = prefixProperCase + restOfName;
+                    }
+                }
+            }
+            
+            // Удалить потенциальные суффиксы "Get", "Post" и т.д.
+            // Например, ClientProfileGet => ClientProfile
+            foreach (var suffix in commonPrefixes)
+            {
+                string suffixProperCase = char.ToUpperInvariant(suffix[0]) + suffix.Substring(1).ToLowerInvariant();
+                if (pascalCase.EndsWith(suffixProperCase))
+                {
+                    // Не удаляем суффикс, если после удаления получается пустая строка
+                    string withoutSuffix = pascalCase.Substring(0, pascalCase.Length - suffixProperCase.Length);
+                    if (!string.IsNullOrEmpty(withoutSuffix))
+                    {
+                        pascalCase = withoutSuffix;
+                    }
+                }
+            }
+            
+            // Гарантируем, что первая буква заглавная
+            if (pascalCase.Length > 0 && !char.IsUpper(pascalCase[0]))
+            {
+                pascalCase = char.ToUpperInvariant(pascalCase[0]) + pascalCase.Substring(1);
+            }
+            
+            Debug.Log($"CleanOperationName: {operationId} => {pascalCase}");
+            return pascalCase;
         }
 
         private void CleanupOutputDirectories()

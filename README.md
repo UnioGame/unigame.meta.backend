@@ -294,3 +294,60 @@ var settings = new WebApiSettings
 
 ApiContractGenerator.GenerateContracts(settings);
 ```
+
+### Response Data Container Support
+
+Some APIs wrap all response data in a container object with a specific field (commonly `data`). The generator supports this pattern:
+
+```json
+{
+  "data": {
+    "id": 5,
+    "name": "John",
+    "email": "john@example.com"
+  }
+}
+```
+
+To enable support for this format:
+
+1. Set `useResponseDataContainer = true` in the WebApiSettings
+2. Specify the field name containing the actual data (default is "data")
+
+```csharp
+var settings = new WebApiSettings
+{
+    // Other settings...
+    useResponseDataContainer = true,
+    responseDataField = "data" // The field name in the response container
+};
+```
+
+When enabled, the generator will:
+1. Create a generic `ResponseDataDTO<T>` wrapper class
+2. Use the wrapper directly in contract signatures
+3. Add appropriate `[JsonProperty]` attributes to map the wrapper properties
+
+The resulting contract will look like:
+
+```csharp
+// Contract includes the ResponseDataDTO wrapper directly in its signature
+public class GetUserProfileContract : RestContract<GetUserProfileInput, ResponseDataDTO<UserProfileDTO>>
+{
+    // Implementation
+}
+```
+
+The generated `ResponseDataDTO<T>` class:
+
+```csharp
+[Serializable]
+public class ResponseDataDTO<T>
+{
+    [JsonProperty("data")]
+    [field: SerializeField]
+    public T Data { get; set; }
+}
+```
+
+This approach ensures that the generated contracts match exactly the structure of the API responses, making it clear to developers that the data is wrapped in a container.

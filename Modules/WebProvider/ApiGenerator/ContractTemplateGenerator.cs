@@ -57,7 +57,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// <summary>
         /// Generates a contract class for a specific endpoint
         /// </summary>
-        public string GenerateContract(string path, string method, SwaggerOperation operation, string apiTemplate)
+        public string GenerateContract(string path, string method, SwaggerOperation operation, string apiTemplate, string customInputType = null, string customOutputType = null)
         {
             try
             {
@@ -94,26 +94,37 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 // Add class declaration
                 sb.AppendLine("    [Serializable]");
                 
-                // Determine input and output types
-                string inputType = GetInputType(operation);
-                string outputType = GetOutputType(operation);
+                // Используем переданные типы, если они есть, иначе используем определенные методом типы
+                string inputType = customInputType ?? GetInputType(operation);
+                string outputType = customOutputType ?? GetOutputType(operation);
+                
+                Debug.Log($"[DEBUG] GenerateContract for {contractName}: inputType='{inputType}', outputType='{outputType}'");
                 
                 // Add class with proper generic arguments
+                string classLine = "";
                 if (!string.IsNullOrEmpty(inputType) && !string.IsNullOrEmpty(outputType))
                 {
-                    sb.AppendLine($"    public class {contractName} : RestContract<{inputType}, {outputType}>");
+                    classLine = "    public class " + contractName + " : RestContract<" + inputType + ", " + outputType + ">";
+                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
+                    sb.AppendLine(classLine);
                 }
                 else if (!string.IsNullOrEmpty(inputType))
                 {
-                    sb.AppendLine($"    public class {contractName} : RestContract<{inputType}, object>");
+                    classLine = "    public class " + contractName + " : RestContract<" + inputType + ", object>";
+                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
+                    sb.AppendLine(classLine);
                 }
                 else if (!string.IsNullOrEmpty(outputType))
                 {
-                    sb.AppendLine($"    public class {contractName} : RestContract<object, {outputType}>");
+                    classLine = "    public class " + contractName + " : RestContract<object, " + outputType + ">";
+                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
+                    sb.AppendLine(classLine);
                 }
                 else
                 {
-                    sb.AppendLine($"    public class {contractName} : RestContract<object, object>");
+                    classLine = "    public class " + contractName + " : RestContract<object, object>";
+                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
+                    sb.AppendLine(classLine);
                 }
                 
                 sb.AppendLine("    {");
@@ -290,7 +301,10 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             return $"{ToPascalCase(method)}{namePart}Contract";
         }
 
-        private string GetInputType(SwaggerOperation operation)
+        /// <summary>
+        /// Determines the input type for a contract based on the operation parameters
+        /// </summary>
+        public string GetInputType(SwaggerOperation operation)
         {
             // Checking for requestBody (OpenAPI 3.0)
             if (operation.RequestBody?.Schema != null)
@@ -357,7 +371,10 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             return "object";
         }
 
-        private string GetOutputType(SwaggerOperation operation)
+        /// <summary>
+        /// Determines the output type for a contract based on the operation responses
+        /// </summary>
+        public string GetOutputType(SwaggerOperation operation)
         {
             var successResponse = operation.Responses.FirstOrDefault(r => r.Key == "200" || r.Key == "201").Value;
             if (successResponse?.Schema != null)
@@ -385,7 +402,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 }
                 else
                 {
-                    // Use the mapped type for simple types
+                    // For primitive types
                     return MapSwaggerTypeToCs(successResponse.Schema.Type, successResponse.Schema.Format);
                 }
             }
@@ -504,8 +521,57 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         // Вспомогательный метод для очистки имен операций
         private string CleanOperationName(string operationId)
         {
+            if (string.IsNullOrEmpty(operationId))
+                return string.Empty;
+            
             // Для имен с подчеркиванием и дефисами форматируем правильно в PascalCase
-            return ToPascalCase(operationId);
+            string pascalCase = ToPascalCase(operationId);
+            
+            // Специальная обработка распространенных префиксов методов
+            string[] commonPrefixes = new[] { "get", "post", "put", "delete", "patch" };
+            
+            foreach (var prefix in commonPrefixes)
+            {
+                // Если operationId начинается с [prefix][rest], например getClientProfile, 
+                // преобразуем в Get[Rest] => GetClientProfile
+                if (pascalCase.Length > prefix.Length && 
+                    pascalCase.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                    char.IsUpper(pascalCase[prefix.Length]))
+                {
+                    string prefixProperCase = char.ToUpperInvariant(prefix[0]) + prefix.Substring(1).ToLowerInvariant();
+                    string restOfName = pascalCase.Substring(prefix.Length);
+                    
+                    // Убедимся, что первая буква restOfName уже заглавная
+                    if (char.IsUpper(restOfName[0]))
+                    {
+                        pascalCase = prefixProperCase + restOfName;
+                    }
+                }
+            }
+            
+            // Удалить потенциальные суффиксы "Get", "Post" и т.д.
+            // Например, ClientProfileGet => ClientProfile
+            foreach (var suffix in commonPrefixes)
+            {
+                string suffixProperCase = char.ToUpperInvariant(suffix[0]) + suffix.Substring(1).ToLowerInvariant();
+                if (pascalCase.EndsWith(suffixProperCase))
+                {
+                    // Не удаляем суффикс, если после удаления получается пустая строка
+                    string withoutSuffix = pascalCase.Substring(0, pascalCase.Length - suffixProperCase.Length);
+                    if (!string.IsNullOrEmpty(withoutSuffix))
+                    {
+                        pascalCase = withoutSuffix;
+                    }
+                }
+            }
+            
+            // Гарантируем, что первая буква заглавная
+            if (pascalCase.Length > 0 && !char.IsUpper(pascalCase[0]))
+            {
+                pascalCase = char.ToUpperInvariant(pascalCase[0]) + pascalCase.Substring(1);
+            }
+            
+            return pascalCase;
         }
 
         private string GenerateProperty(string propertyName, SwaggerProperty property, Dictionary<string, string> schemaToClassName)
@@ -531,6 +597,57 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             sb.AppendLine($"        public {typeName} {pascalCaseName} {{ get; set; }}");
             
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Generates a ResponseDataDTO wrapper class to handle server responses with data containers
+        /// </summary>
+        public string GenerateResponseDataWrapper(string responseDataField)
+        {
+            StringBuilder sb = new StringBuilder();
+            
+            // Add usings
+            sb.AppendLine("using System;");
+            sb.AppendLine("using System.Collections.Generic;");
+            sb.AppendLine("using Newtonsoft.Json;");
+            sb.AppendLine("using UnityEngine;");
+            sb.AppendLine();
+            
+            // Add namespace
+            sb.AppendLine("namespace Game.Modules.WebProvider.Contracts.DTO");
+            sb.AppendLine("{");
+            
+            // Add class documentation
+            sb.AppendLine("    /// <summary>");
+            sb.AppendLine("    /// Generic response wrapper for API responses that wrap data in a container");
+            sb.AppendLine("    /// </summary>");
+            sb.AppendLine("    [Serializable]");
+            sb.AppendLine("    public class ResponseDataDTO<T>");
+            sb.AppendLine("    {");
+            
+            // Add data property
+            sb.AppendLine($"        /// <summary>");
+            sb.AppendLine($"        /// The actual response data from the API");
+            sb.AppendLine($"        /// </summary>");
+            sb.AppendLine($"        [JsonProperty(\"{responseDataField}\")]");
+            sb.AppendLine($"        [field: SerializeField]");
+            sb.AppendLine($"        public T {ToPascalCase(responseDataField)} {{ get; set; }}");
+            sb.AppendLine();
+            
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+            
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Gets a wrapped type name for response data containers
+        /// </summary>
+        public string GetResponseContainerType(string originalTypeName)
+        {
+            string result = "ResponseDataDTO<" + originalTypeName + ">";
+            Debug.Log($"[DEBUG] GetResponseContainerType: originalTypeName='{originalTypeName}', result='{result}'");
+            return result;
         }
     }
 } 

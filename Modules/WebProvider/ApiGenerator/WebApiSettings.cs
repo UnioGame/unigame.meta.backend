@@ -54,6 +54,20 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// </summary>
         [Tooltip("When enabled, all existing files in output folders will be deleted before generating new contracts")]
         public bool cleanUpOnGenerate = false;
+        
+        /// <summary>
+        /// If true, response data will be wrapped in a container
+        /// This is useful when the server returns all responses in a data field
+        /// </summary>
+        [Tooltip("Enable if the server wraps all response data in a container object")]
+        public bool useResponseDataContainer = false;
+        
+        /// <summary>
+        /// The field name in the response containing the actual data
+        /// Only used if useResponseDataContainer is true
+        /// </summary>
+        [Tooltip("Name of the field containing the actual data in the response")]
+        public string responseDataField = "data";
 
         [Button]
         public void GenerateContracts()
