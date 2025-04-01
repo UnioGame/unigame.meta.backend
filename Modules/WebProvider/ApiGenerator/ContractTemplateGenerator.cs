@@ -21,7 +21,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             { "boolean", "bool" },
             { "string", "string" },
             { "array", "List<{0}>" },
-            { "object", "Dictionary<string, object>" }
+            { "object", "object" }
         };
 
         private readonly Dictionary<string, string> _formatMapping = new Dictionary<string, string>

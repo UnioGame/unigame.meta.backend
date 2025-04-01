@@ -1000,6 +1000,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 case "array":
                     return "List<object>";
                 case "object":
+                    return "object";
                 default:
                     return "object";
             }
