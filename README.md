@@ -4,7 +4,7 @@ Game Meta Backend service provider
 
 ![backend service](https://i.ibb.co/TMVcx1Cy/backend-service.png)
 
-## Configuration
+# Configuration
 
 You can create configuration of module with menu: "Assets/UniGame/Meta Service/Create Configuration"
 
