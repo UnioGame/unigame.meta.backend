@@ -10,6 +10,15 @@ You can create configuration of module with menu: "Assets/UniGame/Meta Service/C
 
 ![backend command](https://i.ibb.co/SDdWttMK/create-menu-backend.png)
 
+### StreamingAssets Json settings support
+
+- enable option - "useStreamingSettings"
+- save settings with button "Save Settings To Streaming Asset" on the Web Provider asset
+
+now you can edit settings in StreamingAssets folder - "web_meta_provider_settings.json". 
+
+when you initialize web provider it will load settings from StreamingAssets folder if it's enabled.
+
 ## Core Components
 
 ### Base Contract concept
@@ -60,42 +69,6 @@ public class SimpleGetConfigContract : SimpleOutputContract<ConfigOutput>
 
 ```
 
-### WebProvider - REST API
-
-Main component for working with REST API. Allows configuring base URL, headers, and request parameters.
-
-
-For details data of WebRequest your contract can implement interface `IWebRequestContract`
-
-![rest api settings](https://i.ibb.co/vCCTW1Mh/restapi-settings.png)
-
-![rest api contracts](https://i.ibb.co/VW8Y5ZY5/restapi-settings2.png)
-
-
-### Mock WebProvider
-
-Allows to mock requests and responses for testing purposes.
-
-![mock data](https://i.ibb.co/zVkFRJ2j/mock-settings.png)
-
-
-## Setup and Configuration
-
-### Web Provider - REST API
-
-#### Settings
-
-**pic with settings window ^^**
-
-### StreamingAssets Json settings support
-
-- enable option - "useStreamingSettings"
-- save settings with button "Save Settings To Streaming Asset" on the Web Provider asset
-
-now you can edit settings in StreamingAssets folder - "web_meta_provider_settings.json". 
-
-when you initialize web provider it will load settings from StreamingAssets folder if it's enabled.
-
 ## Data Mapping and Configuration
 
 ### RemoteMetaDataConfig
@@ -144,6 +117,9 @@ var contract = new UserProfileContract
 };
 
 var result = await webProvider.CallAsync(contract);
+
+//or just
+var result = await contract.ExecuteAsync();;
 ```
 
 ## Dynamic Url Path and Arguments
@@ -169,6 +145,24 @@ public class DemoContract : RemoteCallContract<TInput, TOutput>
 ```
 
 result url: `api/store/123/65/demo_product/buy`
+
+### WebProvider - REST API
+
+Main component for working with REST API. Allows configuring base URL, headers, and request parameters.
+
+
+For details data of WebRequest your contract can implement interface `IWebRequestContract`
+
+![rest api settings](https://i.ibb.co/vCCTW1Mh/restapi-settings.png)
+
+![rest api contracts](https://i.ibb.co/VW8Y5ZY5/restapi-settings2.png)
+
+
+### Mock WebProvider
+
+Allows to mock requests and responses for testing purposes.
+
+![mock data](https://i.ibb.co/zVkFRJ2j/mock-settings.png)
 
 ## Additional Features
 
