@@ -15,6 +15,7 @@
     using UniGame.Core.Runtime;
     using UniModules.Runtime.Network;
     using UniModules.UniCore.Runtime.DataFlow;
+    using UniModules.UniCore.Runtime.ReflectionUtils;
     using UniModules.UniGame.Core.Runtime.Rx;
     using UniRx;
     using UnityEngine;
@@ -101,10 +102,10 @@
             if (_settings.enableLogs)
             {
                 var color = requestResult.success ? Color.green : Color.red;
-                GameLog.Log($"[WebMetaProvider] {contract.GetType().Name} {endPoint.url} result : {requestResult.data} {requestResult.error}",color);
+                GameLog.Log($"[WebMetaProvider] \nInputType {contract.InputType.PrettyName()} \nOutputType {contract.OutputType.PrettyName()} | {contract.GetType().Name} {endPoint.url} result : {requestResult.data} {requestResult.error}",color);
             }
 #endif
-
+            
             var requestData = string.Empty;
             if(requestResult.data is string data)
                 requestData = data;
