@@ -88,6 +88,11 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public string Reference { get; set; }
         public SwaggerSchema Items { get; set; }
         public Dictionary<string, SwaggerSchema> Properties { get; set; }
+        
+        /// <summary>
+        /// Исходное имя свойства в API (для JsonProperty)
+        /// </summary>
+        public string OriginalName { get; set; }
     }
 
     /// <summary>
@@ -112,6 +117,11 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public string Description { get; set; }
         public string Reference { get; set; }
         public SwaggerProperty Items { get; set; }
+        
+        /// <summary>
+        /// Вложенные свойства для объектов
+        /// </summary>
+        public Dictionary<string, SwaggerProperty> Properties { get; set; }
         
         /// <summary>
         /// Исходное имя свойства в API (для JsonProperty)

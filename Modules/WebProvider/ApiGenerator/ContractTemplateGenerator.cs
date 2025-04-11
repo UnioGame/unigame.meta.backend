@@ -41,17 +41,38 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         // Словарь для преобразования имен схем в имена классов DTO (с учетом title)
         private Dictionary<string, string> _schemaToClassNameMap;
         
+        // Пространство имен для генерируемых DTO классов
+        private readonly string _namespace;
+        
         public ContractTemplateGenerator(Dictionary<string, string> schemaMap = null)
         {
             _schemaToClassNameMap = schemaMap ?? new Dictionary<string, string>();
+            _namespace = "Game.Modules.WebProvider.Contracts";
+        }
+        
+        public ContractTemplateGenerator(Dictionary<string, string> schemaMap, string dtoNamespace)
+        {
+            _schemaToClassNameMap = schemaMap ?? new Dictionary<string, string>();
+            _namespace = string.IsNullOrEmpty(dtoNamespace) ? "Game.Modules.WebProvider.Contracts" : dtoNamespace;
         }
         
         // Метод для получения имени класса по имени схемы
         public string GetClassNameForSchema(string schemaName)
         {
-            return _schemaToClassNameMap.TryGetValue(schemaName, out var className) 
-                ? className 
-                : schemaName;
+            if (_schemaToClassNameMap.TryGetValue(schemaName, out var className))
+            {
+                // Если имя уже содержит пространство имён через точку, возвращаем как есть
+                if (className.Contains("."))
+                {
+                    return className;
+                }
+                
+                // Иначе добавляем пространство имён для DTO
+                return $"{_namespace}.Dto.{className}";
+            }
+            
+            // Если для схемы нет маппинга, просто возвращаем имя схемы
+            return $"{_namespace}.Dto.{ToPascalCase(schemaName)}";
         }
 
         /// <summary>
@@ -69,13 +90,13 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 sb.AppendLine("using System.Collections.Generic;");
                 sb.AppendLine("using System.Text;");
                 sb.AppendLine("using UniGame.MetaBackend;");
-                sb.AppendLine("using Game.Modules.WebProvider.Contracts.DTO;");
+                sb.AppendLine($"using {_namespace}.Dto;");
                 sb.AppendLine("using Game.Runtime.Services.WebService;");
                 sb.AppendLine("using Newtonsoft.Json;");
                 sb.AppendLine();
                 
                 // Add namespace
-                sb.AppendLine("namespace Game.Modules.WebProvider.Contracts");
+                sb.AppendLine($"namespace {_namespace}");
                 sb.AppendLine("{");
                 
                 // Add summary comments
@@ -200,81 +221,33 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// <summary>
         /// Generate a DTO class from a Swagger definition
         /// </summary>
-        public string GenerateDto(string name, SwaggerDefinition definition)
+        public string GenerateDto(string className, SwaggerDefinition definition)
         {
-            try
-            {
-                StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
+            sb.AppendLine("using System;");
+            sb.AppendLine("using System.Collections.Generic;");
+            sb.AppendLine("using Newtonsoft.Json;");
+            sb.AppendLine("using UnityEngine;");
+            sb.AppendLine();
+            sb.AppendLine($"namespace {_namespace}.Dto");
+            sb.AppendLine("{");
+            sb.AppendLine("    [Serializable]");
+            sb.AppendLine($"    public class {className}");
+            sb.AppendLine("    {");
 
-                // Add usings
-                sb.AppendLine("using System;");
-                sb.AppendLine("using System.Collections.Generic;");
-                sb.AppendLine("using Newtonsoft.Json;");
-                sb.AppendLine("using UnityEngine;");
-                sb.AppendLine();
-                
-                // Add namespace
-                sb.AppendLine("namespace Game.Modules.WebProvider.Contracts.DTO");
-                sb.AppendLine("{");
-                
-                // Add class declaration
-                sb.AppendLine("    /// <summary>");
-                sb.AppendLine($"    /// DTO for {name}");
-                sb.AppendLine("    /// </summary>");
-                sb.AppendLine("    [Serializable]");
-                sb.AppendLine($"    public class {name}");
-                sb.AppendLine("    {");
-                
-                // Add properties
-                if (definition.Properties != null)
-                {
-                    foreach (var property in definition.Properties)
-                    {
-                        string propName = ToPascalCase(property.Key);
-                        string propType = GetPropertyTypeName(property.Value);
-                        bool isRequired = definition.Required?.Contains(property.Key) ?? false;
-                        
-                        // Add property documentation
-                        sb.AppendLine($"        /// <summary>");
-                        if (!string.IsNullOrEmpty(property.Value.Description))
-                        {
-                            sb.AppendLine($"        /// {property.Value.Description}");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"        /// {property.Key} property");
-                        }
-                        if (isRequired)
-                        {
-                            sb.AppendLine($"        /// Required: true");
-                        }
-                        sb.AppendLine($"        /// </summary>");
-                        
-                        // Добавить атрибут JsonProperty с оригинальным именем, если имя отличается от PascalCase
-                        if (propName != property.Key)
-                        {
-                            sb.AppendLine($"        [JsonProperty(\"{property.Key}\")]");
-                        }
-                        
-                        // Добавляем атрибут SerializeField для отображения в Unity Inspector
-                        sb.AppendLine($"        [field: SerializeField]");
-                        
-                        // Add property
-                        sb.AppendLine($"        public {propType} {propName} {{ get; set; }}");
-                        sb.AppendLine();
-                    }
-                }
-                
-                sb.AppendLine("    }");
-                sb.AppendLine("}");
-                
-                return sb.ToString();
-            }
-            catch (Exception ex)
+            if (definition.Properties != null)
             {
-                Debug.LogError($"Error generating DTO for {name}: {ex.Message}");
-                return null;
+                foreach (var property in definition.Properties)
+                {
+                    sb.Append(GeneratePropertyCode(property.Key, property.Value));
+                    sb.AppendLine();
+                }
             }
+
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+
+            return sb.ToString();
         }
 
         /// <summary>
@@ -414,18 +387,21 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             if (!string.IsNullOrEmpty(schema.Reference))
             {
-                // Используем маппинг для получения имени класса с учетом title
-                return GetClassNameForSchema(schema.Reference);
+                return GetClassNameFromReference(schema.Reference);
             }
             
-            if (schema.Type == "array")
+            if (schema.Type == "array" && schema.Items != null)
             {
-                if (schema.Items != null)
+                if (!string.IsNullOrEmpty(schema.Items.Reference))
                 {
-                    string itemType = GetPropertyTypeName(schema.Items);
-                    return string.Format(_typeMapping["array"], itemType);
+                    string itemTypeName = GetClassNameFromReference(schema.Items.Reference);
+                    return $"List<{itemTypeName}>";
                 }
-                return "List<object>";
+                else
+                {
+                    string itemTypeName = MapSwaggerTypeToCs(schema.Items.Type, schema.Items.Format);
+                    return $"List<{itemTypeName}>";
+                }
             }
             
             return MapSwaggerTypeToCs(schema.Type, schema.Format);
@@ -433,23 +409,59 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
 
         private string GetPropertyTypeName(SwaggerProperty property)
         {
+            // Прямая ссылка на другую схему
             if (!string.IsNullOrEmpty(property.Reference))
             {
-                // Use the referenced type with mapping for title
-                return GetClassNameForSchema(property.Reference);
+                return GetClassNameFromReference(property.Reference);
             }
             
-            if (property.Type == "array")
+            // Массив с элементами, которые ссылаются на другую схему
+            if (property.Type == "array" && property.Items != null)
             {
-                if (property.Items != null)
+                if (!string.IsNullOrEmpty(property.Items.Reference))
                 {
-                    string itemType = GetPropertyTypeName(property.Items);
-                    return string.Format(_typeMapping["array"], itemType);
+                    string itemTypeName = GetClassNameFromReference(property.Items.Reference);
+                    return $"List<{itemTypeName}>";
                 }
-                return "List<object>";
+                else
+                {
+                    string itemTypeName = MapSwaggerTypeToCs(property.Items.Type, property.Items.Format);
+                    return $"List<{itemTypeName}>";
+                }
             }
             
+            // Обычный тип
             return MapSwaggerTypeToCs(property.Type, property.Format);
+        }
+        
+        /// <summary>
+        /// Получает имя класса из ссылки на схему, учитывая словарь маппинга
+        /// </summary>
+        private string GetClassNameFromReference(string reference)
+        {
+            string schemaName = reference;
+            
+            // Если это ссылка с префиксом, убираем префикс
+            if (reference.StartsWith("#/definitions/"))
+                schemaName = reference.Substring("#/definitions/".Length);
+            else if (reference.StartsWith("#/components/schemas/"))
+                schemaName = reference.Substring("#/components/schemas/".Length);
+            
+            // Смотрим, есть ли маппинг для этой схемы 
+            if (_schemaToClassNameMap.TryGetValue(schemaName, out var className))
+            {
+                // Если имя уже содержит пространство имён через точку, возвращаем как есть
+                if (className.Contains("."))
+                {
+                    return className;
+                }
+                
+                // Иначе добавляем пространство имён для DTO
+                return $"{_namespace}.Dto.{className}";
+            }
+            
+            // Если для схемы нет маппинга, просто возвращаем имя схемы
+            return $"{_namespace}.Dto.{ToPascalCase(schemaName)}";
         }
 
         private string MapSwaggerTypeToCs(string type, string format)
@@ -614,7 +626,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             sb.AppendLine();
             
             // Add namespace
-            sb.AppendLine("namespace Game.Modules.WebProvider.Contracts.DTO");
+            sb.AppendLine($"namespace {_namespace}.Dto");
             sb.AppendLine("{");
             
             // Add class documentation
@@ -648,6 +660,39 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             string result = "ResponseDataDTO<" + originalTypeName + ">";
             Debug.Log($"[DEBUG] GetResponseContainerType: originalTypeName='{originalTypeName}', result='{result}'");
             return result;
+        }
+
+        private string GeneratePropertyCode(string propertyName, SwaggerProperty property)
+        {
+            var sb = new StringBuilder();
+            
+            // Получаем тип свойства, учитывая ссылки на другие схемы
+            string propertyType = GetPropertyTypeName(property);
+            
+            // Конвертируем имя свойства в PascalCase для C#
+            string csharpPropertyName = ToPascalCase(propertyName);
+            
+            // Добавляем JsonProperty атрибут, если оригинальное имя отличается от C# имени
+            if (!string.IsNullOrEmpty(property.OriginalName) && property.OriginalName != csharpPropertyName)
+            {
+                sb.AppendLine($"        [JsonProperty(\"{property.OriginalName}\")]");
+            }
+            
+            // Добавляем описание, если оно есть
+            if (!string.IsNullOrEmpty(property.Description))
+            {
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// {property.Description}");
+                sb.AppendLine($"        /// </summary>");
+            }
+            
+            // Добавляем атрибут SerializeField для отображения в Unity Inspector
+            sb.AppendLine($"        [field: SerializeField]");
+            
+            // Генерируем само свойство
+            sb.AppendLine($"        public {propertyType} {csharpPropertyName} {{ get; set; }}");
+            
+            return sb.ToString();
         }
     }
 } 

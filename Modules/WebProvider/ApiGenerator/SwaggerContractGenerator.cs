@@ -33,7 +33,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             _settings = settings;
             _parser = new SwaggerParser();
-            _templateGenerator = new ContractTemplateGenerator(_schemaToClassNameMap);
+            _templateGenerator = new ContractTemplateGenerator(_schemaToClassNameMap, _settings.ContractNamespace);
             
             // Debug-логирование для проверки настроек
             Debug.Log($"[DEBUG] SwaggerContractGenerator settings: useResponseDataContainer={settings.useResponseDataContainer}, responseDataField={settings.responseDataField}");
@@ -68,10 +68,6 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     Debug.LogError("Contracts output folder is not specified in settings");
                     return;
                 }
-
-                // ОТЛАДКА: Принудительно включаем использование контейнера ответов
-                _settings.useResponseDataContainer = true;
-                Debug.Log($"[DEBUG] FORCED useResponseDataContainer=true, responseDataField={_settings.responseDataField}");
 
                 // Ensure output directories exist
                 Directory.CreateDirectory(_settings.contractsOutFolder);
@@ -783,39 +779,166 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 foreach (var method in path.Value.Methods)
                 {
                     var operation = method.Value;
+                    string operationId = CleanOperationName(operation.OperationId);
                     
                     // Собираем ссылки из параметров запроса
                     foreach (var param in operation.Parameters)
                     {
-                        if (param.Schema != null && !string.IsNullOrEmpty(param.Schema.Reference))
+                        if (param.Schema != null)
                         {
-                            pendingReferences.Add(param.Schema.Reference);
-                            Debug.Log($"Added parameter schema reference: {param.Schema.Reference} from {method.Key} {path.Key}");
+                            if (!string.IsNullOrEmpty(param.Schema.Reference))
+                            {
+                                string normalizedRef = NormalizeReference(param.Schema.Reference);
+                                pendingReferences.Add(normalizedRef);
+                                Debug.Log($"Added parameter schema reference: {normalizedRef} from {method.Key} {path.Key}");
+                            }
+                            
+                            // Проверяем ссылки в массивах
+                            if (param.Schema.Type == "array" && param.Schema.Items != null && 
+                                !string.IsNullOrEmpty(param.Schema.Items.Reference))
+                            {
+                                string normalizedRef = NormalizeReference(param.Schema.Items.Reference);
+                                pendingReferences.Add(normalizedRef);
+                                Debug.Log($"Added parameter array item reference: {normalizedRef} from {method.Key} {path.Key}");
+                            }
                         }
                     }
                     
                     // Собираем ссылки из requestBody (OpenAPI 3.0)
-                    if (operation.RequestBody?.Schema != null && !string.IsNullOrEmpty(operation.RequestBody.Schema.Reference))
+                    if (operation.RequestBody?.Schema != null)
                     {
-                        string reference = operation.RequestBody.Schema.Reference;
-                        pendingReferences.Add(reference);
-                        Debug.Log($"Added requestBody reference: {reference} from {method.Key} {path.Key}");
-                        
-                        // Если это определение с нужным именем, дополнительно проверим его
-                        if (reference.Contains("UpdateCurrencyRequestDTO"))
+                        if (!string.IsNullOrEmpty(operation.RequestBody.Schema.Reference))
                         {
-                            Debug.Log($"Found UpdateCurrencyRequestDTO reference in requestBody: {reference}");
-                            Debug.Log($"Exists in allDefinitions: {allDefinitions.ContainsKey(reference)}");
+                            string normalizedRef = NormalizeReference(operation.RequestBody.Schema.Reference);
+                            pendingReferences.Add(normalizedRef);
+                            Debug.Log($"Added requestBody reference: {normalizedRef} from {method.Key} {path.Key}");
+                        }
+                        
+                        // Проверяем свойства схемы запроса
+                        if (operation.RequestBody.Schema.Properties != null)
+                        {
+                            foreach (var prop in operation.RequestBody.Schema.Properties.Values)
+                            {
+                                if (!string.IsNullOrEmpty(prop.Reference))
+                                {
+                                    string normalizedRef = NormalizeReference(prop.Reference);
+                                    pendingReferences.Add(normalizedRef);
+                                    Debug.Log($"Added requestBody property reference: {normalizedRef} from {method.Key} {path.Key}");
+                                }
+                                
+                                // Проверяем ссылки в массивах
+                                if (prop.Type == "array" && prop.Items != null && 
+                                    !string.IsNullOrEmpty(prop.Items.Reference))
+                                {
+                                    string normalizedRef = NormalizeReference(prop.Items.Reference);
+                                    pendingReferences.Add(normalizedRef);
+                                    Debug.Log($"Added requestBody array item reference: {normalizedRef} from {method.Key} {path.Key}");
+                                }
+                            }
                         }
                     }
                     
                     // Собираем ссылки из ответов
                     foreach (var response in operation.Responses.Values)
                     {
-                        if (response.Schema != null && !string.IsNullOrEmpty(response.Schema.Reference))
+                        if (response.Schema != null)
                         {
-                            pendingReferences.Add(response.Schema.Reference);
-                            Debug.Log($"Added response schema reference: {response.Schema.Reference} from {method.Key} {path.Key}");
+                            // Проверяем прямую ссылку
+                            if (!string.IsNullOrEmpty(response.Schema.Reference))
+                            {
+                                string normalizedRef = NormalizeReference(response.Schema.Reference);
+                                pendingReferences.Add(normalizedRef);
+                                Debug.Log($"Added response schema reference: {normalizedRef} from {method.Key} {path.Key}");
+                            }
+                            
+                            // Проверяем ссылки в массивах
+                            if (response.Schema.Type == "array" && response.Schema.Items != null && 
+                                !string.IsNullOrEmpty(response.Schema.Items.Reference))
+                            {
+                                string normalizedRef = NormalizeReference(response.Schema.Items.Reference);
+                                pendingReferences.Add(normalizedRef);
+                                Debug.Log($"Added response array item reference: {normalizedRef} from {method.Key} {path.Key}");
+                            }
+                            
+                            // Проверяем свойства ответа
+                            if (response.Schema.Properties != null)
+                            {
+                                foreach (var prop in response.Schema.Properties)
+                                {
+                                    // Проверяем все поля на предмет ссылок
+                                    if (!string.IsNullOrEmpty(prop.Value.Reference))
+                                    {
+                                        string normalizedRef = NormalizeReference(prop.Value.Reference);
+                                        pendingReferences.Add(normalizedRef);
+                                        Debug.Log($"Added response property reference: {normalizedRef} from field '{prop.Key}' in {method.Key} {path.Key}");
+                                    }
+                                    
+                                    // Проверяем ссылки в массивах
+                                    if (prop.Value.Type == "array" && prop.Value.Items != null && 
+                                        !string.IsNullOrEmpty(prop.Value.Items.Reference))
+                                    {
+                                        string normalizedRef = NormalizeReference(prop.Value.Items.Reference);
+                                        pendingReferences.Add(normalizedRef);
+                                        Debug.Log($"Added response array item reference: {normalizedRef} from field '{prop.Key}' in {method.Key} {path.Key}");
+                                    }
+                                    
+                                    // Всегда проверяем поле 'data', вне зависимости от настройки useResponseDataContainer
+                                    if (prop.Key == "data" || prop.Value.OriginalName == "data")
+                                    {
+                                        // Если поле data имеет свойства, анализируем их
+                                        if (prop.Value.Properties != null)
+                                        {
+                                            foreach (var dataProp in prop.Value.Properties)
+                                            {
+                                                if (!string.IsNullOrEmpty(dataProp.Value.Reference))
+                                                {
+                                                    string normalizedRef = NormalizeReference(dataProp.Value.Reference);
+                                                    pendingReferences.Add(normalizedRef);
+                                                    Debug.Log($"Added data field property reference: {normalizedRef} from {method.Key} {path.Key}");
+                                                }
+                                                
+                                                if (dataProp.Value.Type == "array" && dataProp.Value.Items != null && 
+                                                    !string.IsNullOrEmpty(dataProp.Value.Items.Reference))
+                                                {
+                                                    string normalizedRef = NormalizeReference(dataProp.Value.Items.Reference);
+                                                    pendingReferences.Add(normalizedRef);
+                                                    Debug.Log($"Added data field array item reference: {normalizedRef} from {method.Key} {path.Key}");
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Если поле data не имеет свойств или ссылок, пытаемся угадать по имени операции
+                                        if ((prop.Value.Properties == null || !prop.Value.Properties.Any()) && 
+                                            string.IsNullOrEmpty(prop.Value.Reference))
+                                        {
+                                            // Если мы нашли поле data без явной ссылки, ищем подходящие схемы по названию операции
+                                            string searchOperationName = operationId.Replace("Get", "").Replace("Post", "").Replace("Put", "").Replace("Patch", "").Replace("Delete", "");
+                                            
+                                            foreach (var defKey in allDefinitions.Keys)
+                                            {
+                                                if (defKey.Contains(searchOperationName) && (defKey.EndsWith("ResponseDTO") || defKey.EndsWith("Response")))
+                                                {
+                                                    pendingReferences.Add(defKey);
+                                                    Debug.Log($"Added potential data field match for {operationId}: {defKey}");
+                                                }
+                                            }
+                                            
+                                            // Добавляем специальный случай для UpdateCurrencyResponseDTO
+                                            if (operationId.Contains("Currency") || operationId.Contains("Profile"))
+                                            {
+                                                foreach (var defKey in allDefinitions.Keys)
+                                                {
+                                                    if (defKey.Contains("UpdateCurrencyResponseDTO"))
+                                                    {
+                                                        pendingReferences.Add(defKey);
+                                                        Debug.Log($"Added special case UpdateCurrencyResponseDTO for {operationId}");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -826,13 +949,6 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             foreach (var reference in pendingReferences)
             {
                 Debug.Log($"Pending reference: {reference}");
-            }
-
-            // Выведем список всех доступных определений
-            Debug.Log("Available definitions:");
-            foreach (var def in allDefinitions.Keys)
-            {
-                Debug.Log($"Definition: {def}, Title: {allDefinitions[def].Title}");
             }
 
             // Шаг 2: Рекурсивный сбор зависимых схем
@@ -859,17 +975,50 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                             // Проверяем прямые ссылки
                             if (!string.IsNullOrEmpty(prop.Reference) && !processedReferences.Contains(prop.Reference))
                             {
-                                pendingReferences.Add(prop.Reference);
-                                Debug.Log($"Added property reference dependency: {prop.Reference} from {currentRef}");
+                                string normalizedRef = NormalizeReference(prop.Reference);
+                                pendingReferences.Add(normalizedRef);
+                                Debug.Log($"Added property reference dependency: {normalizedRef} from {currentRef}");
                             }
                             
                             // Проверяем массивы с ссылками
                             if (prop.Type == "array" && prop.Items != null && 
-                                !string.IsNullOrEmpty(prop.Items.Reference) && 
-                                !processedReferences.Contains(prop.Items.Reference))
+                                !string.IsNullOrEmpty(prop.Items.Reference))
                             {
-                                pendingReferences.Add(prop.Items.Reference);
-                                Debug.Log($"Added array item reference dependency: {prop.Items.Reference} from {currentRef}");
+                                string normalizedRef = NormalizeReference(prop.Items.Reference);
+                                if (!processedReferences.Contains(normalizedRef))
+                                {
+                                    pendingReferences.Add(normalizedRef);
+                                    Debug.Log($"Added array item reference dependency: {normalizedRef} from {currentRef}");
+                                }
+                            }
+                            
+                            // Проверяем вложенные свойства
+                            if (prop.Properties != null)
+                            {
+                                foreach (var nestedProp in prop.Properties.Values)
+                                {
+                                    if (!string.IsNullOrEmpty(nestedProp.Reference))
+                                    {
+                                        string normalizedRef = NormalizeReference(nestedProp.Reference);
+                                        if (!processedReferences.Contains(normalizedRef))
+                                        {
+                                            pendingReferences.Add(normalizedRef);
+                                            Debug.Log($"Added nested property reference dependency: {normalizedRef} from {currentRef}");
+                                        }
+                                    }
+                                    
+                                    // Проверяем вложенные массивы
+                                    if (nestedProp.Type == "array" && nestedProp.Items != null && 
+                                        !string.IsNullOrEmpty(nestedProp.Items.Reference))
+                                    {
+                                        string normalizedRef = NormalizeReference(nestedProp.Items.Reference);
+                                        if (!processedReferences.Contains(normalizedRef))
+                                        {
+                                            pendingReferences.Add(normalizedRef);
+                                            Debug.Log($"Added nested array item reference dependency: {normalizedRef} from {currentRef}");
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -882,6 +1031,29 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             
             Debug.Log($"Found {usedDefinitions.Count} used definitions out of {allDefinitions.Count} total");
             return usedDefinitions;
+        }
+
+        // Расширенная версия нормализации ссылок для CollectUsedDefinitions
+        private string NormalizeReference(string reference)
+        {
+            if (string.IsNullOrEmpty(reference))
+                return reference;
+
+            // Обрабатываем стандартные префиксы ссылок
+            if (reference.StartsWith("#/definitions/"))
+                return reference.Substring("#/definitions/".Length);
+            
+            if (reference.StartsWith("#/components/schemas/"))
+                return reference.Substring("#/components/schemas/".Length);
+            
+            // Remove any version information from the reference
+            int versionIndex = reference.IndexOf('?');
+            if (versionIndex >= 0)
+            {
+                reference = reference.Substring(0, versionIndex);
+            }
+            
+            return reference;
         }
 
         private string GenerateOperationDtoClass(string operationId, string dtoType, List<SwaggerParameter> parameters)
