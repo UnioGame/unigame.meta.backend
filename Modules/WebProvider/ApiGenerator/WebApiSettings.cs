@@ -5,7 +5,8 @@ using UnityEngine;
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
     using global::Modules.WebServer;
-    
+    using UnityEngine.Serialization;
+
 #if UNITY_EDITOR
     using UniModules.Editor;
 #endif
@@ -35,7 +36,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// <summary>
         /// Namespace for generated contracts and DTOs
         /// </summary>
-        public string ContractNamespace = "Game.Generated.WebContracts";
+        public string contractNamespace = "Game.Generated.WebContracts";
         
         /// <summary>
         /// Template for API URL path

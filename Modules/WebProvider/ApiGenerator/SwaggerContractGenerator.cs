@@ -33,7 +33,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         {
             _settings = settings;
             _parser = new SwaggerParser();
-            _templateGenerator = new ContractTemplateGenerator(_schemaToClassNameMap, _settings.ContractNamespace);
+            _templateGenerator = new ContractTemplateGenerator(_schemaToClassNameMap, _settings.contractNamespace);
             
             // Debug-логирование для проверки настроек
             Debug.Log($"[DEBUG] SwaggerContractGenerator settings: useResponseDataContainer={settings.useResponseDataContainer}, responseDataField={settings.responseDataField}");
@@ -1064,7 +1064,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             sb.AppendLine($"using Newtonsoft.Json;");
             sb.AppendLine($"using UnityEngine;");
             sb.AppendLine();
-            sb.AppendLine($"namespace {_settings.ContractNamespace}.Dto");
+            sb.AppendLine($"namespace {_settings.contractNamespace}.Dto");
             sb.AppendLine($"{{");
             sb.AppendLine($"    [Serializable]");
             sb.AppendLine($"    public class {operationId}{dtoType}");
