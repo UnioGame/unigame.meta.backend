@@ -262,88 +262,51 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         private List<string> GenerateContractClasses(Dictionary<string, SwaggerPathItem> paths)
         {
             var generatedFiles = new List<string>();
-            var processedOperations = new HashSet<string>();
 
-            foreach (var path in paths)
+            foreach (var pathItem in paths)
             {
-                foreach (var method in path.Value.Methods)
+                string path = pathItem.Key;
+                foreach (var methodItem in pathItem.Value.Methods)
                 {
-                    var operation = method.Value;
-                    if (string.IsNullOrEmpty(operation.OperationId))
-                    {
-                        Debug.LogWarning($"Operation ID is missing for {method.Key.ToUpper()} {path.Key}. Skipping...");
-                        continue;
-                    }
+                    string method = methodItem.Key;
+                    SwaggerOperation operation = methodItem.Value;
 
-                    // Нормализуем ID операции, обеспечивая корректный PascalCase
                     string operationId = CleanOperationName(operation.OperationId);
-                    
-                    // Skip if this operation ID has already been processed
-                    if (processedOperations.Contains(operationId))
+                    if (string.IsNullOrEmpty(operationId))
                     {
-                        Debug.LogWarning($"Duplicate operation ID found: {operationId}. Skipping...");
+                        Debug.LogWarning($"Skipping operation without operationId: {method} {path}");
                         continue;
                     }
                     
-                    processedOperations.Add(operationId);
+                    // Определяем URL запроса
+                    string requestUrl = path;
                     
-                    // Определяем входной и выходной типы данных
-                    bool needsInputDto = NeedsInputDto(operation);
-                    bool needsOutputDto = NeedsOutputDto(operation);
+                    // Определяем входной и выходной типы на основе операции
+                    string inputType = _templateGenerator.GetInputType(operation);
+                    string outputType = _templateGenerator.GetOutputType(operation);
                     
-                    // Формируем имена DTO файлов с корректным регистром
-                    string inputDtoClassName = $"{operationId}Input"; 
-                    string outputDtoClassName = $"{operationId}Output";
+                    // Определяем тип ошибки из ответов API
+                    string errorType = GetErrorType(operation);
                     
-                    // Генерируем код для input и output DTO, если нужно
-                    if (needsInputDto)
-                    {
-                        string inputDtoCode = GenerateOperationInputDto(operationId, operation);
-                        if (!string.IsNullOrEmpty(inputDtoCode))
-                        {
-                            string fileName = $"{inputDtoClassName}.cs";
-                            string filePath = Path.Combine(_settings.dtoOutFolder, fileName);
-                            WriteFileWithTracking(filePath, inputDtoCode, isDto: true);
-                        }
-                    }
+                    Debug.Log($"[DEBUG] Contract for {operationId}: Input={inputType}, Output={outputType}, Error={errorType}");
                     
-                    if (needsOutputDto)
-                    {
-                        string outputDtoCode = GenerateOperationOutputDto(operationId, operation);
-                        if (!string.IsNullOrEmpty(outputDtoCode))
-                        {
-                            string fileName = $"{outputDtoClassName}.cs";
-                            string filePath = Path.Combine(_settings.dtoOutFolder, fileName);
-                            WriteFileWithTracking(filePath, outputDtoCode, isDto: true);
-                        }
-                    }
-                    
-                    // Получаем типы для контракта с учетом имен DTO с корректным регистром
-                    string inputType = needsInputDto ? inputDtoClassName : _templateGenerator.GetInputType(operation);
-                    string outputType = needsOutputDto ? outputDtoClassName : _templateGenerator.GetOutputType(operation);
-                    
-                    // Отладочный лог для отслеживания значений
-                    Debug.Log($"[DEBUG] Contract: {operationId}, useResponseDataContainer: {_settings.useResponseDataContainer}, outputType: {outputType}");
-                    
-                    // Если нужно использовать контейнер для ответа и есть какой-то вывод кроме void или object
+                    // Заменяем TOutput на contractOutputType, если используется ResponseDataDTO
                     string contractOutputType = outputType;
-                    if (_settings.useResponseDataContainer && outputType != "object" && outputType != "void")
+                    if (_settings.useResponseDataContainer && outputType != "void" && outputType != "object")
                     {
-                        // Получаем обернутый тип для ответа
                         contractOutputType = _templateGenerator.GetResponseContainerType(outputType);
-                        Debug.Log($"*** Using response data container for {operationId}: OUTPUT={outputType} → WRAPPED={contractOutputType} ***");
-                    }
-                    else
-                    {
-                        Debug.Log($"NOT using container for {operationId} because: useResponseDataContainer={_settings.useResponseDataContainer}, outputType={outputType}");
                     }
                     
-                    // Генерируем код контракта с полным URL и типами напрямую
-                    string apiUrl = string.Format(_settings.apiTemplate, path.Key.TrimStart('/'));
-
-                    Debug.Log($"[DEBUG] Calling GenerateContract with inputType='{inputType}', contractOutputType='{contractOutputType}'");
-                    
-                    string contractCode = _templateGenerator.GenerateContract(path.Key, method.Key, operation, apiUrl, inputType, contractOutputType);
+                    // Генерируем код контракта
+                    string contractCode = _templateGenerator.GenerateContract(
+                        path,
+                        method,
+                        operation,
+                        requestUrl,
+                        inputType,
+                        contractOutputType,
+                        errorType
+                    );
                     
                     // Проверка на наличие незамененных шаблонов
                     if (contractCode.Contains("{INPUT_TYPE}") || contractCode.Contains("{OUTPUT_TYPE}"))
@@ -1056,126 +1019,47 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             return reference;
         }
 
-        private string GenerateOperationDtoClass(string operationId, string dtoType, List<SwaggerParameter> parameters)
+        private string GetErrorType(SwaggerOperation operation)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine($"using System;");
-            sb.AppendLine($"using System.Collections.Generic;");
-            sb.AppendLine($"using Newtonsoft.Json;");
-            sb.AppendLine($"using UnityEngine;");
-            sb.AppendLine();
-            sb.AppendLine($"namespace {_settings.contractNamespace}.Dto");
-            sb.AppendLine($"{{");
-            sb.AppendLine($"    [Serializable]");
-            sb.AppendLine($"    public class {operationId}{dtoType}");
-            sb.AppendLine($"    {{");
+            string errorType = null;
             
-            foreach (var param in parameters)
+            // Проверяем, есть ли ответы с кодами ошибок
+            foreach (var response in operation.Responses)
             {
-                string propertyType = GetParameterType(param);
-                string propertyName = ToPascalCase(param.Name);
-                
-                // Добавляем JsonProperty атрибут, если имя свойства в API отличается от имени свойства в C#
-                if (!string.IsNullOrEmpty(param.OriginalName) && param.OriginalName != propertyName)
+                // Ищем ответы с кодами 4XX или 5XX или 'default'
+                if (response.Key.StartsWith("4") || 
+                    response.Key.StartsWith("5") || 
+                    response.Key.Contains("4XX") || 
+                    response.Key.Contains("5XX") ||
+                    response.Key.Equals("default", StringComparison.OrdinalIgnoreCase))
                 {
-                    sb.AppendLine($"        [JsonProperty(\"{param.OriginalName}\")]");
-                }
-                
-                if (!string.IsNullOrEmpty(param.Description))
-                {
-                    sb.AppendLine($"        /// <summary>");
-                    sb.AppendLine($"        /// {param.Description}");
+                    var errorResponse = response.Value;
                     
-                    if (param.Required)
+                    // Проверяем, есть ли у ответа схема с референсом
+                    if (errorResponse.Schema != null && !string.IsNullOrEmpty(errorResponse.Schema.Reference))
                     {
-                        sb.AppendLine($"        /// Required: true");
+                        string schemaName = NormalizeReference(errorResponse.Schema.Reference);
+                        
+                        // Применяем маппинг схемы, если есть
+                        if (_schemaToClassNameMap.ContainsKey(schemaName))
+                        {
+                            schemaName = _schemaToClassNameMap[schemaName];
+                        }
+                        
+                        // Добавляем пространство имен, если необходимо
+                        if (!schemaName.Contains("."))
+                        {
+                            schemaName = $"{_settings.contractNamespace}.Dto.{schemaName}";
+                        }
+                        
+                        errorType = schemaName;
+                        Debug.Log($"Нашли тип ошибки: {errorType} для ответа {response.Key}");
+                        break; // Берем первый найденный тип ошибки
                     }
-                    
-                    sb.AppendLine($"        /// </summary>");
                 }
-                
-                // Добавляем атрибут SerializeField для отображения в Unity Inspector
-                sb.AppendLine($"        [field: SerializeField]");
-                
-                sb.AppendLine($"        public {propertyType} {propertyName} {{ get; set; }}");
-                sb.AppendLine();
             }
             
-            sb.AppendLine($"    }}");
-            sb.AppendLine($"}}");
-            
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// Определяет тип параметра для использования в свойствах DTO
-        /// </summary>
-        private string GetParameterType(SwaggerParameter param)
-        {
-            if (param.Schema != null)
-            {
-                if (!string.IsNullOrEmpty(param.Schema.Reference))
-                {
-                    return _schemaToClassNameMap.TryGetValue(param.Schema.Reference, out var className) 
-                        ? className 
-                        : param.Schema.Reference;
-                }
-                
-                if (param.Schema.Type == "array")
-                {
-                    if (param.Schema.Items != null && !string.IsNullOrEmpty(param.Schema.Items.Reference))
-                    {
-                        string itemType = _schemaToClassNameMap.TryGetValue(param.Schema.Items.Reference, out var className) 
-                            ? className 
-                            : param.Schema.Items.Reference;
-                        return $"List<{itemType}>";
-                    }
-                    return $"List<{MapSwaggerTypeToCs(param.Schema.Items?.Type, param.Schema.Items?.Format)}>";
-                }
-                
-                return MapSwaggerTypeToCs(param.Schema.Type, param.Schema.Format);
-            }
-            
-            return MapSwaggerTypeToCs(param.Type, param.Format);
-        }
-
-        /// <summary>
-        /// Преобразует Swagger типы в C# типы
-        /// </summary>
-        private string MapSwaggerTypeToCs(string type, string format)
-        {
-            if (string.IsNullOrEmpty(type))
-                return "object";
-            
-            switch (type.ToLower())
-            {
-                case "string":
-                    if (format == "date-time")
-                        return "DateTime";
-                    if (format == "date")
-                        return "DateTime";
-                    if (format == "byte")
-                        return "byte[]";
-                    return "string";
-                case "integer":
-                    if (format == "int64")
-                        return "long";
-                    return "int";
-                case "number":
-                    if (format == "float")
-                        return "float";
-                    if (format == "double")
-                        return "double";
-                    return "decimal";
-                case "boolean":
-                    return "bool";
-                case "array":
-                    return "List<object>";
-                case "object":
-                    return "object";
-                default:
-                    return "object";
-            }
+            return errorType;
         }
     }
 } 

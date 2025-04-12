@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using Game.Runtime.Services.WebService;
 using Newtonsoft.Json;
+using Game.Modules.WebProvider.Contracts;
 
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
@@ -78,143 +79,101 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// <summary>
         /// Generates a contract class for a specific endpoint
         /// </summary>
-        public string GenerateContract(string path, string method, SwaggerOperation operation, string apiTemplate, string customInputType = null, string customOutputType = null)
+        public string GenerateContract(string path, string method, SwaggerOperation operation, string requestUrl, string inputType, string outputType, string errorType = null)
         {
-            try
+            HashSet<string> additionalNamespaces = new HashSet<string>();
+            string contractClassName = GetContractClassName(operation);
+            
+            // Определяем базовый тип контракта (с errorType или без)
+            string baseType;
+            if (!string.IsNullOrEmpty(errorType))
             {
-                string contractName = GetContractName(path, method);
-                StringBuilder sb = new StringBuilder();
-
-                // Add usings
-                sb.AppendLine("using System;");
-                sb.AppendLine("using System.Collections.Generic;");
-                sb.AppendLine("using System.Text;");
-                sb.AppendLine("using UniGame.MetaBackend;");
-                sb.AppendLine($"using {_namespace}.Dto;");
-                sb.AppendLine("using Game.Runtime.Services.WebService;");
-                sb.AppendLine("using Newtonsoft.Json;");
-                sb.AppendLine();
-                
-                // Add namespace
-                sb.AppendLine($"namespace {_namespace}");
-                sb.AppendLine("{");
-                
-                // Add summary comments
-                sb.AppendLine("    /// <summary>");
-                sb.AppendLine($"    /// {operation.Summary ?? $"Contract for {method.ToUpper()} {path}"}");
-                
-                if (!string.IsNullOrEmpty(operation.Description))
-                {
-                    sb.AppendLine("    /// <para>");
-                    sb.AppendLine($"    /// {operation.Description}");
-                    sb.AppendLine("    /// </para>");
-                }
-                
-                sb.AppendLine("    /// </summary>");
-                
-                // Add class declaration
-                sb.AppendLine("    [Serializable]");
-                
-                // Используем переданные типы, если они есть, иначе используем определенные методом типы
-                string inputType = customInputType ?? GetInputType(operation);
-                string outputType = customOutputType ?? GetOutputType(operation);
-                
-                Debug.Log($"[DEBUG] GenerateContract for {contractName}: inputType='{inputType}', outputType='{outputType}'");
-                
-                // Add class with proper generic arguments
-                string classLine = "";
-                if (!string.IsNullOrEmpty(inputType) && !string.IsNullOrEmpty(outputType))
-                {
-                    classLine = "    public class " + contractName + " : RestContract<" + inputType + ", " + outputType + ">";
-                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
-                    sb.AppendLine(classLine);
-                }
-                else if (!string.IsNullOrEmpty(inputType))
-                {
-                    classLine = "    public class " + contractName + " : RestContract<" + inputType + ", object>";
-                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
-                    sb.AppendLine(classLine);
-                }
-                else if (!string.IsNullOrEmpty(outputType))
-                {
-                    classLine = "    public class " + contractName + " : RestContract<object, " + outputType + ">";
-                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
-                    sb.AppendLine(classLine);
-                }
-                else
-                {
-                    classLine = "    public class " + contractName + " : RestContract<object, object>";
-                    Debug.Log($"[DEBUG] Generated class line: {classLine}");
-                    sb.AppendLine(classLine);
-                }
-                
-                sb.AppendLine("    {");
-                
-                // Process URL path
-                string urlPath = path;
-                
-                // Get all path parameters
-                var pathParams = operation.Parameters.Where(p => p.In == "path").ToList();
-                
-                // Add Path property
-                string formattedPath = string.Format(apiTemplate, urlPath.TrimStart('/'));
-                
-                sb.AppendLine($"        /// <summary>");
-                sb.AppendLine($"        /// The API path for this request");
-                sb.AppendLine($"        /// </summary>");
-                sb.AppendLine($"        public override string Path => \"{formattedPath}\";");
-                sb.AppendLine();
-                
-                // Add RequestType property based on HTTP method
-                string requestType = GetRequestTypeFromMethod(method);
-                sb.AppendLine($"        /// <summary>");
-                sb.AppendLine($"        /// The type of request");
-                sb.AppendLine($"        /// </summary>");
-                sb.AppendLine($"        public override WebRequestType RequestType => WebRequestType.{requestType};");
-                sb.AppendLine();
-                
-                // Only add path and query parameters as fields in the contract if we don't have a specific Input DTO
-                bool hasInputDto = !string.IsNullOrEmpty(inputType) && inputType != "object";
-                
-                if (!hasInputDto)
-                {
-                    // Add path parameters as fields if they're not part of the DTO
-                    foreach (var param in pathParams)
-                    {
-                        string typeName = MapSwaggerTypeToCs(param.Type, param.Format);
-                        sb.AppendLine($"        /// <summary>");
-                        sb.AppendLine($"        /// {param.Description ?? $"Path parameter: {param.Name}"}");
-                        sb.AppendLine($"        /// </summary>");
-                        sb.AppendLine($"        public {typeName} {ToPascalCase(param.Name)} {{ get; set; }}");
-                        sb.AppendLine();
-                    }
-                    
-                    // Add query parameters as fields if they're not part of the DTO
-                    var queryParams = operation.Parameters.Where(p => p.In == "query").ToList();
-                    if (queryParams.Any())
-                    {
-                        sb.AppendLine("        // Query parameters");
-                        foreach (var param in queryParams)
-                        {
-                            string typeName = MapSwaggerTypeToCs(param.Type, param.Format);
-                            sb.AppendLine($"        /// <summary>");
-                            sb.AppendLine($"        /// {param.Description ?? $"Query parameter: {param.Name}"}");
-                            sb.AppendLine($"        /// </summary>");
-                            sb.AppendLine($"        public {typeName} {ToPascalCase(param.Name)} {{ get; set; }}");
-                            sb.AppendLine();
-                        }
-                    }
-                }
-                
-                sb.AppendLine("    }");
-                sb.AppendLine("}");
-                
-                return sb.ToString();
+                baseType = $"RestContract<{inputType}, {outputType}, {errorType}>";
+                AddNamespaceImport(errorType, additionalNamespaces);
             }
-            catch (Exception ex)
+            else
             {
-                Debug.LogError($"Error generating contract for {method} {path}: {ex.Message}");
-                return null;
+                baseType = $"RestContract<{inputType}, {outputType}>";
+            }
+            
+            AddNamespaceImport(inputType, additionalNamespaces);
+            AddNamespaceImport(outputType, additionalNamespaces);
+            
+            // Формируем переопределения свойств вместо конструктора
+            string constructorText = $@"        /// <summary>
+        /// The API path for this request
+        /// </summary>
+        public override string Path => ""{requestUrl}"";
+
+        /// <summary>
+        /// The type of request
+        /// </summary>
+        public override WebRequestType RequestType => WebRequestType.{GetRequestTypeFromMethod(method)};";
+            
+            // Формируем дополнительные импорты пространств имен
+            string additionalNamespacesText = string.Join(Environment.NewLine, additionalNamespaces.Select(n => $"using {n};"));
+            if (!string.IsNullOrEmpty(additionalNamespacesText))
+            {
+                additionalNamespacesText = additionalNamespacesText + Environment.NewLine;
+            }
+            
+            // Формируем описание из сводки операции
+            string descriptionText = string.Empty;
+            if (!string.IsNullOrEmpty(operation.Summary))
+            {
+                descriptionText = $@"    /// <summary>
+    /// {operation.Summary}
+    /// </summary>";
+            }
+            
+            // Заменяем плейсхолдеры в шаблоне
+            string contractTemplate = LoadContractTemplate();
+            string contractCode = contractTemplate
+                .Replace("$className$", contractClassName)
+                .Replace("$baseType$", baseType)
+                .Replace("$namespace$", _namespace)
+                .Replace("$description$", FormatDescription(operation.Summary))
+                .Replace("$constructor$", constructorText)
+                .Replace("{{ADDITIONAL_NAMESPACES}}", additionalNamespacesText);
+            
+            return contractCode;
+        }
+
+        private void AddNamespaceImport(string typeName, HashSet<string> namespaces)
+        {
+            if (string.IsNullOrEmpty(typeName) || typeName == "void" || typeName == "object")
+                return;
+            
+            // Обрабатываем параметризованные типы (например ResponseDataDTO<T>)
+            if (typeName.Contains("<"))
+            {
+                string baseType = typeName.Substring(0, typeName.IndexOf("<"));
+                string innerType = typeName.Substring(typeName.IndexOf("<") + 1, typeName.LastIndexOf(">") - typeName.IndexOf("<") - 1);
+                
+                // Рекурсивно обрабатываем внутренний тип
+                AddNamespaceImport(innerType, namespaces);
+                
+                // Определяем пространство имен базового типа
+                if (baseType.Contains("."))
+                {
+                    string baseNamespace = baseType.Substring(0, baseType.LastIndexOf("."));
+                    if (!baseNamespace.StartsWith("System"))
+                    {
+                        namespaces.Add(baseNamespace);
+                    }
+                }
+                
+                return;
+            }
+            
+            // Обрабатываем обычные типы
+            if (typeName.Contains("."))
+            {
+                string namespaceStr = typeName.Substring(0, typeName.LastIndexOf("."));
+                if (!namespaceStr.StartsWith("System"))
+                {
+                    namespaces.Add(namespaceStr);
+                }
             }
         }
 
@@ -381,6 +340,42 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             }
             
             return "object";
+        }
+
+        /// <summary>
+        /// Определяет тип ошибки для контракта на основе ответов с ошибками в операции
+        /// </summary>
+        public string GetErrorType(SwaggerOperation operation)
+        {
+            // Ищем ответы с ошибками (4XX или 5XX)
+            var errorResponses = operation.Responses.Where(r => 
+                r.Key.StartsWith("4") || 
+                r.Key.StartsWith("5") || 
+                r.Key.Contains("4XX") || 
+                r.Key.Contains("5XX") || 
+                r.Key.Contains("default")).ToList();
+            
+            foreach (var errorResponse in errorResponses)
+            {
+                if (errorResponse.Value?.Schema != null)
+                {
+                    // Если у ответа с ошибкой есть прямая ссылка на схему
+                    if (!string.IsNullOrEmpty(errorResponse.Value.Schema.Reference))
+                    {
+                        // Используем маппинг для получения имени класса с учетом title
+                        return GetClassNameForSchema(errorResponse.Value.Schema.Reference);
+                    }
+                    else if (errorResponse.Value.Schema.Type == "object" && errorResponse.Value.Schema.Properties != null)
+                    {
+                        // Для объектных типов без прямой ссылки, создаем кастомный DTO для ошибки
+                        string operationId = operation.OperationId ?? $"{operation.Summary}";
+                        return $"{CleanOperationName(operationId)}ErrorOutput";
+                    }
+                }
+            }
+            
+            // Если не нашли специфичный тип ошибки, используем общий тип ErrorResponseDTO
+            return $"{_namespace}.Dto.ErrorResponseDTO";
         }
 
         private string GetPropertyTypeName(SwaggerSchema schema)
@@ -693,6 +688,61 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             sb.AppendLine($"        public {propertyType} {csharpPropertyName} {{ get; set; }}");
             
             return sb.ToString();
+        }
+
+        private string LoadContractTemplate()
+        {
+            return @"using System;
+using System.Collections.Generic;
+using System.Text;
+using UniGame.MetaBackend;
+using $namespace$.Dto;
+using Game.Runtime.Services.WebService;
+using Game.Modules.WebProvider.Contracts;
+using Newtonsoft.Json;
+
+namespace $namespace$
+{
+    /// <summary>
+    /// $description$
+    /// </summary>
+    [Serializable]
+    public class $className$ : $baseType$
+    {
+        $constructor$
+    }
+}";
+        }
+        
+        private string FormatDescription(string description)
+        {
+            if (string.IsNullOrEmpty(description))
+            {
+                return "Contract for REST API endpoint";
+            }
+            
+            // Заменяем переносы строк на пробелы
+            return description.Replace("\n", " ").Replace("\r", "");
+        }
+        
+        private string GetContractClassName(SwaggerOperation operation)
+        {
+            if (string.IsNullOrEmpty(operation.OperationId))
+            {
+                return "UnnamedContract";
+            }
+            
+            // Очищаем имя операции, удаляя ненужные суффиксы методов
+            string className = CleanOperationName(operation.OperationId);
+            
+            // Добавляем суффикс "Contract", если его еще нет
+            if (!className.EndsWith("Contract"))
+            {
+                className += "Contract";
+            }
+            
+            Debug.Log($"GetContractClassName: {operation.OperationId} => {className}");
+            return className;
         }
     }
 } 

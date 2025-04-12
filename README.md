@@ -334,20 +334,43 @@ The resulting contract will look like:
 // Contract includes the ResponseDataDTO wrapper directly in its signature
 public class GetUserProfileContract : RestContract<GetUserProfileInput, ResponseDataDTO<UserProfileDTO>>
 {
-    // Implementation
-}
-```
+    /// <summary>
+    /// The API path for this request
+    /// </summary>
+    public override string Path => "api/user/profile";
 
-The generated `ResponseDataDTO<T>` class:
-
-```csharp
-[Serializable]
-public class ResponseDataDTO<T>
-{
-    [JsonProperty("data")]
-    [field: SerializeField]
-    public T Data { get; set; }
+    /// <summary>
+    /// The type of request
+    /// </summary>
+    public override WebRequestType RequestType => WebRequestType.Get;
 }
 ```
 
 This approach ensures that the generated contracts match exactly the structure of the API responses, making it clear to developers that the data is wrapped in a container.
+
+### Error Type Support
+
+The generator now supports error types in contracts. If an API operation defines error responses (status codes 4XX or 5XX) with a schema, the generator will include this error type as a third type parameter in the contract:
+
+```csharp
+// Contract with error type
+public class GetUserProfileContract : RestContract<GetUserProfileInput, UserProfileDTO, ErrorResponseDTO>
+{
+    /// <summary>
+    /// The API path for this request
+    /// </summary>
+    public override string Path => "api/user/profile";
+
+    /// <summary>
+    /// The type of request
+    /// </summary>
+    public override WebRequestType RequestType => WebRequestType.Get;
+}
+```
+
+The generator determines the error type by:
+1. Looking for response status codes starting with 4 or 5 (client and server errors)
+2. Checking if these responses have a schema defined
+3. Using the schema reference as the error type, or generating a custom error DTO if needed
+
+This feature allows for more comprehensive error handling in API client code, as the contract explicitly defines the expected error type.
