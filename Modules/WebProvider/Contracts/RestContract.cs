@@ -31,8 +31,23 @@ namespace Game.Modules.WebProvider.Contracts
     }
 
     [Serializable]
-    public abstract class RestContract<TInput, TOutput,TError> : RestContract<TInput, TOutput>
+    public abstract class RestContract<TInput, TOutput,TError> : RemoteMetaContract<TInput,TOutput,TError>,
+        IWebRequestContract
     {
+        [SerializeField]
+        [InlineProperty]
+        [HideLabel]
+        public TInput input;
+
+        [JsonIgnore]
+        public override object Payload => input;
+        [JsonIgnore]
+        public virtual WebRequestType RequestType => WebRequestType.None;
+        [JsonIgnore]
+        public virtual string Url { get; set; } = string.Empty;
+        [JsonIgnore]
+        public virtual string Token { get; set; } = string.Empty;
+        [JsonIgnore]
         public override Type FallbackType => typeof(TError);
     }
 }

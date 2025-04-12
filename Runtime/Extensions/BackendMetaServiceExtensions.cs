@@ -33,8 +33,7 @@ namespace Extensions
             return resultValue;
         }
 
-        public static async UniTask<MetaRequestResult<TResult,TError>> 
-            ExecuteAsync<TResult,TError>(this IRemoteMetaContract contract) 
+        public static async UniTask<MetaRequestResult<TResult,TError>> ExecuteAsync<TResult,TError>(this IRemoteMetaContract contract) 
             where TResult : class where TError : class
         {
             if (RemoteMetaService == null)
