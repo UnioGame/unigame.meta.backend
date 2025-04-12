@@ -15,6 +15,8 @@
         public string Path => name;
         public Type OutputType => typeof(Texture2D);
         public Type InputType => typeof(string);
+        public Type FallbackType => typeof(object);
         public ILifeTime LifeTime => lifeTime;
+        
     }
 }

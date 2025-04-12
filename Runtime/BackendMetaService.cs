@@ -279,7 +279,7 @@
             var contract = contractData.contract;
             var metaData = contractData.metaData;
 
-            var responceData = response.data ?? string.Empty;
+            var responseData = response.data ?? string.Empty;
             var unixTime = DateTime.Now.ToUnixTimestamp();
             var outputType = contract.OutputType;
             
@@ -287,12 +287,12 @@
                 ? typeof(string)
                 : outputType;
             
-            var resultObject = responceData;
+            var resultObject = responseData;
             
             switch (outputType)
             {
                 case not null when outputType == typeof(string):
-                    resultObject = responceData;
+                    resultObject = responseData;
                     break;
                 case not null when outputType == typeof(VoidRemoteData):
                     resultObject = VoidRemoteData.Empty;
@@ -305,9 +305,9 @@
                 payload = contract?.Payload,
                 resultType = outputType,
                 model = resultObject,
-                result = responceData,
+                result = responseData,
                 success = response.success,
-                hash = responceData.GetHashCode(),
+                hash = responseData.GetHashCode(),
                 error = response.error,
                 timestamp = unixTime,
             };

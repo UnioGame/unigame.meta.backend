@@ -6,7 +6,6 @@
     [Serializable]
     public struct RemoteMetaResult
     {
-        [FormerlySerializedAs("Id")]
         public string id;
         public object data;
         public bool success;

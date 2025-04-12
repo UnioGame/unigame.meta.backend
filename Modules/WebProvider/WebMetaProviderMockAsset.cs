@@ -14,10 +14,10 @@
         [HideLabel]
         public WebMetaProviderSettings settings = new();
         
-        public override UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
+        public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
             var service = new WebMetaMockProvider(settings);
-            return UniTask.FromResult<IRemoteMetaProvider>(service);
+            return service;
         }
     }
 }

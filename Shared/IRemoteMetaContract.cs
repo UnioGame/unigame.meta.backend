@@ -4,7 +4,14 @@
     using Newtonsoft.Json;
 
     [Serializable]
-    public abstract class RemoteCallContract<TInput,TOutput> : IRemoteMetaContract<TInput,TOutput>
+    public abstract class RemoteMetaContract<TInput, TOutput,TError> : RemoteMetaContract<TInput,TOutput>
+    {
+        [JsonIgnore]
+        public virtual Type FallbackType => typeof(TError);
+    }
+
+    [Serializable]
+    public abstract class RemoteMetaContract<TInput,TOutput> : IRemoteMetaContract
     {
         [JsonIgnore]
         public virtual object Payload => string.Empty;
@@ -19,15 +26,8 @@
         public virtual Type InputType => typeof(TInput);
     }
     
-    public interface IRemoteMetaContract<TIn,TOut> : IRemoteMetaContract
-    {
-        public Type OutputType => typeof(TOut);
-        
-        public Type InputType => typeof(TIn);
-    }
-    
     [Serializable]
-    public abstract class RemoteCallContract<TOutput> : RemoteCallContract
+    public abstract class RemoteMetaContract<TOutput> : RemoteMetaContract
     {
         [JsonIgnore]
         public override object Payload => this;
@@ -41,7 +41,7 @@
     }
     
     [Serializable]
-    public class RemoteCallContract : IRemoteMetaContract
+    public class RemoteMetaContract : IRemoteMetaContract
     {
         public virtual object Payload => string.Empty;
         public virtual Type InputType => typeof(string);
@@ -55,6 +55,11 @@
         public string Path { get; }
         public Type OutputType { get; }
         public Type InputType { get; }
+    }
+    
+    public interface IFallbackContract
+    {
+        public Type FallbackType { get; }
     }
     
 }

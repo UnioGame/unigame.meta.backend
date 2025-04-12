@@ -10,7 +10,7 @@ namespace Game.Modules.WebProvider.Contracts
 
     [Serializable]
     public abstract class RestContract<TInput,TOutput> : 
-        RemoteCallContract<TInput,TOutput>,
+        RemoteMetaContract<TInput,TOutput>,
         IWebRequestContract
     {
         [SerializeField]
@@ -26,6 +26,13 @@ namespace Game.Modules.WebProvider.Contracts
         public virtual string Url { get; set; } = string.Empty;
         [JsonIgnore]
         public virtual string Token { get; set; } = string.Empty;
-        
+        [JsonIgnore]
+        public virtual Type FallbackType { get; set; } = typeof(string);
+    }
+
+    [Serializable]
+    public abstract class RestContract<TInput, TOutput,TError> : RestContract<TInput, TOutput>
+    {
+        public override Type FallbackType => typeof(TError);
     }
 }

@@ -19,7 +19,7 @@
     }
     
     [Serializable]
-    public class SimpleMetaContract<TInput, TOutput> : RemoteCallContract<TInput, TOutput>
+    public class SimpleMetaContract<TInput, TOutput> : RemoteMetaContract<TInput, TOutput>
     {
         [SerializeReference]
         public TInput inputData = default(TInput);

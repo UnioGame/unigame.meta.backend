@@ -3,7 +3,7 @@
     using Game.Runtime.Services.WebService;
     using UniGame.MetaBackend.Shared;
 
-    public interface IWebRequestContract : IRemoteMetaContract
+    public interface IWebRequestContract : IRemoteMetaContract,IFallbackContract
     {
         public WebRequestType RequestType { get; }
         public string Url { get; set;}

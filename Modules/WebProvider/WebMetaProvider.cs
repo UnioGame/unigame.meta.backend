@@ -105,23 +105,30 @@
                 GameLog.Log($"[WebMetaProvider] \nInputType {contract.InputType.PrettyName()} \nOutputType {contract.OutputType.PrettyName()} | {contract.GetType().Name} {endPoint.url} result : {requestResult.data} {requestResult.error}",color);
             }
 #endif
-            
+            var success = requestResult.success;
             var requestData = string.Empty;
             if(requestResult.data is string data)
                 requestData = data;
             
-            var resultData = requestResult.success 
+            result.data = requestResult.success 
                 ? JsonConvert.DeserializeObject(requestData,contract.OutputType) 
-                : null;
+                : string.Empty;
+
+            //fill fallback data
+            if (success == false && contract is IFallbackContract fallbackContract)
+            {
+                result.data = fallbackContract.FallbackType!=null
+                    ? JsonConvert.DeserializeObject(requestData,fallbackContract.FallbackType) 
+                    : requestData;
+            }
             
-            result.data = resultData;
-            result.success = requestResult.success;
+            result.success = success;
             result.error = requestResult.error;
             
             return result;
         }
 
-        public async UniTask<WebServerResult> ExecuteWebRequest(IRemoteMetaContract contract,
+        public async UniTask<WebRequestResult> ExecuteWebRequest(IRemoteMetaContract contract,
             WebApiEndPoint endPoint)
         {
             var payload = contract.Payload;
@@ -160,7 +167,7 @@
             var retryCounter = 0;
             var retryLimit = _settings.requestRetry;
 
-            var requestResult = WebServerResult.NotResponse;
+            var requestResult = WebRequestResult.NotResponse;
             var startTime = Time.realtimeSinceStartup;
             var timeoutOut = _settings.timeout;
             
@@ -168,11 +175,12 @@
             {
                 requestResult = await SendEndPointRequestAsync(endPoint, url, payload);
                 if (requestResult.success) return requestResult;
+                if (requestResult.httpError)  return requestResult;
                 
                 var elapsedTime = Time.realtimeSinceStartup - startTime;
                 if (timeoutOut > 0 && elapsedTime > timeoutOut)
                 {
-                    return new WebServerResult()
+                    return new WebRequestResult()
                     {
                         error = $"Request timeout with retry {retryLimit} of {retryLimit} | elapsed time: {elapsedTime}",
                         success = false,
@@ -187,9 +195,9 @@
             return requestResult;
         }
 
-        public async UniTask<WebServerResult> SendEndPointRequestAsync(WebApiEndPoint endPoint,string url,object payload)
+        public async UniTask<WebRequestResult> SendEndPointRequestAsync(WebApiEndPoint endPoint,string url,object payload)
         {
-            var requestResult = new WebServerResult()
+            var requestResult = new WebRequestResult()
             {
                 success = false,
                 error = string.Empty,
@@ -228,10 +236,10 @@
             return requestResult;
         }
 
-        public WebServerResult ExecuteDebugAsync(WebApiEndPoint endPoint)
+        public WebRequestResult ExecuteDebugAsync(WebApiEndPoint endPoint)
         {
             var debugResult = endPoint.debugResult;
-            var result = new WebServerResult()
+            var result = new WebRequestResult()
             {
                 error = debugResult.error,
                 data = string.Empty,
