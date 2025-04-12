@@ -3,14 +3,17 @@ namespace MetaService.Runtime
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Reflection;
+    using System.Linq;
     using System.Text;
     using Sirenix.OdinInspector;
     using UniGame.MetaBackend.Shared.Data;
     using UniModules;
     using UnityEngine;
-    using UnityEngine.Serialization;
 
+#if UNITY_EDITOR
+    using UniModules.Editor;
+#endif
+    
     [Serializable]
     public class BackendMetaSettings
     {
@@ -25,6 +28,31 @@ namespace MetaService.Runtime
         
 #region IdGenerator
 #if UNITY_EDITOR
+
+        [Button("Load Providers")]
+        public void LoadProviders()
+        {
+            var providers = AssetEditorTools.GetAssets<BackendMetaServiceAsset>();
+            var newProvider = new List<BackendMetaServiceAsset>();
+            
+            foreach (var provider in providers)
+            {
+                var foundProvider = backendTypes
+                    .FirstOrDefault(x => x.Provider.GetType() == provider.GetType());
+                if(foundProvider.Provider!=null) continue;
+                
+                newProvider.Add(provider);
+            }
+
+            foreach (var serviceAsset in newProvider)
+            {
+                backendTypes.Add(new BackendType()
+                {
+                    Name = serviceAsset.GetType().Name,
+                    Provider = serviceAsset,
+                });
+            }
+        }
         
         [Button("Generate Static Properties")]
         public void GenerateProperties()
