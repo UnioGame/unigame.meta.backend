@@ -379,6 +379,41 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             if (!string.IsNullOrEmpty(reference))
             {
                 property.Reference = NormalizeReference(reference);
+                
+                // Особая обработка ErrorCode - превращаем в int
+                if (property.Reference.EndsWith("ErrorCode"))
+                {
+                    property.Type = "integer";
+                    property.Format = "int32";
+                    property.Reference = null; // Очищаем ссылку, чтобы использовался тип из type/format
+                }
+            }
+            
+            // Обработка oneOf для полиморфных типов
+            var oneOf = propertyObject["oneOf"] as JArray;
+            if (oneOf != null && oneOf.Count > 0)
+            {
+                Debug.Log($"Found oneOf with {oneOf.Count} variants");
+                
+                // По умолчанию используем object
+                property.Type = "object";
+                
+                // Если это "data" свойство в ответе ошибки, делаем его строкой
+                if (propertyObject.Parent != null && 
+                    propertyObject.Parent.Parent != null &&
+                    propertyObject.Parent.Parent["type"]?.ToString() == "object" &&
+                    propertyObject.Path.EndsWith(".data"))
+                {
+                    Debug.Log("Found data property in error response, using string type");
+                    property.Type = "string";
+                }
+                
+                // Проверяем nullable флаг
+                bool nullable = propertyObject["nullable"] != null && (bool)propertyObject["nullable"];
+                if (nullable)
+                {
+                    Debug.Log("Property is nullable");
+                }
             }
             
             // Обработка массивов

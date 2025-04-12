@@ -7,6 +7,7 @@
     using Game.Modules.ModelMapping;
     using Newtonsoft.Json;
     using Shared;
+    using UniCore.Runtime.ProfilerTools;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using UniGame.UniNodes.GameFlow.Runtime;
@@ -311,11 +312,13 @@
                 error = response.error,
                 timestamp = unixTime,
             };
-                
+
+#if GAME_DEBUG || UNITY_EDITOR
             if (!response.success)
             {
-                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.Path}");
+                GameLog.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.Path}");
             }
+#endif
             
             return result;
         }

@@ -407,6 +407,12 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             // Прямая ссылка на другую схему
             if (!string.IsNullOrEmpty(property.Reference))
             {
+                // Специальная обработка для ErrorCode
+                if (property.Reference.EndsWith("ErrorCode"))
+                {
+                    return "ErrorCode";
+                }
+                
                 return GetClassNameFromReference(property.Reference);
             }
             
@@ -415,6 +421,12 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             {
                 if (!string.IsNullOrEmpty(property.Items.Reference))
                 {
+                    // Специальная обработка для массива ErrorCode
+                    if (property.Items.Reference.EndsWith("ErrorCode"))
+                    {
+                        return "List<ErrorCode>";
+                    }
+                    
                     string itemTypeName = GetClassNameFromReference(property.Items.Reference);
                     return $"List<{itemTypeName}>";
                 }

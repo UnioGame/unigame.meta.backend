@@ -39,6 +39,86 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             Debug.Log($"[DEBUG] SwaggerContractGenerator settings: useResponseDataContainer={settings.useResponseDataContainer}, responseDataField={settings.responseDataField}");
         }
 
+        private void CreateErrorClasses()
+        {
+            // Создаем ErrorCode enum
+            string errorCodeEnumCode = $@"using System;
+
+namespace {_settings.contractNamespace}.Dto
+{{
+    /// <summary>
+    /// Коды ошибок API
+    /// </summary>
+    [Serializable]
+    public enum ErrorCode
+    {{
+        /// <summary>
+        /// Общая ошибка
+        /// </summary>
+        GENERAL_ERROR = 1000,
+        
+        /// <summary>
+        /// Ошибка валидации
+        /// </summary>
+        VALIDATION_ERROR = 1001,
+        
+        /// <summary>
+        /// Профиль не найден
+        /// </summary>
+        PROFILE_NOT_FOUND = 2000,
+        
+        /// <summary>
+        /// Неизвестная ошибка
+        /// </summary>
+        UNKNOWN = 0
+    }}
+}}";
+
+            // Записываем ErrorCode enum
+            string errorCodeFilePath = Path.Combine(_settings.dtoOutFolder, "ErrorCode.cs");
+            WriteFileWithTracking(errorCodeFilePath, errorCodeEnumCode, isDto: true);
+            
+            // Создаем ErrorResponseDTO
+            string errorResponseDtoCode = $@"using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using UnityEngine;
+
+namespace {_settings.contractNamespace}.Dto
+{{
+    /// <summary>
+    /// Ответ с ошибкой от API
+    /// </summary>
+    [Serializable]
+    public class ErrorResponseDTO
+    {{
+        /// <summary>
+        /// Код ошибки
+        /// </summary>
+        [JsonProperty(""code"")]
+        [field: SerializeField]
+        public ErrorCode Code {{ get; set; }}
+
+        /// <summary>
+        /// Данные об ошибке
+        /// </summary>
+        [JsonProperty(""data"")]
+        [field: SerializeField]
+        public string Data {{ get; set; }}
+    }}
+}}";
+
+            // Записываем ErrorResponseDTO
+            string errorResponseFilePath = Path.Combine(_settings.dtoOutFolder, "ErrorResponseDTO.cs");
+            WriteFileWithTracking(errorResponseFilePath, errorResponseDtoCode, isDto: true);
+            
+            // Добавляем в маппинг имен
+            _schemaToClassNameMap["ErrorResponseDTO"] = "ErrorResponseDTO";
+            _schemaToClassNameMap["ErrorCode"] = "ErrorCode";
+            
+            Debug.Log("Created custom ErrorResponseDTO and ErrorCode enum");
+        }
+
         public void GenerateContracts()
         {
             try
@@ -78,6 +158,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 {
                     CleanupOutputDirectories();
                 }
+
+                // Создаем встроенные классы для ErrorResponseDTO и ErrorCode
+                CreateErrorClasses();
 
                 // Read and parse Swagger JSON
                 string jsonContent = File.ReadAllText(_settings.apiJsonPath);
@@ -280,6 +363,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     
                     // Определяем URL запроса
                     string requestUrl = path;
+                    
+                    // Заменяем на использование apiTemplate
+                    requestUrl = string.Format(_settings.apiTemplate, path.TrimStart('/'));
                     
                     // Определяем входной и выходной типы на основе операции
                     string inputType = _templateGenerator.GetInputType(operation);
@@ -1039,6 +1125,12 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     if (errorResponse.Schema != null && !string.IsNullOrEmpty(errorResponse.Schema.Reference))
                     {
                         string schemaName = NormalizeReference(errorResponse.Schema.Reference);
+                        
+                        // Для ErrorResponseDTO возвращаем хардкодный путь
+                        if (schemaName == "ErrorResponseDTO")
+                        {
+                            return $"{_settings.contractNamespace}.Dto.ErrorResponseDTO";
+                        }
                         
                         // Применяем маппинг схемы, если есть
                         if (_schemaToClassNameMap.ContainsKey(schemaName))
