@@ -175,18 +175,14 @@
             {
                 requestResult = await SendEndPointRequestAsync(endPoint, url, payload);
                 if (requestResult.success) return requestResult;
-                if (requestResult.httpError)  return requestResult;
                 
                 var elapsedTime = Time.realtimeSinceStartup - startTime;
                 if (timeoutOut > 0 && elapsedTime > timeoutOut)
                 {
-                    return new WebRequestResult()
-                    {
-                        error = $"Request timeout with retry {retryLimit} of {retryLimit} | elapsed time: {elapsedTime}",
-                        success = false,
-                        responseCode = 500,
-                        data = string.Empty,
-                    };
+#if UNITY_EDITOR || GAME_DEBUG
+                    Debug.LogError($"Request timeout with retry {retryLimit} of {retryLimit} | elapsed time: {elapsedTime}");
+#endif
+                    return requestResult;
                 }
                 
                 retryCounter++;

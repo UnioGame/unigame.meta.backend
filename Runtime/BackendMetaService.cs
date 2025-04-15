@@ -192,7 +192,8 @@
                 contractName = meta.method,
             };
             
-            return await ExecuteAsync(contractData);
+            return await ExecuteAsync(contractData)
+                .AttachExternalCancellation(LifeTime.Token);
         }
 
         private async UniTask<MetaDataResult> ExecuteAsync(MetaContractData contractData)
