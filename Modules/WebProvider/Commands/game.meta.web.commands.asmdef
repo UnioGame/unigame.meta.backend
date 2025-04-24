@@ -1,0 +1,32 @@
+{
+    "name": "game.meta.web.commands",
+    "rootNamespace": "",
+    "references": [
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:205f11ff4afe4cd4a4fb86737ce7f906",
+        "GUID:518f2e7bead940a3a30e44e8c95cf87f",
+        "GUID:8e4577c9194c10845984cf27eb974fd1",
+        "GUID:a0b431bd9232ee0439a3722ec36414ed",
+        "GUID:560b04d1a97f54a4e82edc0cbbb69285",
+        "GUID:2796129a6c23eb84a8181f62bf7332f1",
+        "GUID:f0321ba97c62c974b82a7fc7c1d544f9",
+        "GUID:0405dd5053fc70847b1c72953e097e34"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "ENABLE_BUILDPIPELINE"
+    ],
+    "versionDefines": [
+        {
+            "name": "unigame.buildpipeline.editor",
+            "expression": "",
+            "define": "ENABLE_BUILDPIPELINE"
+        }
+    ],
+    "noEngineReferences": false
+}
