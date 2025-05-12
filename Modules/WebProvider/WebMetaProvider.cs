@@ -109,17 +109,27 @@
             var requestData = string.Empty;
             if(requestResult.data is string data)
                 requestData = data;
-            
-            result.data = requestResult.success 
-                ? JsonConvert.DeserializeObject(requestData,contract.OutputType) 
-                : string.Empty;
 
-            //fill fallback data
-            if (success == false && contract is IFallbackContract fallbackContract)
+            try
             {
-                result.data = fallbackContract.FallbackType!=null
-                    ? JsonConvert.DeserializeObject(requestData,fallbackContract.FallbackType) 
-                    : requestData;
+                result.data = requestResult.success 
+                    ? JsonConvert.DeserializeObject(requestData,contract.OutputType) 
+                    : string.Empty;
+
+                //fill fallback data
+                if (success == false && contract is IFallbackContract fallbackContract)
+                {
+                    result.data = fallbackContract.FallbackType!=null
+                        ? JsonConvert.DeserializeObject(requestData,fallbackContract.FallbackType) 
+                        : requestData;
+                }
+            }
+            catch (Exception e)
+            {
+                success = false;
+                
+                Debug.LogException(e);
+                Debug.LogError($"WebProvider Error: {contractType.Name} | URL: {requestResult.url} | \nRESPONSE:  {requestData}");
             }
             
             result.success = success;
@@ -196,6 +206,7 @@
             var requestResult = new WebRequestResult()
             {
                 success = false,
+                url = endPoint.url,
                 error = string.Empty,
             };
 
