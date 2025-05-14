@@ -3,8 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Reflection;
-    using System.Text.RegularExpressions;
     using Cysharp.Threading.Tasks;
     using Game.Runtime.Services.WebService;
     using MetaService.Runtime;
@@ -19,8 +17,7 @@
     using UniModules.UniGame.Core.Runtime.Rx;
     using UniRx;
     using UnityEngine;
-    using UnityEngine.Serialization;
-
+    
     [Serializable]
     public class WebMetaProvider : IWebMetaProvider
     {
@@ -127,9 +124,11 @@
             catch (Exception e)
             {
                 success = false;
+                var message =
+                    $"WebProvider Error: {contractType.Name} | URL: {requestResult.url} | \nRESPONSE:  {requestData}";
                 
-                Debug.LogException(e);
-                Debug.LogError($"WebProvider Error: {contractType.Name} | URL: {requestResult.url} | \nRESPONSE:  {requestData}");
+                GameLog.LogError(message);
+                GameLog.LogException(e);
             }
             
             result.success = success;
