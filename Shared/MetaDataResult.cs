@@ -12,7 +12,7 @@
         };
         
         public int id = -1;
-        public int timestamp = 0;
+        public long timestamp = 0;
         public int hash = 0;
         public Type resultType;
         public object payload = string.Empty;
