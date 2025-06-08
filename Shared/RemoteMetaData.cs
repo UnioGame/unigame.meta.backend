@@ -4,7 +4,7 @@
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using Sirenix.OdinInspector;
-    using UniModules.UniCore.Runtime.Utils;
+    using UniGame.Runtime.Utils;
     using UnityEngine;
 #if UNITY_EDITOR
     using UniModules.Editor;

@@ -8,12 +8,13 @@
     using Cysharp.Threading.Tasks;
     using MetaService.Runtime;
     using Newtonsoft.Json;
+    using R3;
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
-    using UniModules.UniCore.Runtime.DataFlow;
-    using UniRx;
+    using UniGame.Runtime.DataFlow;
+     
     using Object = UnityEngine.Object;
 
     public class JsMetaProvider : IRemoteMetaJsProvider
@@ -31,7 +32,7 @@
         
         public ILifeTime LifeTime => _lifeTime;
         
-        public IReadOnlyReactiveProperty<ConnectionState> State => _state;
+        public ReadOnlyReactiveProperty<ConnectionState> State => _state;
 
         public JsMetaProvider(JsMetaContractConfig config, JsBridgeAgentBase bridgeAgentBase)
         {

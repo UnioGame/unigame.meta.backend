@@ -3,11 +3,12 @@
     using System;
     using Cysharp.Threading.Tasks;
     using Data;
-    using UniRx;
+    using R3;
+
 
     public interface IMetaConnection : IDisposable
     {
-        IReadOnlyReactiveProperty<ConnectionState> State { get; }
+        ReadOnlyReactiveProperty<ConnectionState> State { get; }
         
         UniTask<MetaConnectionResult> ConnectAsync();
         

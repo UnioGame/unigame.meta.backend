@@ -5,6 +5,7 @@
     using Data;
     using Game.Modules.ModelMapping;
     using global::Shared;
+    using R3;
     using UniGame.Core.Runtime;
 
     public interface IBackendMetaService : 
@@ -14,7 +15,7 @@
         public bool AddContractHandler(IMetaContractHandler handler);
         public bool RemoveContractHandler<T>() where T : IMetaContractHandler;
         IRemoteMetaDataConfiguration MetaDataConfiguration { get; }
-        IObservable<MetaDataResult> DataStream { get; }
+        Observable<MetaDataResult> DataStream { get; }
         void SwitchProvider(int providerId);
         UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract payload);
         bool TryDequeueMetaRequest(IRemoteMetaContract contract, out MetaDataResult result);

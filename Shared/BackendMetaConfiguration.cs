@@ -10,7 +10,7 @@ namespace MetaService.Runtime
     using Sirenix.OdinInspector;
     using UniGame.MetaBackend.Shared;
     using UniModules;
-    using UniModules.UniCore.Runtime.Utils;
+    using UniGame.Runtime.Utils;
     using UnityEditor;
     using UnityEngine;
 

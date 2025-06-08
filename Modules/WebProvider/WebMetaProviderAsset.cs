@@ -10,7 +10,7 @@
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using UniGame.Core.Runtime;
-    using UniModules.UniCore.Runtime.Utils;
+    using UniGame.Runtime.Utils;
     using UnityEngine;
     using Game.Modules.Meta.Runtime;
     

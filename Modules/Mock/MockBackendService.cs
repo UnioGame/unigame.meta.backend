@@ -4,12 +4,13 @@
     using System.Linq;
     using Cysharp.Threading.Tasks;
     using MetaService.Runtime;
+    using R3;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using UniGame.Core.Runtime;
-    using UniModules.UniCore.Runtime.DataFlow;
-    using UniModules.UniGame.Core.Runtime.Rx;
-    using UniRx;
+    using UniGame.Runtime.DataFlow;
+    using UniGame.Runtime.Rx;
+     
 
     [Serializable]
     public class MockBackendService : IRemoteMetaProvider
@@ -27,7 +28,7 @@
 
         public ILifeTime LifeTime => _lifeTime;
         
-        public IReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
+        public ReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
         
         public UniTask<MetaConnectionResult> ConnectAsync()
         {

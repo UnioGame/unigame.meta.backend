@@ -2,16 +2,24 @@
   "name": "com.unigame.metaservice",
   "author": "UniGame",
   "displayName": "Game Meta Service",
-  "description": "Backend meta service",
-  "unity": "2022.2",
-  "version": "2024.0.0",
+  "description": "Allow to create and manage game backend api transport and responses",
+  "unity": "2023.1",
+  "version": "2025.0.0",
   "keywords": [
     "meta",
     "backend",
     "service",
-    "server",
-    "nakama"
+    "server"
   ],
   "dependencies": {
+    "com.unity.addressables": "2.6.0",
+    "com.unigame.addressablestools": "https://github.com/UnioGame/unigame.addressables.git",
+    "com.unigame.contextdata" : "https://github.com/UnioGame/unigame.context.git",
+    "com.unigame.unicore": "https://github.com/UnioGame/unigame.core.git",
+    "com.unigame.localization": "https://github.com/UnioGame/unigame.localization.git",
+    "com.unigame.rx": "https://github.com/UnioGame/unigame.rx.git",
+    "com.cysharp.unitask" : "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+    "com.cysharp.r3": "https://github.com/Cysharp/R3.git?path=src/R3.Unity/Assets/R3.Unity",
+    "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity"
   }
 }

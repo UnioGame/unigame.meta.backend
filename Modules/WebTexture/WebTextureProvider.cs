@@ -4,13 +4,14 @@
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
     using UniModules.Runtime.Network;
-    using global::UniModules.UniCore.Runtime.DataFlow;
-    using global::UniModules.UniGame.Core.Runtime.Rx;
+    using global::UniGame.Runtime.DataFlow;
+    using global::UniGame.Runtime.Rx;
     using MetaService.Runtime;
+    using R3;
     using UniGame.Core.Runtime;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
-    using UniRx;
+     
     using UnityEngine;
     using Object = UnityEngine.Object;
 
@@ -28,7 +29,7 @@
         private Dictionary<string,TextureCacheItem> _cache = new();
 
         public ILifeTime LifeTime => _lifeTime;
-        public IReadOnlyReactiveProperty<ConnectionState> State => _state;
+        public ReadOnlyReactiveProperty<ConnectionState> State => _state;
         
         public WebTextureProvider(WebTextureSettings settings,ILifeTime defaultLifeTime)
         {

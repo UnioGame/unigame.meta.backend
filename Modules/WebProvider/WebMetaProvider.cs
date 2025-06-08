@@ -7,15 +7,16 @@
     using Game.Runtime.Services.WebService;
     using MetaService.Runtime;
     using Newtonsoft.Json;
+    using R3;
     using UniCore.Runtime.ProfilerTools;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using UniGame.Core.Runtime;
     using UniModules.Runtime.Network;
-    using UniModules.UniCore.Runtime.DataFlow;
-    using UniModules.UniCore.Runtime.ReflectionUtils;
-    using UniModules.UniGame.Core.Runtime.Rx;
-    using UniRx;
+    using UniGame.Runtime.DataFlow;
+    using UniGame.Runtime.ReflectionUtils;
+    using UniGame.Runtime.Rx;
+     
     using UnityEngine;
     
     [Serializable]
@@ -62,7 +63,7 @@
         
         public ILifeTime LifeTime => _lifeTime;
 
-        public IReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
+        public ReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
 
         public void SetToken(string token)
         {

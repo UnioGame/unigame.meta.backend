@@ -10,7 +10,7 @@
     using UniGame.MetaBackend.Shared;
     using Sirenix.OdinInspector;
     using UniModules;
-    using UniModules.UniCore.Runtime.Utils;
+    using UniGame.Runtime.Utils;
     using UnityEngine;
 
 #if UNITY_EDITOR

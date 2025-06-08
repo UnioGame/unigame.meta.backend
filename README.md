@@ -1,6 +1,17 @@
-# unity.meta.backend
+  # unity.meta.backend
 
-Game Meta Backend service provider
+Customizable Constract-based backend transport for Unity, supporting REST API, Mocking, Unity JavaScript bridge for WebGL
+
+# Installation
+
+You can install this module via Unity Package Manager by adding the following git URL to your `manifest.json` file:
+
+```json
+{
+  "dependencies": {
+    "com.unigame.metaservice": "https://github.com/UnioGame/unity.meta.backend.git"
+}
+```
 
 ![backend service](https://i.ibb.co/TMVcx1Cy/backend-service.png)
 

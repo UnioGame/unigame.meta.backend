@@ -6,13 +6,13 @@
     using Extensions;
     using Game.Modules.ModelMapping;
     using Newtonsoft.Json;
+    using R3;
     using Shared;
-    using UniCore.Runtime.ProfilerTools;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Shared.Data;
     using UniGame.UniNodes.GameFlow.Runtime;
-    using UniModules.UniCore.Runtime.DateTime;
-    using UniRx;
+    using UniGame.Runtime.DateTime;
+     
     using UnityEngine;
 
     [Serializable]
@@ -50,9 +50,9 @@
             UpdateMetaCache();
         }
 
-        public IObservable<MetaDataResult> DataStream => _dataStream;
+        public Observable<MetaDataResult> DataStream => _dataStream;
 
-        public IReadOnlyReactiveProperty<ConnectionState> State => _defaultMetaProvider.State;
+        public ReadOnlyReactiveProperty<ConnectionState> State => _defaultMetaProvider.State;
 
         public bool AddContractHandler(IMetaContractHandler handler)
         {
@@ -261,7 +261,7 @@
                 
         private async UniTask<MetaConnectionResult> ConnectAsync(IRemoteMetaProvider provider)
         {
-            if (provider.State.Value != ConnectionState.Connected)
+            if (provider.State.CurrentValue != ConnectionState.Connected)
             {
                 var connectionResult = await provider.ConnectAsync();
                 return connectionResult;
@@ -317,7 +317,7 @@
 #if GAME_DEBUG || UNITY_EDITOR
             if (!response.success)
             {
-                GameLog.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.Path}");
+                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.Path}");
             }
 #endif
             

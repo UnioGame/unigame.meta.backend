@@ -3,9 +3,10 @@
     using System;
     using System.Runtime.CompilerServices;
     using System.Text;
+    using R3;
     using Sirenix.OdinInspector;
     using UniCore.Runtime.ProfilerTools;
-    using UniRx;
+     
     using UnityEngine;
 
     public class JsBridgeAgentBase : MonoBehaviour,IDisposable, IJsBridgeAgent
@@ -19,7 +20,7 @@
         
         private Subject<JsMetaMessageData> _messageStream = new();
         
-        public IObservable<JsMetaMessageData> MessageStream => _messageStream;
+        public Observable<JsMetaMessageData> MessageStream => _messageStream;
         
         public void InvokeReceiveMessage(string message)
         {
