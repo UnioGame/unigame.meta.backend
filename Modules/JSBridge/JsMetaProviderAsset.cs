@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
-    using Sirenix.OdinInspector;
     using UniGame.Core.Runtime;
     using UniGame.Core.Runtime.SerializableType;
     using UniGame.MetaBackend.Shared;
@@ -11,15 +10,23 @@
     using UnityEditor;
     using UnityEngine;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
     [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Js Meta Provider", fileName = "Js Meta Provider")]
     public class JsMetaProviderAsset : BackendMetaServiceAsset
     {
+#if ODIN_INSPECTOR
         [InlineProperty]
         [HideLabel]
+#endif
         public JsMetaContractConfig config;
 
+#if ODIN_INSPECTOR
         [InlineProperty]
         [HideLabel]
+#endif
         public JsBridgeAgentBase bridgePrefab;
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
@@ -41,8 +48,10 @@
     {
         public int id;
 
+#if ODIN_INSPECTOR
         [LabelText(text:"@Name")]
         [ValueDropdown(nameof(GetContracts))]
+#endif
         public SType contract = new();
         
         public static IEnumerable<ValueDropdownItem<SType>> GetContracts()

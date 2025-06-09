@@ -7,25 +7,32 @@ namespace MetaService.Runtime
     using System.Text;
     using Game.Modules.Meta.Runtime;
     using Game.Modules.ModelMapping;
-    using Sirenix.OdinInspector;
+    
     using UniGame.MetaBackend.Shared;
     using UniModules;
     using UniGame.Runtime.Utils;
     using UnityEditor;
     using UnityEngine;
+    
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
 
     [Serializable]
     public class BackendMetaConfiguration
     {
-        
+#if ODIN_INSPECTOR
         [TabGroup("meta contracts")]
         [HideLabel]
         [InlineProperty]
+#endif
         public RemoteMetaDataConfig configuration = new();
 
+#if ODIN_INSPECTOR
         [TabGroup(nameof(settings))]
         [InlineProperty]
         [HideLabel]
+#endif
         public BackendMetaSettings settings = new();
 
         
@@ -33,9 +40,11 @@ namespace MetaService.Runtime
 
 #if UNITY_EDITOR
 
+#if ODIN_INSPECTOR
         [PropertyOrder(-1)]
         [Button(icon: SdfIconType.ImageFill)]
         [ButtonGroup("Providers")]
+#endif
         public void SetDefaultTypeForAll()
         {
             foreach (var metaCallData in configuration.remoteMetaData)
@@ -44,9 +53,11 @@ namespace MetaService.Runtime
             }
         }
 
+#if ODIN_INSPECTOR
         [Button(icon: SdfIconType.ArrowClockwise, "Update Remote Meta Data")]
         [PropertyOrder(-1)]
         [ButtonGroup("Providers")]
+#endif
         public void UpdateRemoteMetaData()
         {
             var remoteItems = LoadRemoteMetaData();
@@ -127,8 +138,10 @@ namespace MetaService.Runtime
             return true;
         }
 
+#if ODIN_INSPECTOR
         [PropertyOrder(-1)]
         [Button("Generate Static Properties")]
+#endif
         public void GenerateProperties()
         {
             GenerateStaticProperties(this);

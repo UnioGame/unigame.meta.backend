@@ -1,11 +1,16 @@
 ﻿namespace Game.Modules.ModelMapping
 {
     using System;
+    using UniGame.Core.Runtime;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Runtime;
-    using Sirenix.OdinInspector;
     using UniGame.Runtime.Utils;
     using UnityEngine;
+    
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
 #if UNITY_EDITOR
     using UniModules.Editor;
 #endif
@@ -35,20 +40,28 @@
 
         public bool overrideProvider = false;
         
+#if ODIN_INSPECTOR
         [ShowIf(nameof(overrideProvider))]
+#endif
         public BackendTypeId provider = BackendTypeId.Empty;
         
+#if ODIN_INSPECTOR
         [BoxGroup(nameof(contract))]
         [HideLabel]
         [InlineProperty]
+#endif
         [SerializeReference]
         public IRemoteMetaContract contract;
         
+#if ODIN_INSPECTOR
         [BoxGroup(nameof(converter))]
+#endif
         public bool overriderDataConverter;
         
+#if ODIN_INSPECTOR
         [BoxGroup(nameof(converter))]
         [ShowIf(nameof(overriderDataConverter))]
+#endif
         [SerializeReference]
         public IRemoteDataConverter converter;
 

@@ -3,18 +3,24 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Sirenix.OdinInspector;
+    using UniGame.Core.Runtime;
     using UnityEngine;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
 #if UNITY_EDITOR
     using UnityEditor;
     using UniModules.Editor;
 #endif
     
     [Serializable]
+#if ODIN_INSPECTOR
     [ValueDropdown("@Game.Modules.ModelMapping.RemoteMetaId.GetBackendTypes()", 
         IsUniqueList = true, 
         DropdownTitle = "RemoteMetaId")]
+#endif
     public partial struct RemoteMetaId
     {
         [SerializeField]

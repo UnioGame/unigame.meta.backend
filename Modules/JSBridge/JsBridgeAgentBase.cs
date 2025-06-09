@@ -4,9 +4,12 @@
     using System.Runtime.CompilerServices;
     using System.Text;
     using R3;
-    using Sirenix.OdinInspector;
     using UniCore.Runtime.ProfilerTools;
      
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
     using UnityEngine;
 
     public class JsBridgeAgentBase : MonoBehaviour,IDisposable, IJsBridgeAgent
@@ -52,7 +55,9 @@
             _messageStream.Dispose();
         }
 
+#if ODIN_INSPECTOR
         [Button]
+#endif
         public void SendMessageToGame()
         {
             SendMessageToGame(debugMessage);

@@ -3,17 +3,23 @@
     using System;
     using Meta.Runtime;
     using UniGame.MetaBackend.Shared;
-    using Sirenix.OdinInspector;
+
     using UnityEngine;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
     [Serializable]
     public class RemoteMetaDataConfig : IRemoteMetaDataConfiguration
     {
         [SerializeReference]
         public IRemoteDataConverter defaultConverter = new JsonRemoteDataConverter();
 
+#if ODIN_INSPECTOR
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
         [ListDrawerSettings(ListElementLabelName = "method")]
+#endif
         public RemoteMetaData[] remoteMetaData = Array.Empty<RemoteMetaData>();
 
         public IRemoteDataConverter Converter => defaultConverter;

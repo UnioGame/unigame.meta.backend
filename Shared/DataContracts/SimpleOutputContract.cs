@@ -1,11 +1,7 @@
 ﻿namespace UniGame.MetaBackend.Shared
 {
     using System;
-    using Newtonsoft.Json;
-    using Sirenix.OdinInspector;
-    using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime.SerializableType;
-    using UniGame.Runtime.Utils;
     using UnityEngine;
 
     [Serializable]

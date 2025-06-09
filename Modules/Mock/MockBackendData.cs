@@ -1,8 +1,12 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
+    using Core.Runtime;
+    
+#if ODIN_INSPECTOR
     using Sirenix.OdinInspector;
-
+#endif
+    
     [Serializable]
     public class MockBackendData : ISearchFilterable
     {

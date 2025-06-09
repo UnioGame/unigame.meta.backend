@@ -1,6 +1,9 @@
 using System;
-using Sirenix.OdinInspector;
 using UnityEngine;
+
+#if ODIN_INSPECTOR
+	using Sirenix.OdinInspector;
+#endif
 
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
@@ -20,7 +23,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// <summary>
         /// Path to the Swagger JSON file
         /// </summary>
+    #if ODIN_INSPECTOR
         [FilePath]
+    #endif
         public string apiJsonPath;
 
         /// <summary>
@@ -70,7 +75,10 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         [Tooltip("Name of the field containing the actual data in the response")]
         public string responseDataField = "data";
 
+        
+#if ODIN_INSPECTOR
         [Button]
+#endif
         public void GenerateContracts()
         {
             WebApiGenerator.GenerateContracts(this);

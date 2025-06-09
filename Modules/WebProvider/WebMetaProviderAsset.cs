@@ -5,7 +5,7 @@
     using Cysharp.Threading.Tasks;
     using UniGame.MetaBackend.Runtime.WebService;
     using Game.Runtime.Tools;
-    using Sirenix.OdinInspector;
+
     using UniCore.Runtime.ProfilerTools;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Runtime;
@@ -13,6 +13,10 @@
     using UniGame.Runtime.Utils;
     using UnityEngine;
     using Game.Modules.Meta.Runtime;
+    
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
     
 #if UNITY_EDITOR
     using Game.Modules.ModelMapping;
@@ -23,8 +27,10 @@
     [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Backend Provider", fileName = "Web Backend Provider")]
     public class WebMetaProviderAsset : BackendMetaServiceAsset
     {
+#if ODIN_INSPECTOR
         [InlineProperty]
         [HideLabel]
+#endif
         public WebMetaProviderSettings settings = new();
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
@@ -49,8 +55,10 @@
             return service;
         }
         
+#if ODIN_INSPECTOR
         [Button]
         [PropertyOrder(-1)]
+#endif
         public void LoadContracts()
         {
 #if UNITY_EDITOR
@@ -119,8 +127,11 @@
 #endif
         }
         
+#if ODIN_INSPECTOR
         [Button]
         [PropertyOrder(-1)]
+#endif
+
         public void SaveSettingsToStreamingAsset()
         {
             var webSettings = new WebMetaStreamingAsset()
@@ -131,8 +142,10 @@
             StreamingAssetsUtils.SaveToStreamingAssets(settings.streamingAssetsFileName,webSettings);
         }
         
+#if ODIN_INSPECTOR
         [Button]
         [PropertyOrder(-1)]
+#endif
         public void LoadSettingsFromStreamingAsset()
         {
             LoadSettingsDataFromStreaming().Forget();

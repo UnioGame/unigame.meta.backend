@@ -4,15 +4,20 @@
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
     using Shared;
-    using Sirenix.OdinInspector;
     using UniGame.Core.Runtime;
     using UnityEngine;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
     [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Mock Backend Provider", fileName = "Mock Backend Provider")]
     public class MockBackendProviderAsset : BackendMetaServiceAsset
     {
+#if ODIN_INSPECTOR
         [InlineProperty]
         [HideLabel]
+#endif
         public MockBackendDataConfig configuration = new();
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
@@ -27,7 +32,9 @@
     {
         public bool allowConnect = true;
         
+#if ODIN_INSPECTOR
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
+#endif
         public List<MockBackendData> mockBackendData = new();
     }
 }

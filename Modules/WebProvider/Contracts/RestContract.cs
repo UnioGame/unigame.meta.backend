@@ -4,18 +4,24 @@ namespace Game.Modules.WebProvider.Contracts
     using global::UniGame.MetaBackend.Runtime;
     using Newtonsoft.Json;
     using UniGame.MetaBackend.Runtime.WebService;
-    using Sirenix.OdinInspector;
+
     using UniGame.MetaBackend.Shared;
     using UnityEngine;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
     [Serializable]
     public abstract class RestContract<TInput,TOutput> : 
         RemoteMetaContract<TInput,TOutput>,
         IWebRequestContract
     {
-        [SerializeField]
+#if ODIN_INSPECTOR
         [InlineProperty]
         [HideLabel]
+#endif
+        [SerializeField]
         public TInput input;
 
         [JsonIgnore]
@@ -34,9 +40,11 @@ namespace Game.Modules.WebProvider.Contracts
     public abstract class RestContract<TInput, TOutput,TError> : RemoteMetaContract<TInput,TOutput,TError>,
         IWebRequestContract
     {
-        [SerializeField]
+#if ODIN_INSPECTOR
         [InlineProperty]
         [HideLabel]
+#endif
+        [SerializeField]
         public TInput input;
 
         [JsonIgnore]

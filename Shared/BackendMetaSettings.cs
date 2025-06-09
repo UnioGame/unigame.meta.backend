@@ -5,11 +5,14 @@ namespace MetaService.Runtime
     using System.IO;
     using System.Linq;
     using System.Text;
-    using Sirenix.OdinInspector;
     using UniGame.MetaBackend.Runtime;
     using UniModules;
     using UnityEngine;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
 #if UNITY_EDITOR
     using UniModules.Editor;
 #endif
@@ -23,13 +26,17 @@ namespace MetaService.Runtime
         
         public BackendTypeId backendType;
         
+#if ODIN_INSPECTOR
         [InlineProperty]
+#endif
         public List<BackendType> backendTypes = new();
         
 #region IdGenerator
 #if UNITY_EDITOR
 
+#if ODIN_INSPECTOR
         [Button("Load Providers")]
+#endif
         public void LoadProviders()
         {
             var providers = AssetEditorTools.GetAssets<BackendMetaServiceAsset>();
@@ -54,7 +61,9 @@ namespace MetaService.Runtime
             }
         }
         
+#if ODIN_INSPECTOR
         [Button("Generate Static Properties")]
+#endif
         public void GenerateProperties()
         {
             GenerateStaticProperties(this);

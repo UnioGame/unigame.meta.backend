@@ -3,17 +3,24 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Core.Runtime;
     using Game.Modules.ModelMapping;
-    using Sirenix.OdinInspector;
+
     using UnityEngine;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
 #if UNITY_EDITOR
     using UniModules.Editor;
 #endif
     
     [Serializable]
+#if ODIN_INSPECTOR
     [ValueDropdown("@UniGame.MetaBackend.Shared.Data.BackendTypeId.GetBackendTypes()", IsUniqueList = true, DropdownTitle = "BackendType")]
-    public struct BackendTypeId : IEquatable<int>
+#endif
+       public struct BackendTypeId : IEquatable<int>
     {
         public static readonly BackendTypeId Empty = new() { value = nameof(Empty).GetHashCode() };
         

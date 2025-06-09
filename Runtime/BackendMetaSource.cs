@@ -4,12 +4,16 @@
     using Cysharp.Threading.Tasks;
     using Game.Modules.ModelMapping;
     using UniGame.MetaBackend.Shared;
-    using Sirenix.OdinInspector;
+
     using UniGame.Core.Runtime;
     using UniGame.Context.Runtime;
     using UnityEngine;
     using UnityEngine.Serialization;
 
+#if ODIN_INSPECTOR
+    using Sirenix.OdinInspector;
+#endif
+    
     /// <summary>
     /// Represents a class that provides backend meta data for the game.
     /// </summary>
@@ -17,9 +21,12 @@
         fileName = "Backend Meta Source")]
     public class BackendMetaSource : DataSourceAsset<IBackendMetaService>
     {
-        [FormerlySerializedAs("backendMetaConfiguration")]
+        
+#if ODIN_INSPECTOR
         [InlineEditor]
         [HideLabel]
+#endif
+        [FormerlySerializedAs("backendMetaConfiguration")]
         public RemoteMetaDataConfigAsset configuration;
         
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
