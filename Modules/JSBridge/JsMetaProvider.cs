@@ -1,4 +1,4 @@
-﻿namespace Game.Modules.unity.meta.backend.Modules.JSBridge
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
     using System.Collections.Generic;
@@ -12,7 +12,7 @@
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime;
     using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
     using UniGame.Runtime.DataFlow;
      
     using Object = UnityEngine.Object;

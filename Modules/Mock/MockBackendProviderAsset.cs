@@ -1,10 +1,9 @@
-﻿namespace Game.Runtime.Services.Backend.Mock.Data
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
-    using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using Shared;
     using Sirenix.OdinInspector;
     using UniGame.Core.Runtime;
     using UnityEngine;

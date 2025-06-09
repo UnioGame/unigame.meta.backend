@@ -1,4 +1,4 @@
-﻿namespace Modules.WebTexture
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using UnityEngine;
 

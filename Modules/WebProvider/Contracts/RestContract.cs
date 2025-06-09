@@ -1,9 +1,9 @@
 namespace Game.Modules.WebProvider.Contracts
 {
     using System;
-    using global::Modules.WebServer;
+    using global::UniGame.MetaBackend.Runtime;
     using Newtonsoft.Json;
-    using Runtime.Services.WebService;
+    using UniGame.MetaBackend.Runtime.WebService;
     using Sirenix.OdinInspector;
     using UniGame.MetaBackend.Shared;
     using UnityEngine;

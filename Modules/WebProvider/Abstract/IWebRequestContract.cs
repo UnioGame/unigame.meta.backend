@@ -1,6 +1,6 @@
-﻿namespace Modules.WebServer
+﻿namespace UniGame.MetaBackend.Runtime
 {
-    using Game.Runtime.Services.WebService;
+    using UniGame.MetaBackend.Runtime.WebService;
     using UniGame.MetaBackend.Shared;
 
     public interface IWebRequestContract : IRemoteMetaContract,IFallbackContract

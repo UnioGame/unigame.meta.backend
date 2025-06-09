@@ -1,6 +1,7 @@
-﻿namespace UniGame.MetaBackend.Shared.Data
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
+    using Shared;
 
     [Serializable]
     public struct MetaConnectionResult

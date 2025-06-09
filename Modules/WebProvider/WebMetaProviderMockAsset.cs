@@ -1,9 +1,8 @@
-﻿namespace Modules.WebServer
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using Cysharp.Threading.Tasks;
+    using Shared;
     using Sirenix.OdinInspector;
-    using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
     using UniGame.Core.Runtime;
     using UnityEngine;
 

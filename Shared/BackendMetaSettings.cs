@@ -6,7 +6,7 @@ namespace MetaService.Runtime
     using System.Linq;
     using System.Text;
     using Sirenix.OdinInspector;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
     using UniModules;
     using UnityEngine;
 

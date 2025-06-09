@@ -1,4 +1,4 @@
-﻿namespace Game.Modules.unity.meta.backend.Modules.JSBridge
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using UniGame.MetaBackend.Shared;
 

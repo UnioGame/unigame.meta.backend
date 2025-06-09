@@ -1,10 +1,10 @@
-﻿namespace Modules.WebTexture
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using Cysharp.Threading.Tasks;
     using Sirenix.OdinInspector;
     using UniGame.Core.Runtime;
     using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
     using UnityEngine;
 
     [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Texture Provider", fileName = "Web Texture Provider")]

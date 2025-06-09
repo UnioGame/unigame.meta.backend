@@ -1,6 +1,6 @@
 ﻿namespace MetaService.Runtime
 {
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
 
     public class BackendMetaConstants
     {

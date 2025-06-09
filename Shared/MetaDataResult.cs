@@ -1,4 +1,4 @@
-﻿namespace UniGame.MetaBackend.Shared.Data
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
 

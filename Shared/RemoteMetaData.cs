@@ -2,7 +2,7 @@
 {
     using System;
     using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
     using Sirenix.OdinInspector;
     using UniGame.Runtime.Utils;
     using UnityEngine;

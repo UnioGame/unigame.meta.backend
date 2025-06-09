@@ -1,7 +1,8 @@
-﻿namespace UniGame.MetaBackend.Shared.Data
+﻿namespace UniGame.MetaBackend.Runtime
 {
+    using Core.Runtime;
     using Cysharp.Threading.Tasks;
-    using UniGame.Core.Runtime;
+    using Shared;
     using UnityEngine;
 
     public abstract class BackendMetaServiceAsset : ScriptableObject,IBackendMetaSource

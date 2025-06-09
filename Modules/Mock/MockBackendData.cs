@@ -1,4 +1,4 @@
-﻿namespace Game.Runtime.Services.Backend.Mock.Data
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
     using Sirenix.OdinInspector;

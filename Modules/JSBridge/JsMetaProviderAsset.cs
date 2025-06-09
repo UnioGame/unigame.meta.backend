@@ -1,4 +1,4 @@
-﻿namespace Game.Modules.unity.meta.backend.Modules.JSBridge
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
     using System.Collections.Generic;
@@ -7,7 +7,7 @@
     using UniGame.Core.Runtime;
     using UniGame.Core.Runtime.SerializableType;
     using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
     using UnityEditor;
     using UnityEngine;
 

@@ -5,7 +5,7 @@
     using Sirenix.OdinInspector;
     using UniCore.Runtime.ProfilerTools;
     using UniGame.Core.Runtime.SerializableType;
-    using Runtime.Utils;
+    using UniGame.Runtime.Utils;
     using UnityEngine;
 
     [Serializable]

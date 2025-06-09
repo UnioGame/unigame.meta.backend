@@ -4,7 +4,7 @@ namespace Game.Modules.Editor
     using System.Linq;
     using MetaService.Runtime;
     using ModelMapping;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
     using UniModules;
     using UniModules.Editor;
     using UnityEditor;

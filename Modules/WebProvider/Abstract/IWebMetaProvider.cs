@@ -1,9 +1,9 @@
-﻿namespace Modules.WebServer
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
     using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
 
     public interface IWebMetaProvider : IRemoteMetaProvider
     {

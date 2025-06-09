@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using Game.Runtime.Services.WebService;
+using UniGame.MetaBackend.Runtime.WebService;
 using Newtonsoft.Json;
 using Game.Modules.WebProvider.Contracts;
 

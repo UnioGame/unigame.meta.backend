@@ -3,7 +3,7 @@ namespace Extensions
     using System;
     using Cysharp.Threading.Tasks;
     using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
 
     public static class BackendMetaServiceExtensions
     {

@@ -1,4 +1,4 @@
-﻿namespace Game.Runtime.Services.Backend.Mock.Data
+﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
     using System.Linq;
@@ -6,7 +6,7 @@
     using MetaService.Runtime;
     using R3;
     using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Shared.Data;
+    using UniGame.MetaBackend.Runtime;
     using UniGame.Core.Runtime;
     using UniGame.Runtime.DataFlow;
     using UniGame.Runtime.Rx;

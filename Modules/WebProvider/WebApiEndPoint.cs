@@ -1,4 +1,4 @@
-﻿namespace Game.Runtime.Services.WebService
+﻿namespace UniGame.MetaBackend.Runtime.WebService
 {
     using System;
     using System.Collections.Generic;
