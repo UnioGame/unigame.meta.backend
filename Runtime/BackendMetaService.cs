@@ -243,6 +243,13 @@
         {
             foreach (var meta in _metaDataConfiguration.RemoteMetaData)
             {
+#if UNITY_EDITOR
+                if (meta.contract == null)
+                {
+                    Debug.LogError($"Backend Service: {meta.id} {meta.method} {meta.provider}");
+                }
+#endif
+                
                 if(meta.contract.OutputType == contract.OutputType && 
                    meta.contract.InputType == contract.InputType)
                     return meta;
