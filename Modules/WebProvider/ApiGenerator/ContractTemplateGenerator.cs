@@ -709,8 +709,8 @@ using System.Collections.Generic;
 using System.Text;
 using UniGame.MetaBackend;
 using $namespace$.Dto;
-using Game.Runtime.Services.WebService;
 using Game.Modules.WebProvider.Contracts;
+using UniGame.MetaBackend.Runtime.WebService;
 using Newtonsoft.Json;
 
 namespace $namespace$
