@@ -110,17 +110,23 @@
 
             try
             {
-                result.data = requestResult.success 
+                var resultData = requestResult.success 
                     ? JsonConvert.DeserializeObject(requestData,contract.OutputType) 
                     : string.Empty;
 
+                var isFailedData = resultData == null || success == false;
+                var isSuccess = success && resultData != null;
+                
                 //fill fallback data
-                if (success == false && contract is IFallbackContract fallbackContract)
+                if (isFailedData && contract is IFallbackContract fallbackContract)
                 {
-                    result.data = fallbackContract.FallbackType!=null
+                    resultData = fallbackContract.FallbackType!=null
                         ? JsonConvert.DeserializeObject(requestData,fallbackContract.FallbackType) 
                         : requestData;
                 }
+                
+                result.success = isSuccess;
+                result.data = resultData;
             }
             catch (Exception e)
             {
