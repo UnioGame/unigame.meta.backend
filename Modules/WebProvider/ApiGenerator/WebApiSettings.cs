@@ -8,7 +8,6 @@ using UnityEngine;
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
     using global::UniGame.MetaBackend.Runtime;
-    using UnityEngine.Serialization;
 
 #if UNITY_EDITOR
     using UniModules.Editor;

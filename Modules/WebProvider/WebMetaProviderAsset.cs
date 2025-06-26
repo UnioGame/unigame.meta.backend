@@ -3,12 +3,11 @@
     using System;
     using System.Linq;
     using Cysharp.Threading.Tasks;
-    using UniGame.MetaBackend.Runtime.WebService;
+    using WebService;
     using Game.Runtime.Tools;
 
     using UniCore.Runtime.ProfilerTools;
-    using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Runtime;
+    using Shared;
     using UniGame.Core.Runtime;
     using UniGame.Runtime.Utils;
     using UnityEngine;
@@ -35,7 +34,8 @@
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
-            var webSettings = settings;
+            var thisSettings = Instantiate(this);
+            var webSettings = thisSettings.settings;
             var useStreaming = settings.useStreamingSettings && 
                                (settings.useStreamingUnderEditor || !Application.isEditor);
             if (useStreaming)

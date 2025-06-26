@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using Core.Runtime;
     using UniGame.Core.Runtime.SerializableType;
     using UnityEngine.Serialization;
 
@@ -12,7 +11,7 @@
 
     
 #if UNITY_EDITOR
-    using UniGame.MetaBackend.Shared;
+    using Shared;
     using UnityEditor;
 #endif
     

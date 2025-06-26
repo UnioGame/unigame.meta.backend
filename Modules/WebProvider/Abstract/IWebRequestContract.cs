@@ -1,7 +1,7 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
-    using UniGame.MetaBackend.Runtime.WebService;
-    using UniGame.MetaBackend.Shared;
+    using WebService;
+    using Shared;
 
     public interface IWebRequestContract : IRemoteMetaContract,IFallbackContract
     {

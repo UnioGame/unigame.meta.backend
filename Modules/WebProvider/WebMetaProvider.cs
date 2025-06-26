@@ -4,13 +4,12 @@
     using System.Collections.Generic;
     using System.Linq;
     using Cysharp.Threading.Tasks;
-    using UniGame.MetaBackend.Runtime.WebService;
+    using WebService;
     using MetaService.Runtime;
     using Newtonsoft.Json;
     using R3;
     using UniCore.Runtime.ProfilerTools;
-    using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Runtime;
+    using Shared;
     using UniGame.Core.Runtime;
     using UniModules.Runtime.Network;
     using UniGame.Runtime.DataFlow;
@@ -42,6 +41,7 @@
         
         private string _token;
         private bool _debugMode;
+        private bool _isInitialized;
 
         public WebMetaProvider(WebMetaProviderSettings settings)
         {
@@ -59,6 +59,8 @@
                 userToken = _token,
 #endif
             };
+            
+            InitializeAsync().Forget();
         }
         
         public ILifeTime LifeTime => _lifeTime;
@@ -147,6 +149,9 @@
         public async UniTask<WebRequestResult> ExecuteWebRequest(IRemoteMetaContract contract,
             WebApiEndPoint endPoint)
         {
+            if (!_isInitialized)
+                await UniTask.WaitWhile(this, x => x._isInitialized == false);
+            
             var payload = contract.Payload;
             var url = string.IsNullOrEmpty(endPoint.url) 
                 ? _defaultUrl : endPoint.url;
@@ -304,6 +309,42 @@
         {
             _lifeTime.Release();
         }
+        
+        private async UniTask InitializeAsync()
+        {
+            if (_settings.useMultiHost == false)
+            {
+                _isInitialized = true;
+                return;
+            }
+            
+            var multiHostSettings = _settings.multiHostSettings;
 
+            var hosts = multiHostSettings.hosts;
+            var testHosts = hosts.Select(x => x.hostTestUrl).ToList();
+            var complete = false;
+
+            while (!complete && _lifeTime.IsAlive)
+            {
+                var bestResult = await UrlChecker.SelectFastestEndPoint(testHosts,_settings.requestTimeout);
+
+                if (!bestResult.success)
+                {
+                    await UniTask.Delay(TimeSpan.FromMilliseconds(100));
+                    continue;
+                }
+                
+                var resultHost = hosts.First(x => x.hostTestUrl == bestResult.url);
+                var urlBuilder = UriBuilderTool.GetUriBuilder(resultHost.host);
+                if (resultHost.port > 0 && resultHost.port!=80)
+                    urlBuilder.Port = resultHost.port;
+    
+                _defaultUrl = urlBuilder.ToString();
+                complete = true;
+            }
+            
+            _isInitialized = true;
+        }
+        
     }
 }

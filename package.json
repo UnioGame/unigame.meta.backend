@@ -4,7 +4,7 @@
   "displayName": "Game Meta Service",
   "description": "Allow to create and manage game backend api transport and responses",
   "unity": "2023.1",
-  "version": "2025.0.5",
+  "version": "2025.0.6",
   "keywords": [
     "meta",
     "backend",

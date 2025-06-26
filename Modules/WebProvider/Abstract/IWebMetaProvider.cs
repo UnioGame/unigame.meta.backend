@@ -2,8 +2,7 @@
 {
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
-    using UniGame.MetaBackend.Shared;
-    using UniGame.MetaBackend.Runtime;
+    using Shared;
 
     public interface IWebMetaProvider : IRemoteMetaProvider
     {

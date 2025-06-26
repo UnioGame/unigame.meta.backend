@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using System.Text.RegularExpressions;
-using System.Text;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif

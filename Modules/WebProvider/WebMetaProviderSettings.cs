@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
     using Game.Modules.unity.meta.service.Modules.WebProvider;
-    using UniGame.MetaBackend.Runtime.WebService;
+    using WebService;
 
     using UnityEngine;
 
@@ -64,12 +64,23 @@
         [ShowIf(nameof(useStreamingSettings))]
 #endif
         public string streamingAssetsFileName = "web_meta_provider_settings.json";
+      
+#if ODIN_INSPECTOR
+        [TabGroup(SettingsKey)]
+#endif
+        public bool useMultiHost = false;
         
 #if ODIN_INSPECTOR
         [TabGroup(SettingsKey)]
 #endif
-
         public string defaultUrl = "http://localhost:5000";
+        
+#if ODIN_INSPECTOR
+        [TabGroup(SettingsKey)]
+        [ShowIf(nameof(useMultiHost))]
+        [ListDrawerSettings(ListElementLabelName = "@host")]
+#endif
+        public WebMultiHostSettings multiHostSettings = new();
         
 #if ODIN_INSPECTOR
         [TabGroup(SettingsKey)]
@@ -105,6 +116,19 @@
 #endif
         public bool sendVersion = true;
         
+    }
+    
+    [Serializable]
+    public class WebMultiHostSettings
+    {
+        public List<WebHostSettings> hosts = new();
+    }
 
+    [Serializable]
+    public class WebHostSettings
+    {
+        public string hostTestUrl;
+        public string host;
+        public int port = 80;
     }
 }

@@ -4,9 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using UniGame.MetaBackend.Runtime.WebService;
-using Newtonsoft.Json;
-using Game.Modules.WebProvider.Contracts;
 
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
