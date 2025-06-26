@@ -312,15 +312,16 @@
         
         private async UniTask InitializeAsync()
         {
-            if (_settings.useMultiHost == false)
+            var multiHostSettings = _settings.multiHostSettings;
+            var hosts = multiHostSettings.hosts;
+            
+            if (_settings.useMultiHost == false ||
+                hosts.Count == 0)
             {
                 _isInitialized = true;
                 return;
             }
             
-            var multiHostSettings = _settings.multiHostSettings;
-
-            var hosts = multiHostSettings.hosts;
             var testHosts = hosts.Select(x => x.hostTestUrl).ToList();
             var complete = false;
 
