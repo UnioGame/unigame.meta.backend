@@ -17,13 +17,13 @@
     {
         private MockBackendDataConfig _config;
         private ReactiveValue<ConnectionState> _connectionState;
-        private LifeTimeDefinition _lifeTime;
+        private LifeTime _lifeTime;
 
         public MockBackendService(MockBackendDataConfig config)
         {
             _config = config;
             _connectionState = new ReactiveValue<ConnectionState>(ConnectionState.Disconnected);
-            _lifeTime = new LifeTimeDefinition();
+            _lifeTime = new LifeTime();
         }
 
         public ILifeTime LifeTime => _lifeTime;
