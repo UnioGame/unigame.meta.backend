@@ -39,7 +39,7 @@
             _connection = connection;
             _authenticate = authenticate;
 
-            _sessionLifeTime.AddCleanUpAction(() => _sessionLifeTime.Release());
+            //_sessionLifeTime.AddCleanUpAction(() => _sessionLifeTime.Terminate());
             
             var servers = _nakamaSettings.servers;
             

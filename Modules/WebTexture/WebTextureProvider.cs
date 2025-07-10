@@ -299,7 +299,7 @@
         
         public void Dispose()
         {
-            _lifeTime.Release();
+            _lifeTime.Terminate();
         }
 
         private async UniTask UpdateCacheAsync()
