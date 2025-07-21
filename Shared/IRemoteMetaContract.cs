@@ -4,7 +4,7 @@
     using Newtonsoft.Json;
 
     [Serializable]
-    public abstract class RemoteMetaContract<TInput, TOutput,TError> : RemoteMetaContract<TInput,TOutput>
+    public abstract class RemoteMetaContract<TInput, TOutput,TError> : RemoteMetaContract<TInput,TOutput>, IFallbackContract
     {
         [JsonIgnore]
         public virtual Type FallbackType => typeof(TError);

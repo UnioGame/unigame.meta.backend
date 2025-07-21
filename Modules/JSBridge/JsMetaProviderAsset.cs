@@ -14,7 +14,7 @@
     using Sirenix.OdinInspector;
 #endif
     
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Js Meta Provider", fileName = "Js Meta Provider")]
+    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Js Meta Provider", fileName = "Js Meta Provider")]
     public class JsMetaProviderAsset : BackendMetaServiceAsset
     {
 #if ODIN_INSPECTOR

@@ -5,7 +5,7 @@
     using Shared;
     using UnityEngine;
 
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Nakama Provider", fileName = "Nakama Provider")]
+    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Nakama Provider", fileName = "Nakama Provider")]
     public class NakamaServiceAsset : BackendMetaServiceAsset
     {
         public NakamaSettings nakamaSettings;
@@ -14,8 +14,7 @@
         {
             var settings = Instantiate(this).nakamaSettings;
             var nakamaConnection = new NakamaConnection();
-            var nakamaAuth = new NakamaAuthenticate(settings);
-            var service = new NakamaService(settings,nakamaConnection,nakamaAuth);
+            var service = new NakamaService(settings,nakamaConnection);
 
             context.Publish(settings);
             context.Publish<INakamaConnection>(nakamaConnection);

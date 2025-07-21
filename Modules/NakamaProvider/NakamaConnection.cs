@@ -1,9 +1,9 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
-    using System.Data;
     using Nakama;
     using R3;
     using UniGame.Runtime.Rx;
+    using ConnectionState = Shared.ConnectionState;
 
     public class NakamaConnection : INakamaConnection
     {
@@ -20,7 +20,7 @@
         /// <summary>
         /// Contains the current connection state of the client.
         /// </summary>
-        public ReactiveValue<Shared.ConnectionState> state = new(Shared.ConnectionState.Disconnected);
+        public ReactiveValue<ConnectionState> state = new(ConnectionState.Disconnected);
         
         /// <summary>
         /// contains the last authentication data used to authenticate the user.
@@ -78,11 +78,25 @@
         
         public ReadOnlyReactiveProperty<string> Token => token;
 
-        public ReadOnlyReactiveProperty<Shared.ConnectionState> State => state;
+        public ReadOnlyReactiveProperty<ConnectionState> State => state;
         
         public ReadOnlyReactiveProperty<INakamaAuthenticateData> AuthenticateData => authenticateData;
 
         public ReadOnlyReactiveProperty<NakamaServerData> ServerData => serverData;
+
+
+        public void Reset()
+        {
+            session.Value = null;
+            socket.Value = null;
+            client.Value = null;
+            account.Value = null;
+            userId.Value = string.Empty;
+            token.Value = string.Empty;
+            authenticateData.Value = null;
+            serverData.Value = null;
+            state.Value = ConnectionState.Disconnected;
+        }
     }
     
 }
