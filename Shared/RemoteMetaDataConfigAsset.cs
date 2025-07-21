@@ -21,7 +21,7 @@
     using UnityEditor;
 #endif
 
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Remote Meta Data Config")]
+    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Remote Meta Data Config",fileName = "RemoteMetaDataConfig")]
     public class RemoteMetaDataConfigAsset : ScriptableObject
     {
 #if ODIN_INSPECTOR

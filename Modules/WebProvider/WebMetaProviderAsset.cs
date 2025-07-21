@@ -23,7 +23,7 @@
     using UniModules.Editor;
 #endif
     
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Backend Provider", fileName = "Web Backend Provider")]
+    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Web Backend Provider", fileName = "Web Backend Provider")]
     public class WebMetaProviderAsset : BackendMetaServiceAsset
     {
 #if ODIN_INSPECTOR

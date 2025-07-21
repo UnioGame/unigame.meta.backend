@@ -18,7 +18,7 @@
     
     [Serializable]
 #if ODIN_INSPECTOR
-    [ValueDropdown("@UniGame.MetaBackend.Shared.Data.BackendTypeId.GetBackendTypes()", IsUniqueList = true, DropdownTitle = "BackendType")]
+    [ValueDropdown("@UniGame.MetaBackend.Runtime.BackendTypeId.GetBackendTypes()", IsUniqueList = true, DropdownTitle = "BackendType")]
 #endif
        public struct BackendTypeId : IEquatable<int>
     {

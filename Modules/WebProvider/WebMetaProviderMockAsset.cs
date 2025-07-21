@@ -9,7 +9,7 @@
     using Sirenix.OdinInspector;
 #endif
     
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Backend Mock", fileName = "Web Backend Mock")]
+    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Web Backend Mock", fileName = "Web Backend Mock")]
     public class WebMetaProviderMockAsset : BackendMetaServiceAsset
     {
 #if ODIN_INSPECTOR

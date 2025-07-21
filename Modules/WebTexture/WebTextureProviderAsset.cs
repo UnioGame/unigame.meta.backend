@@ -11,7 +11,7 @@
     using Sirenix.OdinInspector;
 #endif
     
-    [CreateAssetMenu(menuName = "UniGame/Services/MetaBackend/Web Texture Provider", fileName = "Web Texture Provider")]
+    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Web Texture Provider", fileName = "Web Texture Provider")]
     public class WebTextureProviderAsset : BackendMetaServiceAsset
     {
 #if ODIN_INSPECTOR

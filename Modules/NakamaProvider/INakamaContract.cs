@@ -1,6 +1,8 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
-    public interface INakamaContract
+    using Shared;
+
+    public interface INakamaContract : IRemoteMetaContract
     {
         
     }
