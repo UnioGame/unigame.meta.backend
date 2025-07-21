@@ -4,12 +4,13 @@
   "displayName": "Game Meta Service",
   "description": "Allow to create and manage game backend api transport and responses",
   "unity": "2023.1",
-  "version": "2025.0.7",
+  "version": "2025.0.8",
   "keywords": [
     "meta",
     "backend",
     "service",
-    "server"
+    "server",
+    "nakama"
   ],
   "dependencies": {
     "com.unity.addressables": "2.6.0",
