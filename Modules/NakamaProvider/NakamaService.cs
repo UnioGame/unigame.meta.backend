@@ -99,7 +99,7 @@
 
         public bool IsContractSupported(IRemoteMetaContract command)
         {
-            return command is INakamaContract;
+            return true;
         }
 
         public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
