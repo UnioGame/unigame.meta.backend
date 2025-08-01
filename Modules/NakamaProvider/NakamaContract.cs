@@ -7,6 +7,6 @@
     public class NakamaContract<TInput,TOutput> : RemoteMetaContract<TInput,TOutput>, 
         INakamaContract
     {
-        
+
     }
 }

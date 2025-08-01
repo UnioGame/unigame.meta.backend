@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using GameFlow.Runtime;
     using MetaService.Runtime;
@@ -15,6 +16,7 @@
     using UniGame.Runtime.Rx;
     using UniModules.Runtime.Network;
     using UnityEngine;
+    using Object = System.Object;
 
     [Serializable]
     public class NakamaService : GameService, INakamaService,INakamaAuthenticate
@@ -120,27 +122,13 @@
                     var message = $"Cannot execute contract {contractData.contractName} {contractData.contract.GetType().Name} in state {state}";
                     result.error = message;
                 }
-                var session = _connection.session.Value;
-                var client = _connection.client.Value;
                 
                 var contract = contractData.contract;
-                var rpcName = contract.Path;
-                var payloadObject = contract.Payload;
-                var targetType = contract.OutputType;
+                var contractResult = await ExecuteContractAsync(_connection,
+                    contract, LifeTime.Token);
                 
-                var payloadValue = string.Empty;
-                if (payloadObject != null && payloadObject is not string)
-                    payloadValue = JsonConvert.SerializeObject(payloadObject,JsonSettings);    
-                
-                var rpcResult = await client
-                    .RpcAsync(session, rpcName, payloadValue);
-
-                result.data = targetType == typeof(string) 
-                    ? rpcResult.Payload 
-                    : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, JsonSettings);
-                
-                result.data ??= string.Empty;
-                result.success = true;
+                result.data = contractResult.success ? contractResult.data : string.Empty;
+                result.success = contractResult.success;
             }
             catch (ApiResponseException ex)
             {
@@ -150,6 +138,130 @@
             }
 
             return result;
+        }
+        
+        public async UniTask<ContractResult> ExecuteRpcContractAsync(
+            NakamaConnection connection,
+            IRemoteMetaContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+            var rpcName = contract.Path;
+            var payloadObject = contract.Payload;
+            var targetType = contract.OutputType;
+            
+            var payloadValue = string.Empty;
+            if (payloadObject != null && payloadObject is not string)
+                payloadValue = JsonConvert.SerializeObject(payloadObject,JsonSettings);
+
+            var contractResult = new ContractResult()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+            };
+            
+            var rpcResult = await client
+                .RpcAsync(session, rpcName, payloadValue,  _retryConfiguration, cancellation);
+
+            var resultObject = targetType == typeof(string) 
+                ? rpcResult.Payload 
+                : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, JsonSettings);
+                
+            contractResult.success = resultObject != null;
+            contractResult.data = resultObject;
+            contractResult.error = string.Empty;
+
+            return contractResult;
+        }
+
+        public async UniTask<ContractResult> LoadUsersAsync(
+            NakamaUsersContract usersContract,
+            NakamaConnection connection,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+            
+            var contractResult = new ContractResult()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+            };
+            
+            var account = await client
+                .GetUsersAsync(session,usersContract.userIds,usersContract.userNames,usersContract.facebookIds,
+                    _retryConfiguration, cancellation)
+                .AsUniTask();
+                
+            contractResult.success = account != null;
+            contractResult.data = account;
+            contractResult.error = string.Empty;
+            
+            return contractResult;
+        }
+        
+        public async UniTask<ContractResult> LoadAccountAsync(
+            NakamaConnection connection,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+            
+            var contractResult = new ContractResult()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+            };
+            
+            var account = await client
+                .GetAccountAsync(session,_retryConfiguration, cancellation)
+                .AsUniTask();
+                
+            contractResult.success = account != null;
+            contractResult.data = account;
+            contractResult.error = string.Empty;
+            return contractResult;
+        }
+
+        public async UniTask<ContractResult> ExecuteContractAsync(NakamaConnection connection,
+            IRemoteMetaContract contract,
+            CancellationToken cancellation = default)
+        {
+            var contractResult = new ContractResult()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+            };
+
+            try
+            {
+                if (contract is NakamaUsersContract usersContract)
+                {
+                    return await LoadUsersAsync(usersContract,connection,cancellation);
+                }
+                if(contract is NakamaAccountContract accountContract)
+                {
+                    return await LoadAccountAsync(connection, cancellation);
+                }
+                else
+                {
+                    return await ExecuteRpcContractAsync(connection, contract, cancellation);
+                }
+            }
+            catch (Exception e)
+            {
+                GameLog.LogError(e);
+                contractResult.error = e.Message;
+                contractResult.success = false;
+                contractResult.data = string.Empty;
+            }
+    
+            return contractResult;
         }
 
         public bool TryDequeue(out RemoteMetaResult result)
@@ -473,5 +585,13 @@
     {
         public bool success;
         public string error;
+    }
+
+    [Serializable]
+    public struct ContractResult
+    {
+        public bool success;
+        public string error;
+        public Object data;
     }
 }
