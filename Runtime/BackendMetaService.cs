@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using Extensions;
     using Game.Modules.ModelMapping;
@@ -173,9 +174,10 @@
             }
         }
 
-        public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract)
+        public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract,CancellationToken cancellation = default)
         {
             var meta = FindMetaData(contract);
+            
             if (meta == RemoteMetaData.Empty) 
                 return MetaDataResult.Empty;
 
@@ -192,11 +194,11 @@
                 contractName = meta.method,
             };
             
-            return await ExecuteAsync(contractData)
+            return await ExecuteAsync(contractData, cancellation)
                 .AttachExternalCancellation(LifeTime.Token);
         }
 
-        private async UniTask<MetaDataResult> ExecuteAsync(MetaContractData contractData)
+        private async UniTask<MetaDataResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellation = default)
         {
             try
             {
