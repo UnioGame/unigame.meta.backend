@@ -1,6 +1,7 @@
 namespace Extensions
 {
     using System;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Runtime;
@@ -9,7 +10,8 @@ namespace Extensions
     {
         public static IBackendMetaService RemoteMetaService;
 
-        public static async UniTask<MetaRequestResult<TResult>> ExecuteAsync<TResult>(this IRemoteMetaContract contract) 
+        public static async UniTask<MetaRequestResult<TResult>> 
+            ExecuteAsync<TResult>(this IRemoteMetaContract contract, CancellationToken cancellationToken = default) 
             where TResult : class
         {
             if (RemoteMetaService == null)
@@ -21,7 +23,7 @@ namespace Extensions
                 };
             }
             
-            var result = await ExecuteAsync(contract);
+            var result = await ExecuteAsync(contract,cancellationToken);
             
             var resultValue = new MetaRequestResult<TResult>
             {
@@ -33,7 +35,8 @@ namespace Extensions
             return resultValue;
         }
 
-        public static async UniTask<MetaRequestResult<TResult,TError>> ExecuteAsync<TResult,TError>(this IRemoteMetaContract contract) 
+        public static async UniTask<MetaRequestResult<TResult,TError>> 
+            ExecuteAsync<TResult,TError>(this IRemoteMetaContract contract,CancellationToken cancellationToken = default) 
             where TResult : class where TError : class
         {
             if (RemoteMetaService == null)
@@ -45,7 +48,7 @@ namespace Extensions
                 };
             }
             
-            var result = await ExecuteAsync(contract);
+            var result = await ExecuteAsync(contract,cancellationToken);
             
             var resultValue = new MetaRequestResult<TResult,TError>
             {
@@ -59,20 +62,22 @@ namespace Extensions
         }
 
         public static async UniTask<MetaRequestResult<TOutput>> ExecuteAsync<TInput,TOutput>(
-            this RemoteMetaContract<TInput,TOutput> contract) 
+            this RemoteMetaContract<TInput,TOutput> contract,CancellationToken cancellationToken = default) 
             where TOutput : class
         {
-            return await contract.ExecuteAsync<TOutput>();
+            return await contract.ExecuteAsync<TOutput>(cancellationToken);
         }
         
         public static async UniTask<MetaRequestResult<TOutput,TError>> ExecuteAsync<TInput,TOutput,TError>(
-            this  RemoteMetaContract<TInput,TOutput,TError>  contract) 
+            this  RemoteMetaContract<TInput,TOutput,TError>  contract,
+            CancellationToken cancellationToken = default) 
             where TOutput : class where TError : class
         {
-            return await contract.ExecuteAsync<TOutput,TError>();
+            return await contract.ExecuteAsync<TOutput,TError>(cancellationToken);
         }
 
-        public static async UniTask<MetaDataResult> ExecuteAsync(this IRemoteMetaContract contract) 
+        public static async UniTask<MetaDataResult> ExecuteAsync(this IRemoteMetaContract contract, 
+            CancellationToken cancellationToken = default)
         {
             if (RemoteMetaService == null)
             {
@@ -83,7 +88,7 @@ namespace Extensions
                 };
             }
             
-            var result = await RemoteMetaService.ExecuteAsync(contract);
+            var result = await RemoteMetaService.ExecuteAsync(contract, cancellationToken);
             return result;
         }
         
