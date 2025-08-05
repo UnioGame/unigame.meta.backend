@@ -156,57 +156,28 @@
 
             try
             {
-                if (contract is NakamaUsersContract usersContract)
+                return contract switch
                 {
-                    return await LoadUsersAsync(usersContract, connection, cancellation);
-                }
-
-                if (contract is NakamaAccountContract accountContract)
-                {
-                    return await LoadAccountAsync(connection, cancellation);
-                }
-
-                if (contract is NakamaGetLeaderboardRecordsContract getLeaderboardRecordsContract)
-                {
-                    return await GetLeaderboardAsync(connection, getLeaderboardRecordsContract, cancellation);
-                }
-
-                if (contract is NakamaGetLeaderboardRecordsAroundContract leaderboardRecordsAround)
-                {
-                    return await GetLeaderboardAroundAsync(connection, leaderboardRecordsAround, cancellation);
-                }
-
-                if (contract is NakamaWriteLeaderboardRecordContract writeLeaderboardRecordContract)
-                {
-                    return await WriteLeaderboardAsync(connection, writeLeaderboardRecordContract, cancellation);
-                }
-
-                if (contract is NakamaTournamentsListContract tournametsListContract)
-                {
-                    return await GetTournamentsAsync(connection, tournametsListContract, cancellation);
-                }
-                
-                if (contract is NakamaJoinTournamentsContract joinTournamet)
-                {
-                    return await JoinTournamentAsync(connection, joinTournamet, cancellation);
-                }
-                
-                if (contract is NakamaTournamentRecordsContract tournamentRecords)
-                {
-                    return await ListTournamentRecordsAsync(connection, tournamentRecords, cancellation);
-                }
-                
-                if (contract is NakamaTournamentRecordsAroundContract tournamentAroundRecords)
-                {
-                    return await ListTournamentRecordsAroundAsync(connection, tournamentAroundRecords, cancellation);
-                }
-                
-                if (contract is NakamaTournamentWriteRecordContract writeTournamentRecord)
-                {
-                    return await TournamentWriteAsync(connection, writeTournamentRecord, cancellation);
-                }
-                
-                return await ExecuteRpcContractAsync(connection, contract, cancellation);
+                    NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
+                    NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
+                    NakamaLeaderboardGetRecordsContract getLeaderboardRecordsContract => await GetLeaderboardAsync(
+                        connection, getLeaderboardRecordsContract, cancellation),
+                    NakamaLeaderboardGetRecordsAroundContract leaderboardRecordsAround => await
+                        GetLeaderboardAroundAsync(connection, leaderboardRecordsAround, cancellation),
+                    NakamaLeaderboardWriteRecordContract writeLeaderboardRecordContract => await WriteLeaderboardAsync(
+                        connection, writeLeaderboardRecordContract, cancellation),
+                    NakamaTournamentsListContract tournamentsListContract => await GetTournamentsAsync(connection,
+                        tournamentsListContract, cancellation),
+                    NakamaJoinTournamentsContract joinTournament => await JoinTournamentAsync(connection, joinTournament,
+                        cancellation),
+                    NakamaTournamentRecordsContract tournamentRecords => await ListTournamentRecordsAsync(connection,
+                        tournamentRecords, cancellation),
+                    NakamaTournamentRecordsAroundContract tournamentAroundRecords => await
+                        ListTournamentRecordsAroundAsync(connection, tournamentAroundRecords, cancellation),
+                    NakamaTournamentWriteRecordContract writeTournamentRecord => await TournamentWriteAsync(connection,
+                        writeTournamentRecord, cancellation),
+                    _ => await ExecuteRpcContractAsync(connection, contract, cancellation)
+                };
             }
             catch (Exception e)
             {
@@ -221,7 +192,7 @@
 
         public async UniTask<NakamaContractResult> WriteLeaderboardAsync(
             NakamaConnection connection,
-            NakamaWriteLeaderboardRecordContract contract,
+            NakamaLeaderboardWriteRecordContract contract,
             CancellationToken cancellation = default)
         {
             var client = connection.client.Value;
@@ -450,7 +421,7 @@
         
         public async UniTask<NakamaContractResult> GetLeaderboardAsync(
             NakamaConnection connection,
-            NakamaGetLeaderboardRecordsContract contract,
+            NakamaLeaderboardGetRecordsContract contract,
             CancellationToken cancellation = default)
         {
             var client = connection.client.Value;
@@ -486,7 +457,7 @@
 
         public async UniTask<NakamaContractResult> GetLeaderboardAroundAsync(
             NakamaConnection connection,
-            NakamaGetLeaderboardRecordsAroundContract contract,
+            NakamaLeaderboardGetRecordsAroundContract contract,
             CancellationToken cancellation = default)
         {
             var client = connection.client.Value;

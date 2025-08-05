@@ -4,7 +4,7 @@
     using Shared;
 
     [Serializable]
-    public class NakamaContract<TInput,TOutput> : RemoteMetaContract<TInput,TOutput>, 
+    public abstract class NakamaContract<TInput,TOutput> : RemoteMetaContract<TInput,TOutput>, 
         INakamaContract
     {
 
