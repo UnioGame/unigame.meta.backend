@@ -16,7 +16,6 @@
     using UniGame.Runtime.Rx;
     using UniModules.Runtime.Network;
     using UnityEngine;
-    using Object = System.Object;
 
     [Serializable]
     public class NakamaService : GameService, INakamaService,INakamaAuthenticate
@@ -140,7 +139,7 @@
             return result;
         }
         
-        public async UniTask<ContractResult> ExecuteRpcContractAsync(
+        public async UniTask<NakamaContractResult> ExecuteRpcContractAsync(
             NakamaConnection connection,
             IRemoteMetaContract contract,
             CancellationToken cancellation = default)
@@ -155,7 +154,7 @@
             if (payloadObject != null && payloadObject is not string)
                 payloadValue = JsonConvert.SerializeObject(payloadObject,JsonSettings);
 
-            var contractResult = new ContractResult()
+            var contractResult = new NakamaContractResult()
             {
                 success = false,
                 data = default,
@@ -176,7 +175,7 @@
             return contractResult;
         }
 
-        public async UniTask<ContractResult> LoadUsersAsync(
+        public async UniTask<NakamaContractResult> LoadUsersAsync(
             NakamaUsersContract usersContract,
             NakamaConnection connection,
             CancellationToken cancellation = default)
@@ -184,7 +183,7 @@
             var client = connection.client.Value;
             var session = connection.session.Value;
             
-            var contractResult = new ContractResult()
+            var contractResult = new NakamaContractResult()
             {
                 success = false,
                 data = default,
@@ -203,14 +202,14 @@
             return contractResult;
         }
         
-        public async UniTask<ContractResult> LoadAccountAsync(
+        public async UniTask<NakamaContractResult> LoadAccountAsync(
             NakamaConnection connection,
             CancellationToken cancellation = default)
         {
             var client = connection.client.Value;
             var session = connection.session.Value;
             
-            var contractResult = new ContractResult()
+            var contractResult = new NakamaContractResult()
             {
                 success = false,
                 data = default,
@@ -227,11 +226,11 @@
             return contractResult;
         }
 
-        public async UniTask<ContractResult> ExecuteContractAsync(NakamaConnection connection,
+        public async UniTask<NakamaContractResult> ExecuteContractAsync(NakamaConnection connection,
             IRemoteMetaContract contract,
             CancellationToken cancellation = default)
         {
-            var contractResult = new ContractResult()
+            var contractResult = new NakamaContractResult()
             {
                 success = false,
                 data = default,
@@ -413,15 +412,32 @@
             var socket = _connection.socket.Value;
             
             var sessionResult = await AuthenticateAsync(client, authenticateData);
+
+            if (sessionResult.success == false)
+            {
+                return new NakamaConnectionResult()
+                {
+                    userId = string.Empty,
+                    success = false,
+                    error = sessionResult.error,
+                };
+            }
+            
             var session = sessionResult.session;
             var connected = await ConnectAsync(socket, session);
+
+            if (connected)
+            {
+                _connection.session.Value = session;
+                _connection.token.Value = session.AuthToken;
+                _connection.account.Value = await GetUserProfileAsync();
+            }
             
-            _connection.session.Value = session;
-            _connection.token.Value = session.AuthToken;
-            _connection.account.Value = await GetUserProfileAsync();
+            var userId = connected ? session.UserId : string.Empty;
             
             return new NakamaConnectionResult()
             {
+                userId = userId,
                 success = connected,
                 error = string.Empty,
             };
@@ -434,6 +450,7 @@
             {
                 return new NakamaConnectionResult()
                 {
+                    userId = string.Empty,
                     success = false,
                     error = "No available Nakama server found. Try again later.",
                 };
@@ -471,6 +488,7 @@
 
             return new NakamaConnectionResult()
             {
+                userId = string.Empty,
                 success = true,
                 error = string.Empty,
             };
@@ -570,28 +588,5 @@
             return null;
         }
 
-    }
-
-    [Serializable]
-    public class NakamaServerData
-    {
-        public NakamaEndpoint endpoint;
-        public string url;
-        public string healthCheckUrl;
-    }
-
-    [Serializable]
-    public struct NakamaConnectionResult
-    {
-        public bool success;
-        public string error;
-    }
-
-    [Serializable]
-    public struct ContractResult
-    {
-        public bool success;
-        public string error;
-        public Object data;
     }
 }
