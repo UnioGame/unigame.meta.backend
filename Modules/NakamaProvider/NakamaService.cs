@@ -19,13 +19,13 @@
     using UnityEngine;
 
     [Serializable]
-    public class NakamaService : GameService, INakamaService,INakamaAuthenticate
+    public class NakamaService : GameService, INakamaService, INakamaAuthenticate
     {
         public static readonly JsonSerializerSettings JsonSettings = new()
         {
             TypeNameHandling = TypeNameHandling.None,
         };
-        
+
         private NakamaSettings _nakamaSettings;
         private NakamaConnection _connection;
         private List<string> _healthCheckUrls;
@@ -34,8 +34,8 @@
         private LifeTime _sessionLifeTime;
 
         private ReactiveValue<ConnectionState> _state;
-        
-        
+
+
         public NakamaService(NakamaSettings nakamaSettings, NakamaConnection connection)
         {
             _sessionLifeTime = new();
@@ -44,7 +44,7 @@
             _nakamaSettings = nakamaSettings;
             _connection = connection;
             _state = connection.state;
-            
+
             var servers = _nakamaSettings.servers;
 
             foreach (var serverEndpoint in servers)
@@ -69,10 +69,10 @@
         }
 
         public ReadOnlyReactiveProperty<ConnectionState> State => _state;
-        
+
         public bool IsConnected => _state.Value == ConnectionState.Connected &&
                                    _connection.socket.Value is { IsConnected: true };
-        
+
         public async UniTask<MetaConnectionResult> ConnectAsync()
         {
             if (_state.Value != ConnectionState.Connected)
@@ -113,22 +113,24 @@
                 error = string.Empty,
                 id = contractData.contractName,
             };
-            
+
             try
             {
                 var state = _connection.state.Value;
                 if (state != ConnectionState.Connected)
                 {
-                    var message = $"Cannot execute contract {contractData.contractName} {contractData.contract.GetType().Name} in state {state}";
+                    var message =
+                        $"Cannot execute contract {contractData.contractName} {contractData.contract.GetType().Name} in state {state}";
                     result.error = message;
                 }
-                
+
                 var contract = contractData.contract;
                 var contractResult = await ExecuteContractAsync(_connection,
                     contract, LifeTime.Token);
-                
-                result.data = contractResult.success 
-                    ? contractResult.data : string.Empty;
+
+                result.data = contractResult.success
+                    ? contractResult.data
+                    : string.Empty;
                 result.success = contractResult.success;
             }
             catch (ApiResponseException ex)
@@ -156,28 +158,55 @@
             {
                 if (contract is NakamaUsersContract usersContract)
                 {
-                    return await LoadUsersAsync(usersContract,connection,cancellation);
+                    return await LoadUsersAsync(usersContract, connection, cancellation);
                 }
-                if(contract is NakamaAccountContract accountContract)
+
+                if (contract is NakamaAccountContract accountContract)
                 {
                     return await LoadAccountAsync(connection, cancellation);
                 }
+
                 if (contract is NakamaGetLeaderboardRecordsContract getLeaderboardRecordsContract)
                 {
                     return await GetLeaderboardAsync(connection, getLeaderboardRecordsContract, cancellation);
                 }
+
                 if (contract is NakamaGetLeaderboardRecordsAroundContract leaderboardRecordsAround)
                 {
                     return await GetLeaderboardAroundAsync(connection, leaderboardRecordsAround, cancellation);
                 }
+
                 if (contract is NakamaWriteLeaderboardRecordContract writeLeaderboardRecordContract)
                 {
                     return await WriteLeaderboardAsync(connection, writeLeaderboardRecordContract, cancellation);
                 }
-                else
+
+                if (contract is NakamaTournamentsListContract tournametsListContract)
                 {
-                    return await ExecuteRpcContractAsync(connection, contract, cancellation);
+                    return await GetTournamentsAsync(connection, tournametsListContract, cancellation);
                 }
+                
+                if (contract is NakamaJoinTournamentsContract joinTournamet)
+                {
+                    return await JoinTournamentAsync(connection, joinTournamet, cancellation);
+                }
+                
+                if (contract is NakamaTournamentRecordsContract tournamentRecords)
+                {
+                    return await ListTournamentRecordsAsync(connection, tournamentRecords, cancellation);
+                }
+                
+                if (contract is NakamaTournamentRecordsAroundContract tournamentAroundRecords)
+                {
+                    return await ListTournamentRecordsAroundAsync(connection, tournamentAroundRecords, cancellation);
+                }
+                
+                if (contract is NakamaTournamentWriteRecordContract writeTournamentRecord)
+                {
+                    return await TournamentWriteAsync(connection, writeTournamentRecord, cancellation);
+                }
+                
+                return await ExecuteRpcContractAsync(connection, contract, cancellation);
             }
             catch (Exception e)
             {
@@ -186,10 +215,10 @@
                 contractResult.success = false;
                 contractResult.data = string.Empty;
             }
-    
+
             return contractResult;
         }
-        
+
         public async UniTask<NakamaContractResult> WriteLeaderboardAsync(
             NakamaConnection connection,
             NakamaWriteLeaderboardRecordContract contract,
@@ -197,10 +226,10 @@
         {
             var client = connection.client.Value;
             var session = connection.session.Value;
-    
+
             IApiLeaderboardRecord leaderboard = null;
             var error = string.Empty;
-            
+
             try
             {
                 leaderboard = await client
@@ -218,11 +247,203 @@
             }
 
             await UniTask.SwitchToMainThread();
-            
+
             return new NakamaContractResult()
             {
                 data = leaderboard,
-                success = leaderboard!=null,
+                success = leaderboard != null,
+                error = error,
+            };
+        }
+
+        public async UniTask<NakamaContractResult> GetTournamentsAsync(
+            NakamaConnection connection,
+            NakamaTournamentsListContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+
+            IApiTournamentList leaderboard = null;
+            var error = string.Empty;
+
+            try
+            {
+                leaderboard = await client.ListTournamentsAsync(session,
+                    contract.categoryStart,
+                    contract.categoryEnd,
+                    contract.startTime,
+                    contract.endTime,
+                    contract.limit,
+                    contract.cursor,
+                    _retryConfiguration,
+                    cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                leaderboard = null;
+                error = ex.Message;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            return new NakamaContractResult()
+            {
+                data = leaderboard,
+                success = leaderboard != null,
+                error = error,
+            };
+        }
+
+        public async UniTask<NakamaContractResult> JoinTournamentAsync(
+            NakamaConnection connection,
+            NakamaJoinTournamentsContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+
+            var error = string.Empty;
+            var result = (string)null;
+            
+            try
+            {
+                await client.JoinTournamentAsync(session,
+                    contract.tournamentId,
+                    _retryConfiguration,
+                    cancellation);
+                result = string.Empty;
+            }
+            catch (ApiResponseException ex)
+            {
+                error = ex.Message;
+                result = null;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            return new NakamaContractResult()
+            {
+                data = result,
+                success = result != null,
+                error = error,
+            };
+        }
+        
+        
+        public async UniTask<NakamaContractResult> ListTournamentRecordsAsync(
+            NakamaConnection connection,
+            NakamaTournamentRecordsContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+
+            var error = string.Empty;
+
+            IApiTournamentRecordList result = null;
+            
+            try
+            {
+                result = await client.ListTournamentRecordsAsync(session,
+                    contract.tournamentId,
+                    contract.ownerIds,
+                    contract.expiry,
+                    contract.limit,
+                    contract.cursor,
+                    _retryConfiguration,
+                    cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                error = ex.Message;
+                result = null;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            return new NakamaContractResult()
+            {
+                data = result,
+                success = result != null,
+                error = error,
+            };
+        }
+        
+        public async UniTask<NakamaContractResult> ListTournamentRecordsAroundAsync(
+            NakamaConnection connection,
+            NakamaTournamentRecordsAroundContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+
+            var error = string.Empty;
+
+            IApiTournamentRecordList result = null;
+            
+            try
+            {
+                result = await client.ListTournamentRecordsAroundOwnerAsync(session,
+                    contract.tournamentId,
+                    contract.ownerId,
+                    contract.expiry,
+                    contract.limit,
+                    contract.cursor,
+                    _retryConfiguration,
+                    cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                error = ex.Message;
+                result = null;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            return new NakamaContractResult()
+            {
+                data = result,
+                success = result != null,
+                error = error,
+            };
+        }
+        
+        public async UniTask<NakamaContractResult> TournamentWriteAsync(
+            NakamaConnection connection,
+            NakamaTournamentWriteRecordContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+
+            var error = string.Empty;
+
+            IApiLeaderboardRecord result = null;
+            
+            try
+            {
+                result = await client.WriteTournamentRecordAsync(session,
+                    contract.tournamentId,
+                    contract.score,
+                    contract.subScore,
+                    contract.metadata,
+                    contract.apiOperator,
+                    _retryConfiguration,
+                    cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                error = ex.Message;
+                result = null;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            return new NakamaContractResult()
+            {
+                data = result,
+                success = result != null,
                 error = error,
             };
         }
@@ -234,10 +455,10 @@
         {
             var client = connection.client.Value;
             var session = connection.session.Value;
-    
+
             IApiLeaderboardRecordList leaderboard = null;
             var error = string.Empty;
-            
+
             try
             {
                 leaderboard = await client
@@ -254,15 +475,15 @@
             }
 
             await UniTask.SwitchToMainThread();
-            
+
             return new NakamaContractResult()
             {
                 data = leaderboard,
-                success = leaderboard!=null,
+                success = leaderboard != null,
                 error = error,
             };
         }
-        
+
         public async UniTask<NakamaContractResult> GetLeaderboardAroundAsync(
             NakamaConnection connection,
             NakamaGetLeaderboardRecordsAroundContract contract,
@@ -270,10 +491,10 @@
         {
             var client = connection.client.Value;
             var session = connection.session.Value;
-    
+
             IApiLeaderboardRecordList leaderboard = null;
             var error = string.Empty;
-            
+
             try
             {
                 leaderboard = await client
@@ -290,15 +511,15 @@
             }
 
             await UniTask.SwitchToMainThread();
-            
+
             return new NakamaContractResult()
             {
                 data = leaderboard,
-                success = leaderboard!=null,
+                success = leaderboard != null,
                 error = error,
             };
         }
-        
+
         public async UniTask<NakamaContractResult> ExecuteRpcContractAsync(
             NakamaConnection connection,
             IRemoteMetaContract contract,
@@ -309,10 +530,10 @@
             var rpcName = contract.Path;
             var payloadObject = contract.Payload;
             var targetType = contract.OutputType;
-            
+
             var payloadValue = string.Empty;
             if (payloadObject != null && payloadObject is not string)
-                payloadValue = JsonConvert.SerializeObject(payloadObject,JsonSettings);
+                payloadValue = JsonConvert.SerializeObject(payloadObject, JsonSettings);
 
             var contractResult = new NakamaContractResult()
             {
@@ -320,14 +541,14 @@
                 data = default,
                 error = string.Empty,
             };
-            
-            var rpcResult = await client
-                .RpcAsync(session, rpcName, payloadValue,  _retryConfiguration, cancellation);
 
-            var resultObject = targetType == typeof(string) 
-                ? rpcResult.Payload 
+            var rpcResult = await client
+                .RpcAsync(session, rpcName, payloadValue, _retryConfiguration, cancellation);
+
+            var resultObject = targetType == typeof(string)
+                ? rpcResult.Payload
                 : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, JsonSettings);
-                
+
             contractResult.success = resultObject != null;
             contractResult.data = resultObject;
             contractResult.error = string.Empty;
@@ -342,44 +563,44 @@
         {
             var client = connection.client.Value;
             var session = connection.session.Value;
-            
+
             var contractResult = new NakamaContractResult()
             {
                 success = false,
                 data = default,
                 error = string.Empty,
             };
-            
+
             var account = await client
-                .GetUsersAsync(session,usersContract.userIds,usersContract.userNames,usersContract.facebookIds,
+                .GetUsersAsync(session, usersContract.userIds, usersContract.userNames, usersContract.facebookIds,
                     _retryConfiguration, cancellation)
                 .AsUniTask();
-                
+
             contractResult.success = account != null;
             contractResult.data = account;
             contractResult.error = string.Empty;
-            
+
             return contractResult;
         }
-        
+
         public async UniTask<NakamaContractResult> LoadAccountAsync(
             NakamaConnection connection,
             CancellationToken cancellation = default)
         {
             var client = connection.client.Value;
             var session = connection.session.Value;
-            
+
             var contractResult = new NakamaContractResult()
             {
                 success = false,
                 data = default,
                 error = string.Empty,
             };
-            
+
             var account = await client
-                .GetAccountAsync(session,_retryConfiguration, cancellation)
+                .GetAccountAsync(session, _retryConfiguration, cancellation)
                 .AsUniTask();
-                
+
             contractResult.success = account != null;
             contractResult.data = account;
             contractResult.error = string.Empty;
@@ -404,22 +625,22 @@
         public async UniTask<bool> SignOutAsync()
         {
             var isConnected = _state.Value != ConnectionState.Connected;
-            
+
             //clear cached authentication data
             PlayerPrefs.DeleteKey(NakamaConstants.NakamaAuthenticateKey);
 
             if (!isConnected) return false;
-            
+
             var session = _connection.session.Value;
             var socket = _connection.socket.Value;
-            
+
             if (socket is { IsConnected: true })
             {
                 await socket.CloseAsync();
             }
 
             _connection.Reset();
-            
+
             return true;
         }
 
@@ -439,17 +660,17 @@
             }
 
             _state.Value = ConnectionState.Connecting;
-            
+
             var connectionResult = await ConnectToServerAsync(authenticateData);
-            
-            _state.Value = connectionResult.success 
-                ? ConnectionState.Connected 
+
+            _state.Value = connectionResult.success
+                ? ConnectionState.Connected
                 : ConnectionState.Disconnected;
 
             return connectionResult;
         }
 
-        
+
         /// <summary>
         ///  Authenticate user by custom data. Try to convert authdata into supported type.
         /// </summary>
@@ -460,16 +681,16 @@
             INakamaAuthenticateData authenticateData)
         {
             var restoreResult = await RestoreSessionAsync(authenticateData.AuthTypeName, client);
-            if(restoreResult.success) return restoreResult;
-			
+            if (restoreResult.success) return restoreResult;
+
             ISession nakamaSession = null;
-	        
+
             if (authenticateData is NakamaIdAuthenticateData idData)
             {
                 // get a new refresh token
                 nakamaSession = await client.AuthenticateDeviceAsync(idData.clientId,
                     idData.userName,
-                    idData.create,idData.vars,
+                    idData.create, idData.vars,
                     idData.retryConfiguration);
             }
 
@@ -492,9 +713,9 @@
             };
 
             var prefsValue = JsonConvert.SerializeObject(nakamaSessionData);
-	        
-            PlayerPrefs.SetString(NakamaConstants.NakamaAuthenticateKey,prefsValue);
-	        
+
+            PlayerPrefs.SetString(NakamaConstants.NakamaAuthenticateKey, prefsValue);
+
             var result = new NakamaSessionResult()
             {
                 session = nakamaSession,
@@ -504,7 +725,7 @@
 
             return result;
         }
-        
+
         public async UniTask<IApiAccount> GetUserProfileAsync()
         {
             try
@@ -512,10 +733,10 @@
                 var client = _connection.client.Value;
                 var session = _connection.session.Value;
                 var account = await client.GetAccountAsync(session);
-                
+
                 _connection.account.Value = account;
                 _connection.userId.Value = account.User.Id;
-                
+
                 return account;
             }
             catch (ApiResponseException e)
@@ -530,10 +751,10 @@
             var connectionInitResult = await InitializeConnectionAsync();
             if (connectionInitResult.success == false)
                 return connectionInitResult;
-            
+
             var client = _connection.client.Value;
             var socket = _connection.socket.Value;
-            
+
             var sessionResult = await AuthenticateAsync(client, authenticateData);
 
             if (sessionResult.success == false)
@@ -545,7 +766,7 @@
                     error = sessionResult.error,
                 };
             }
-            
+
             var session = sessionResult.session;
             var connected = await ConnectAsync(socket, session);
 
@@ -555,9 +776,9 @@
                 _connection.token.Value = session.AuthToken;
                 _connection.account.Value = await GetUserProfileAsync();
             }
-            
+
             var userId = connected ? session.UserId : string.Empty;
-            
+
             return new NakamaConnectionResult()
             {
                 userId = userId,
@@ -578,22 +799,22 @@
                     error = "No available Nakama server found. Try again later.",
                 };
             }
-            
+
             var endpoint = hostSettings.endpoint;
-            
-            var client = new Client(endpoint.scheme, endpoint.host, 
+
+            var client = new Client(endpoint.scheme, endpoint.host,
                 endpoint.port, endpoint.serverKey, UnityWebRequestAdapter.Instance);
-            
+
             client.Timeout = _nakamaSettings.timeoutSec;
             client.GlobalRetryConfiguration = _retryConfiguration;
-    
+
             var useMainThread = _nakamaSettings.useSocketMainThread;
 #if UNITY_WEBGL
             useMainThread = true; // WebGL does not support multithreading for sockets
 #endif
-            
+
             var socket = client.NewSocket(useMainThread: useMainThread);
-            
+
             var disposable = Observable
                 .FromEvent(x => socket.Closed += ReconnectNakamaSocket, x => socket.Closed -= ReconnectNakamaSocket)
                 .Subscribe();
@@ -604,7 +825,7 @@
                 socket.Closed -= ReconnectNakamaSocket;
                 socket.CloseAsync();
             });
-            
+
             _connection.client.Value = client;
             _connection.socket.Value = socket;
             _connection.serverData.Value = hostSettings;
@@ -616,30 +837,30 @@
                 error = string.Empty,
             };
         }
-        
+
         private async UniTask<NakamaServerData> SelectServerAsync()
         {
             var bestServer = await UrlChecker.SelectFastestEndPoint(_healthCheckUrls);
             if (bestServer.success == false)
                 return null;
-            
+
             var hostSettings = _nakamaServers
                 .Find(x => x.healthCheckUrl == bestServer.url);
 
             return hostSettings;
         }
-        
+
         private void ReconnectNakamaSocket()
         {
             var socket = _connection.socket.Value;
             var session = _connection.session.Value;
             ConnectAsync(socket, session).Forget();
         }
-        
+
         private async UniTask<bool> ConnectAsync(ISocket socket, ISession session)
         {
-            if(_sessionLifeTime.IsTerminated) return false;
-            
+            if (_sessionLifeTime.IsTerminated) return false;
+
             try
             {
                 if (!socket.IsConnected)
@@ -657,9 +878,8 @@
 
             return socket.IsConnected;
         }
-        
-        
-        
+
+
         private async UniTask<NakamaSessionResult> RestoreSessionAsync(string authType, IClient client)
         {
             var result = new NakamaSessionResult()
@@ -668,7 +888,7 @@
                 error = $"cannot restore session by {authType}",
                 success = false,
             };
-	        
+
             var authData = PlayerPrefs.GetString(NakamaConstants.NakamaAuthenticateKey, string.Empty);
 
             if (string.IsNullOrEmpty(authData)) return result;
@@ -676,11 +896,11 @@
             var restoreData = JsonConvert.DeserializeObject<NakamaSessionData>(authData);
             if (!restoreData.authType.Equals(authType))
                 return result;
-	        
+
             var session = await RestoreSessionAsync(restoreData.authToken, restoreData.refreshToken, client);
-	        
+
             if (session == null) return result;
-	        
+
             return new NakamaSessionResult()
             {
                 session = session,
@@ -689,27 +909,27 @@
             };
         }
 
-        private async UniTask<ISession> RestoreSessionAsync(string authToken,string refreshToken, IClient client)
+        private async UniTask<ISession> RestoreSessionAsync(string authToken, string refreshToken, IClient client)
         {
             var session = Session.Restore(authToken, refreshToken);
-	        
+
             // Check whether a session is close to expiry.
-            if (!session.HasExpired(DateTime.UtcNow.AddSeconds(_nakamaSettings.refreshTokenInterval))) 
+            if (!session.HasExpired(DateTime.UtcNow.AddSeconds(_nakamaSettings.refreshTokenInterval)))
                 return session;
-	        
+
             try
             {
                 // get a new access token
-                session = await client.SessionRefreshAsync(session,canceller:LifeTime.Token);
+                session = await client.SessionRefreshAsync(session, canceller: LifeTime.Token);
                 return session;
             }
             catch (ApiResponseException ex)
             {
-                GameLog.LogError($"Nakama Restore Session Status {ex.StatusCode} GRPC {ex.GrpcStatusCode} Message {ex.Message}");	   
+                GameLog.LogError(
+                    $"Nakama Restore Session Status {ex.StatusCode} GRPC {ex.GrpcStatusCode} Message {ex.Message}");
             }
 
             return null;
         }
-
     }
 }
