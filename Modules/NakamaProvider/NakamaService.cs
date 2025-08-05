@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Threading;
+    using Contracts;
     using Cysharp.Threading.Tasks;
     using GameFlow.Runtime;
     using MetaService.Runtime;
@@ -126,7 +127,8 @@
                 var contractResult = await ExecuteContractAsync(_connection,
                     contract, LifeTime.Token);
                 
-                result.data = contractResult.success ? contractResult.data : string.Empty;
+                result.data = contractResult.success 
+                    ? contractResult.data : string.Empty;
                 result.success = contractResult.success;
             }
             catch (ApiResponseException ex)
@@ -137,6 +139,164 @@
             }
 
             return result;
+        }
+
+        public async UniTask<NakamaContractResult> ExecuteContractAsync(NakamaConnection connection,
+            IRemoteMetaContract contract,
+            CancellationToken cancellation = default)
+        {
+            var contractResult = new NakamaContractResult()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+            };
+
+            try
+            {
+                if (contract is NakamaUsersContract usersContract)
+                {
+                    return await LoadUsersAsync(usersContract,connection,cancellation);
+                }
+                if(contract is NakamaAccountContract accountContract)
+                {
+                    return await LoadAccountAsync(connection, cancellation);
+                }
+                if (contract is NakamaGetLeaderboardRecordsContract getLeaderboardRecordsContract)
+                {
+                    return await GetLeaderboardAsync(connection, getLeaderboardRecordsContract, cancellation);
+                }
+                if (contract is NakamaGetLeaderboardRecordsAroundContract leaderboardRecordsAround)
+                {
+                    return await GetLeaderboardAroundAsync(connection, leaderboardRecordsAround, cancellation);
+                }
+                if (contract is NakamaWriteLeaderboardRecordContract writeLeaderboardRecordContract)
+                {
+                    return await WriteLeaderboardAsync(connection, writeLeaderboardRecordContract, cancellation);
+                }
+                else
+                {
+                    return await ExecuteRpcContractAsync(connection, contract, cancellation);
+                }
+            }
+            catch (Exception e)
+            {
+                GameLog.LogError(e);
+                contractResult.error = e.Message;
+                contractResult.success = false;
+                contractResult.data = string.Empty;
+            }
+    
+            return contractResult;
+        }
+        
+        public async UniTask<NakamaContractResult> WriteLeaderboardAsync(
+            NakamaConnection connection,
+            NakamaWriteLeaderboardRecordContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+    
+            IApiLeaderboardRecord leaderboard = null;
+            var error = string.Empty;
+            
+            try
+            {
+                leaderboard = await client
+                    .WriteLeaderboardRecordAsync(session, contract.leaderboardId,
+                        contract.score,
+                        contract.subscore, contract.metadata,
+                        contract.apiOperator,
+                        _retryConfiguration,
+                        cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                leaderboard = null;
+                error = ex.Message;
+            }
+
+            await UniTask.SwitchToMainThread();
+            
+            return new NakamaContractResult()
+            {
+                data = leaderboard,
+                success = leaderboard!=null,
+                error = error,
+            };
+        }
+        
+        public async UniTask<NakamaContractResult> GetLeaderboardAsync(
+            NakamaConnection connection,
+            NakamaGetLeaderboardRecordsContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+    
+            IApiLeaderboardRecordList leaderboard = null;
+            var error = string.Empty;
+            
+            try
+            {
+                leaderboard = await client
+                    .ListLeaderboardRecordsAsync(session, contract.leaderboardId,
+                        contract.ownerIds, contract.expiry,
+                        contract.limit, contract.cursor,
+                        _retryConfiguration,
+                        cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                leaderboard = null;
+                error = ex.Message;
+            }
+
+            await UniTask.SwitchToMainThread();
+            
+            return new NakamaContractResult()
+            {
+                data = leaderboard,
+                success = leaderboard!=null,
+                error = error,
+            };
+        }
+        
+        public async UniTask<NakamaContractResult> GetLeaderboardAroundAsync(
+            NakamaConnection connection,
+            NakamaGetLeaderboardRecordsAroundContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+    
+            IApiLeaderboardRecordList leaderboard = null;
+            var error = string.Empty;
+            
+            try
+            {
+                leaderboard = await client
+                    .ListLeaderboardRecordsAroundOwnerAsync(session, contract.leaderboardId,
+                        contract.ownerId, contract.expiry,
+                        contract.limit, contract.cursor,
+                        _retryConfiguration,
+                        cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                leaderboard = null;
+                error = ex.Message;
+            }
+
+            await UniTask.SwitchToMainThread();
+            
+            return new NakamaContractResult()
+            {
+                data = leaderboard,
+                success = leaderboard!=null,
+                error = error,
+            };
         }
         
         public async UniTask<NakamaContractResult> ExecuteRpcContractAsync(
@@ -223,43 +383,6 @@
             contractResult.success = account != null;
             contractResult.data = account;
             contractResult.error = string.Empty;
-            return contractResult;
-        }
-
-        public async UniTask<NakamaContractResult> ExecuteContractAsync(NakamaConnection connection,
-            IRemoteMetaContract contract,
-            CancellationToken cancellation = default)
-        {
-            var contractResult = new NakamaContractResult()
-            {
-                success = false,
-                data = default,
-                error = string.Empty,
-            };
-
-            try
-            {
-                if (contract is NakamaUsersContract usersContract)
-                {
-                    return await LoadUsersAsync(usersContract,connection,cancellation);
-                }
-                if(contract is NakamaAccountContract accountContract)
-                {
-                    return await LoadAccountAsync(connection, cancellation);
-                }
-                else
-                {
-                    return await ExecuteRpcContractAsync(connection, contract, cancellation);
-                }
-            }
-            catch (Exception e)
-            {
-                GameLog.LogError(e);
-                contractResult.error = e.Message;
-                contractResult.success = false;
-                contractResult.data = string.Empty;
-            }
-    
             return contractResult;
         }
 
