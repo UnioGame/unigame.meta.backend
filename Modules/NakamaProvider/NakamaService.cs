@@ -132,6 +132,7 @@
                     ? contractResult.data
                     : string.Empty;
                 result.success = contractResult.success;
+                result.error = contractResult.error;
             }
             catch (ApiResponseException ex)
             {
