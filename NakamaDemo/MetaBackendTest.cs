@@ -19,18 +19,18 @@ using UnityEngine;
     using UnityEditor;
 #endif
 
-public class NakamaTest : MonoBehaviour
+public class MetaBackendTest : MonoBehaviour
 {
     public bool autoSignIn = true;
     public BackendMetaSource source;
 
     [SerializeReference]
     [InlineButton(nameof(UpdateContracts))]
-    public List<INakamaContract> contracts = new();
+    public List<IRemoteMetaContract> contracts = new();
     
     [ShowIf(nameof(IsPlaying))]
     [ListDrawerSettings(ListElementLabelName = "name")]
-    public List<NakamaDemoContract> demoContracts = new();
+    public List<DemoContract> demoContracts = new();
     
     private EntityContext _context;
     private INakamaService _nakamaService;
@@ -75,19 +75,19 @@ public class NakamaTest : MonoBehaviour
     public async UniTask CallAllRpcAsync()
     {
         await IdAuthAsync();
-        foreach (var rpcName in contracts)
+        foreach (var contract in contracts)
         {
-            await ExecuteContractAsync(rpcName);
+            await ExecuteContractAsync(contract);
         }
     }
 
-    public void ExecuteContract(INakamaContract contract)
+    public void ExecuteContract(IRemoteMetaContract contract)
     {
         
         ExecuteContractAsync(contract).Forget();
     }
     
-    public async UniTask ExecuteContractAsync(INakamaContract contract)
+    public async UniTask ExecuteContractAsync(IRemoteMetaContract contract)
     {
         if (_nakamaService == null) return;
         
@@ -178,7 +178,7 @@ public class NakamaTest : MonoBehaviour
 
         foreach (var contract in contracts)
         {
-            demoContracts.Add(new NakamaDemoContract(contract, ExecuteContract));
+            demoContracts.Add(new DemoContract(contract, ExecuteContract));
         }
 
         if (autoSignIn)
@@ -209,16 +209,16 @@ public class NakamaTest : MonoBehaviour
 }
 
 [Serializable]
-public class NakamaDemoContract
+public class DemoContract
 {
-    private readonly Action<INakamaContract> _executor;
+    private readonly Action<IRemoteMetaContract> _executor;
 
     public string name;
 
     [SerializeReference]
-    public INakamaContract contract;
+    public IRemoteMetaContract contract;
 
-    public NakamaDemoContract(INakamaContract value,Action<INakamaContract> executor)
+    public DemoContract(IRemoteMetaContract value,Action<IRemoteMetaContract> executor)
     {
         contract = value;
         name = value.Path;

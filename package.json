@@ -1,10 +1,10 @@
 {
   "name": "com.unigame.metaservice",
   "author": "UniGame",
-  "displayName": "Game Meta Service",
+  "displayName": "UniGame Backend Meta Service",
   "description": "Allow to create and manage game backend api transport and responses",
   "unity": "2023.1",
-  "version": "2025.0.11",
+  "version": "2025.0.12",
   "keywords": [
     "meta",
     "backend",
