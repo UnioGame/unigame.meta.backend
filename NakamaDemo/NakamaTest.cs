@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Extensions;
+using Game.Nakama.Models;
 using MetaService.Runtime;
 using Nakama;
 using Newtonsoft.Json;
@@ -84,11 +85,14 @@ public class NakamaTest : MonoBehaviour
 
     public void ExecuteContract(INakamaContract contract)
     {
+        
         ExecuteContractAsync(contract).Forget();
     }
     
     public async UniTask ExecuteContractAsync(INakamaContract contract)
     {
+        var r = await contract.ExecuteAsync<NakamaModel<LevelModel>>();
+        
         if (_nakamaService == null) return;
         
         var result = await _backendMetaService.ExecuteAsync(contract);
