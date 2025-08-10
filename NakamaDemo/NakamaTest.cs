@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Extensions;
-using Game.Nakama.Models;
 using MetaService.Runtime;
 using Nakama;
 using Newtonsoft.Json;
 using Sirenix.OdinInspector;
-using Sirenix.Utilities;
 using UniCore.Runtime.ProfilerTools;
 using UniGame.Context.Runtime;
 using UniGame.MetaBackend.Runtime;
@@ -91,8 +89,6 @@ public class NakamaTest : MonoBehaviour
     
     public async UniTask ExecuteContractAsync(INakamaContract contract)
     {
-        var r = await contract.ExecuteAsync<NakamaModel<LevelModel>>();
-        
         if (_nakamaService == null) return;
         
         var result = await _backendMetaService.ExecuteAsync(contract);
