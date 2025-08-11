@@ -143,15 +143,6 @@
             return true;
         }
 
-#if ODIN_INSPECTOR
-        [PropertyOrder(-1)]
-        [Button("Generate Static Properties")]
-#endif
-        public void GenerateProperties()
-        {
-            GenerateStaticProperties(this);
-        }
-
         public static void GenerateStaticProperties(RemoteMetaDataConfigAsset dataAsset)
         {
             var idType = typeof(RemoteMetaId);
