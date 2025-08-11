@@ -29,6 +29,7 @@
         private Dictionary<Type, IRemoteMetaProvider> _contractsCache;
         private Subject<MetaDataResult> _dataStream;
         private List<IMetaContractHandler> _contractHandlers = new();
+        private IRemoteDataConverter _defaultConverter;
 
         public BackendMetaService(
             bool useDefaultProvider,
@@ -37,7 +38,8 @@
             IRemoteMetaDataConfiguration metaDataConfiguration)
         {
             BackendMetaServiceExtensions.RemoteMetaService = this;
-            
+
+            _defaultConverter = metaDataConfiguration.Converter ?? new JsonRemoteDataConverter();
             _responceCache = new Dictionary<int, MetaDataResult>(64);
             _metaIdCache = new Dictionary<int, RemoteMetaData>(64);
             _contractsCache = new Dictionary<Type, IRemoteMetaProvider>(64);
@@ -293,7 +295,8 @@
             var remoteId = contractData.contractName;
             var contract = contractData.contract;
             var metaData = contractData.metaData;
-
+            var success = response.success;
+            
             var responseData = response.data ?? string.Empty;
             var unixTime = DateTime.Now.ToUnixTimestamp();
             var outputType = contract.OutputType;
@@ -302,12 +305,23 @@
                 ? typeof(string)
                 : outputType;
             
+            var resultType = response.data !=null && success
+                ? response.data.GetType()
+                : outputType;
+            
             var resultObject = responseData;
             
             switch (outputType)
             {
                 case not null when outputType == typeof(string):
                     resultObject = responseData;
+                    break;
+                case not null when outputType != typeof(string) && resultType == typeof(string):
+                    if (responseData is string responseString &&
+                        !string.IsNullOrEmpty(responseString))
+                    {
+                        resultObject = _defaultConverter.Convert(outputType, responseString);
+                    }
                     break;
                 case not null when outputType == typeof(VoidRemoteData):
                     resultObject = VoidRemoteData.Empty;
