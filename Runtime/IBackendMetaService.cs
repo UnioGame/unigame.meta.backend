@@ -1,6 +1,5 @@
 ﻿namespace UniGame.MetaBackend.Shared
 {
-    using System;
     using System.Threading;
     using Cysharp.Threading.Tasks;
     using Runtime;
@@ -9,8 +8,7 @@
     using R3;
     using UniGame.Core.Runtime;
 
-    public interface IBackendMetaService : 
-        IMetaConnection,
+    public interface IBackendMetaService :
         ILifeTimeContext
     {
         public bool AddContractHandler(IMetaContractHandler handler);

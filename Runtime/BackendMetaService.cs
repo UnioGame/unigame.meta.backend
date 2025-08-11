@@ -19,6 +19,7 @@
     [Serializable]
     public class BackendMetaService : GameService, IBackendMetaService
     {
+        private readonly bool _useDefaultProvider;
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
         private BackendTypeId _defaultProviderId;
@@ -28,9 +29,10 @@
         private Dictionary<Type, IRemoteMetaProvider> _contractsCache;
         private Subject<MetaDataResult> _dataStream;
         private List<IMetaContractHandler> _contractHandlers = new();
-        private string _connectionId = string.Empty;
 
-        public BackendMetaService(BackendTypeId defaultMetaProvider,
+        public BackendMetaService(
+            bool useDefaultProvider,
+            BackendTypeId defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
             IRemoteMetaDataConfiguration metaDataConfiguration)
         {
@@ -40,7 +42,8 @@
             _metaIdCache = new Dictionary<int, RemoteMetaData>(64);
             _contractsCache = new Dictionary<Type, IRemoteMetaProvider>(64);
             _dataStream = new Subject<MetaDataResult>().AddTo(LifeTime);
-            
+
+            _useDefaultProvider = useDefaultProvider;
             _metaDataConfiguration = metaDataConfiguration;
             
             _defaultProviderId = defaultMetaProvider;
@@ -107,9 +110,8 @@
         
         public IRemoteMetaProvider GetProvider(int providerId)
         {
-            if (_metaProviders.TryGetValue(providerId, out var provider))
-                return provider;
-            return _defaultMetaProvider;
+            return _metaProviders.TryGetValue(providerId, out var provider) 
+                ? provider : _defaultMetaProvider;
         }        
         
         public bool RegisterProvider(int providerId,IRemoteMetaProvider provider)
@@ -118,20 +120,6 @@
             return true;
         }
         
-        public async UniTask<MetaConnectionResult> ConnectAsync()
-        {
-            _connectionId = SystemInfo.deviceUniqueIdentifier;
-#if UNITY_EDITOR
-            Debug.Log($"BackendMetaService ConnectAsync with deviceId: {_connectionId}");
-#endif
-            return await ConnectAsync(_defaultMetaProvider);
-        }
-
-        public async UniTask DisconnectAsync()
-        {
-            await _defaultMetaProvider.DisconnectAsync();
-        }
-
         public void SwitchProvider(int providerId)
         {
             _defaultMetaProvider = GetProvider(providerId);
@@ -174,6 +162,24 @@
             }
         }
 
+        public IRemoteMetaProvider SelectProvider(RemoteMetaData meta,IRemoteMetaContract contract)
+        {
+            if (meta.overrideProvider)
+                return GetProvider(meta.provider);
+
+            if (_useDefaultProvider && _defaultMetaProvider.IsContractSupported(contract))
+                return _defaultMetaProvider;
+
+            foreach (var metaProvider in _metaProviders)
+            {
+                var provider = metaProvider.Value;
+                if(provider.IsContractSupported(contract))
+                    return provider;
+            }
+            
+            return _defaultMetaProvider;
+        }
+
         public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract,CancellationToken cancellation = default)
         {
             var meta = FindMetaData(contract);
@@ -181,9 +187,7 @@
             if (meta == RemoteMetaData.Empty) 
                 return MetaDataResult.Empty;
 
-            var provider = meta.overrideProvider 
-                ? GetProvider(meta.provider)
-                : _defaultMetaProvider;
+            var provider = SelectProvider(meta,contract);
             
             var contractData = new MetaContractData()
             {

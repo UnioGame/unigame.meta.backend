@@ -23,6 +23,8 @@ namespace MetaService.Runtime
         private const string IdsType = "BackendTypeIds";
         private const string DefaultDirectory = "UniGame.Generated/RemoteMetaService/";
         private const string FileName = "BackendTypeIds.Generated.cs";
+
+        public bool useDefaultBackendFirst = true;
         
         public BackendTypeId backendType;
         
