@@ -518,12 +518,14 @@
                 ? rpcResult.Payload
                 : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, JsonSettings);
 
+            var success = resultObject != null;
+            
             if (resultObject == null && contract is IFallbackContract fallbackContract)
             {
                 resultObject = JsonConvert.DeserializeObject(rpcResult.Payload, fallbackContract.FallbackType, JsonSettings);
             }
             
-            contractResult.success = resultObject != null;
+            contractResult.success = success;
             contractResult.data = resultObject;
             contractResult.error = string.Empty;
 
