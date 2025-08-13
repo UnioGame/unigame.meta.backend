@@ -125,12 +125,9 @@
                 }
 
                 var contract = contractData.contract;
-                var contractResult = await ExecuteContractAsync(_connection,
-                    contract, LifeTime.Token);
+                var contractResult = await ExecuteContractAsync(_connection, contract, LifeTime.Token);
 
-                result.data = contractResult.success
-                    ? contractResult.data
-                    : string.Empty;
+                result.data = contractResult.data;
                 result.success = contractResult.success;
                 result.error = contractResult.error;
             }
@@ -521,6 +518,11 @@
                 ? rpcResult.Payload
                 : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, JsonSettings);
 
+            if (resultObject == null && contract is IFallbackContract fallbackContract)
+            {
+                resultObject = JsonConvert.DeserializeObject(rpcResult.Payload, fallbackContract.FallbackType, JsonSettings);
+            }
+            
             contractResult.success = resultObject != null;
             contractResult.data = resultObject;
             contractResult.error = string.Empty;
