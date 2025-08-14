@@ -134,7 +134,7 @@ public class MetaBackendTest : MonoBehaviour
 
         var clientId = SystemInfo.deviceUniqueIdentifier;
         
-        var idAuth = new NakamaIdAuthenticateData()
+        var idAuth = new NakamaDeviceIdAuthenticateData()
         {
             clientId = clientId,
             userName = "Demo User",

@@ -5,7 +5,7 @@
     using Nakama;
 
     [Serializable]
-    public class NakamaIdAuthenticateData : INakamaAuthenticateData
+    public class NakamaDeviceIdAuthenticateData : INakamaAuthenticateData
     {
         public string clientId;
         public string userName;
@@ -13,6 +13,6 @@
         public Dictionary<string, string> vars = null;
         public RetryConfiguration retryConfiguration = null;
         
-        public string AuthTypeName => nameof(NakamaIdAuthenticateData);
+        public string AuthTypeName => nameof(NakamaDeviceIdAuthenticateData);
     }
 }

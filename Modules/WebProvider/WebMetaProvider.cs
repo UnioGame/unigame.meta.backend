@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using WebService;
     using MetaService.Runtime;
@@ -212,7 +213,11 @@
             return requestResult;
         }
 
-        public async UniTask<WebRequestResult> SendEndPointRequestAsync(WebApiEndPoint endPoint,string url,object payload)
+        public async UniTask<WebRequestResult> SendEndPointRequestAsync(
+            WebApiEndPoint endPoint,
+            string url,
+            object payload,
+            CancellationToken cancellation = default)
         {
             var requestResult = new WebRequestResult()
             {
@@ -247,7 +252,7 @@
                     break;
                 case WebRequestType.Get:
                     var query = SerializeToQuery(payload);
-                    requestResult = await _webRequestBuilder.GetAsync(url,query,timeout:timeout);
+                    requestResult = await _webRequestBuilder.GetAsync(url,query,timeout:timeout,cancellation:cancellation);
                     break;
             }
 
