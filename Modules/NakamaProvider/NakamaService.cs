@@ -75,20 +75,10 @@
 
         public async UniTask<MetaConnectionResult> ConnectAsync()
         {
-            if (_state.Value != ConnectionState.Connected)
-            {
-                return new MetaConnectionResult()
-                {
-                    Success = false,
-                    Error = "Not connected to Nakama server",
-                    State = _state.Value,
-                };
-            }
-
             return new MetaConnectionResult()
             {
                 Error = string.Empty,
-                State = _state.Value,
+                State = ConnectionState.Connected,
                 Success = true,
             };
         }
