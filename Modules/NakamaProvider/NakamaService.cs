@@ -864,7 +864,7 @@
             return hostSettings;
         }
 
-        private void ReconnectNakamaSocket()
+        private void ReconnectNakamaSocket(string reason)
         {
             var socket = _connection.socket.Value;
             var session = _connection.session.Value;
