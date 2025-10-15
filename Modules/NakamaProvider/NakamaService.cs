@@ -138,6 +138,7 @@
             {
                 return contract switch
                 {
+                    INakamaAuthContract authContract => await AuthContractAsync(authContract, cancellation),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaDeviceIdAuthContract usersContract => await DeviceIdAuthAsync(connection,usersContract,cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
@@ -557,6 +558,32 @@
             return contractResult;
         }
 
+        public async UniTask<NakamaContractResult> AuthContractAsync(
+            INakamaAuthContract authContract, 
+            CancellationToken cancellation = default)
+        {
+            var contractResult = new NakamaContractResult()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+            };
+
+            var signInResult = await SignInAsync(authContract.AuthData,cancellation:cancellation);
+            if (signInResult.success == false)
+            {
+                return contractResult;
+            }
+
+            var profile = await GetUserProfileAsync();
+            
+            contractResult.success = profile!=null;
+            contractResult.data = profile;
+            contractResult.error = profile == null ? "Cannot load user profile" : string.Empty;
+
+            return contractResult;
+        }
+        
         public async UniTask<NakamaContractResult> LoadUsersAsync(
             NakamaUsersContract usersContract,
             NakamaConnection connection,
@@ -657,8 +684,9 @@
             {
                 return new NakamaConnectionResult()
                 {
-                    success = false,
-                    error = "Already connected to Nakama server.",
+                    success = true,
+                    userId = _connection?.userId.Value,
+                    error = "already connected to nakama server.",
                 };
             }
 

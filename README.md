@@ -56,6 +56,10 @@ graph TB
 
 # Basic Setup
 
+## Create Configuration
+
+Call Menu: `Assets/UniGame/Meta Service/Create Configurati`
+
 ## BackendMetaSource
 
 You can use **BackendMetaSource** to create a backend service instance:

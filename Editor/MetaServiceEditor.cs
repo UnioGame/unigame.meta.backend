@@ -13,7 +13,7 @@ namespace Game.Modules.Editor
     public class MetaServiceEditor
     {
         [MenuItem("Assets/UniGame/Meta Service/Create Configuration")]
-        public static void CreateViewSystemPrefab()
+        public static void CreateMetaServiceConfiguration()
         {
             var activeObject = Selection.activeObject;
             if (!activeObject) return;
