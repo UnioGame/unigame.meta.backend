@@ -76,12 +76,12 @@ namespace Extensions
             return await contract.ExecuteAsync<TOutput,TError>(cancellationToken);
         }
 
-        public static async UniTask<MetaDataResult> ExecuteAsync(this IRemoteMetaContract contract, 
+        public static async UniTask<ContractDataResult> ExecuteAsync(this IRemoteMetaContract contract, 
             CancellationToken cancellationToken = default)
         {
             if (RemoteMetaService == null)
             {
-                return  new MetaDataResult
+                return  new ContractDataResult
                 {
                     success = false,
                     error = "MetaService is not initialized",

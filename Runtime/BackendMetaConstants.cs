@@ -4,7 +4,7 @@
 
     public class BackendMetaConstants
     {
-        public static readonly MetaDataResult UnsupportedContract = new()
+        public static readonly ContractDataResult UnsupportedContract = new()
         {
             hash = -1,
             resultType = typeof(string),

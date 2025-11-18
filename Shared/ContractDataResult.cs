@@ -3,15 +3,15 @@
     using System;
 
     [Serializable]
-    public class MetaDataResult
+    public class ContractDataResult
     {
-        public static readonly MetaDataResult Empty = new MetaDataResult()
+        public static readonly ContractDataResult Empty = new()
         {
             hash = -1,
             resultType = typeof(string),
         };
         
-        public int id = -1;
+        public int metaId = -1;
         public long timestamp = 0;
         public int hash = 0;
         public Type resultType;
