@@ -1,6 +1,7 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using Cysharp.Threading.Tasks;
     using MetaService.Runtime;
@@ -18,12 +19,18 @@
         private MockBackendDataConfig _config;
         private ReactiveValue<ConnectionState> _connectionState;
         private LifeTime _lifeTime;
+        private HashSet<string> _mockedMethods = new();
 
         public MockBackendService(MockBackendDataConfig config)
         {
             _config = config;
             _connectionState = new ReactiveValue<ConnectionState>(ConnectionState.Disconnected);
             _lifeTime = new LifeTime();
+
+            foreach (var mockBackendData in _config.mockBackendData)
+            {
+                _mockedMethods.Add(mockBackendData.Method);
+            }
         }
 
         public ILifeTime LifeTime => _lifeTime;
@@ -100,7 +107,7 @@
 
         public bool IsContractSupported(IRemoteMetaContract command)
         {
-            return true;
+            return _mockedMethods.Contains(command.Path);
         }
     }
 }

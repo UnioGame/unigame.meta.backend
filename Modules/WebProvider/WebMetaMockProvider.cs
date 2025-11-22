@@ -41,7 +41,7 @@
 
         public bool IsContractSupported(IRemoteMetaContract command)
         {
-            return true;
+            return _contractsMap.ContainsKey(command.GetType());
         }
 
         public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract)
