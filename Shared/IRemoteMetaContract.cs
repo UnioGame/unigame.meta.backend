@@ -12,7 +12,7 @@
 
     [Serializable]
     public abstract class RemoteMetaContract<TInput,TOutput> : IRemoteMetaContract
-    {
+    {   
         [JsonIgnore]
         public virtual object Payload => string.Empty;
 
@@ -24,6 +24,22 @@
         
         [JsonIgnore]
         public virtual Type InputType => typeof(TInput);
+    }
+    
+    /// <summary>
+    /// Self contract use its own object as input type and payload
+    /// </summary>
+    [Serializable]
+    public abstract class RemoteSelfMetaContract<TInput,TOutput> : RemoteMetaContract<TInput,TOutput>
+    {   
+        [JsonIgnore]
+        public override object Payload => this;
+
+        /// <summary>
+        /// return input as contract type
+        /// </summary>
+        [JsonIgnore]
+        public sealed override Type InputType => GetType();
     }
     
     [Serializable]

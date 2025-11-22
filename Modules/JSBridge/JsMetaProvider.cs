@@ -60,6 +60,7 @@
             
             _metaAgent = Object.Instantiate(_bridgePrefab);
             _metaAgent.gameObject.name = JsBridgeName;
+            
             Object.DontDestroyOnLoad(_metaAgent.gameObject);
             
             _metaAgent.MessageStream
