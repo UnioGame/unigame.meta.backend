@@ -116,7 +116,7 @@
             }
 
             var serviceConfigs = AssetEditorTools
-                .GetAssets<RemoteMetaDataConfigAsset>();
+                .GetAssets<ContractsConfigurationAsset>();
 
             foreach (var serviceConfig in serviceConfigs)
             {

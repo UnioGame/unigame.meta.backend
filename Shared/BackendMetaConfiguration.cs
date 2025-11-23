@@ -26,14 +26,14 @@ namespace MetaService.Runtime
         [HideLabel]
         [InlineProperty]
 #endif
-        public RemoteMetaDataConfig configuration = new();
+        public ContractsMetaData configuration = new();
 
 #if ODIN_INSPECTOR
         [TabGroup(nameof(settings))]
         [InlineProperty]
         [HideLabel]
 #endif
-        public BackendMetaSettings settings = new();
+        public ContractsProvidersData settings = new();
 
         
         #region IdGenerator

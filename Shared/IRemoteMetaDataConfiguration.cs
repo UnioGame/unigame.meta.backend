@@ -4,8 +4,6 @@
 
     public interface IRemoteMetaDataConfiguration
     {
-        public int HistorySize { get; }
-        
         public IRemoteDataConverter Converter { get; }
 
         public RemoteMetaData[] RemoteMetaData { get; }

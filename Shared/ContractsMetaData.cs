@@ -11,13 +11,11 @@
 #endif
     
     [Serializable]
-    public class RemoteMetaDataConfig : IRemoteMetaDataConfiguration
+    public class ContractsMetaData : IRemoteMetaDataConfiguration
     {
         [SerializeReference]
         public IRemoteDataConverter defaultConverter = new JsonRemoteDataConverter();
 
-        public int contractHistorySize = 100;
-        
 #if ODIN_INSPECTOR
         [Searchable(FilterOptions = SearchFilterOptions.ISearchFilterableInterface)]
         [ListDrawerSettings(ListElementLabelName = "method")]
@@ -25,10 +23,9 @@
         public RemoteMetaData[] remoteMetaData = Array.Empty<RemoteMetaData>();
 
         public IRemoteDataConverter Converter => defaultConverter;
+        
         public RemoteMetaData[] RemoteMetaData => remoteMetaData;
-        
-        public int HistorySize => contractHistorySize;
-        
+
         
         public string GetContractName(IRemoteMetaContract contract)
         {

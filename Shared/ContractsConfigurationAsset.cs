@@ -21,23 +21,22 @@
     using UnityEditor;
 #endif
 
-    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Remote Meta Data Config",fileName = "RemoteMetaDataConfig")]
-    public class RemoteMetaDataConfigAsset : ScriptableObject
+    [CreateAssetMenu(menuName = "UniGame/MetaBackend/Contracts Configuration",fileName = "Contracts Configuration")]
+    public class ContractsConfigurationAsset : ScriptableObject
     {
 #if ODIN_INSPECTOR
-        [TabGroup("meta contracts")]
+        [TabGroup("contracts")]
         [HideLabel]
         [InlineProperty]
 #endif
-        public RemoteMetaDataConfig configuration = new();
+        public ContractsMetaData configuration = new();
 
 #if ODIN_INSPECTOR
         [TabGroup(nameof(settings))]
         [InlineProperty]
         [HideLabel]
 #endif
-        public BackendMetaSettings settings = new();
-
+        public ContractsProvidersData settings = new();
         
         #region IdGenerator
 
@@ -143,7 +142,7 @@
             return true;
         }
 
-        public static void GenerateStaticProperties(RemoteMetaDataConfigAsset dataAsset)
+        public static void GenerateStaticProperties(ContractsConfigurationAsset dataAsset)
         {
             var idType = typeof(RemoteMetaId);
             var typeName = nameof(RemoteMetaId);

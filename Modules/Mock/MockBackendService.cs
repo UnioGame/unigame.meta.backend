@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using MetaService.Runtime;
     using R3;
@@ -65,7 +66,8 @@
             return UniTask.FromResult(result);
         }
 
-        public UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contract)
+        public UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contract,
+            CancellationToken cancellationToken = default)
         {
             var method = contract.contractName;
             var result = _config

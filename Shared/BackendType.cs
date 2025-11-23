@@ -10,9 +10,9 @@
     public struct BackendType
     {
         public string Name;
-        
-        public int Id => string.IsNullOrEmpty(Name) ? 0 : Name.GetHashCode();
 
+        public int Id;
+        
 #if ODIN_INSPECTOR
         [InlineEditor]
 #endif

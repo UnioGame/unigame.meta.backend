@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using MetaService.Runtime;
     using Newtonsoft.Json;
@@ -101,7 +102,8 @@
             return false;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
+        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData,
+            CancellationToken cancellationToken = default)
         {
             if (!IsContractSupported(contractData.contractName, out var contractConfig))
             {

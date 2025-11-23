@@ -36,6 +36,7 @@
 
         public BackendMetaService(
             bool useDefaultProvider,
+            int historySize,
             BackendTypeId defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
             IRemoteMetaDataConfiguration metaDataConfiguration)
@@ -47,7 +48,7 @@
             _metaIdCache = new Dictionary<int, RemoteMetaData>(64);
             _contractsCache = new Dictionary<Type, IRemoteMetaProvider>(64);
             _dataStream = new Subject<ContractDataResult>().AddTo(LifeTime);
-            _historySize = metaDataConfiguration.HistorySize;
+            _historySize = historySize;
             _history = new ContractHistoryItem[_historySize];
 
             _useDefaultProvider = useDefaultProvider;
@@ -66,8 +67,6 @@
         public ContractHistoryItem[] ContractHistory => _history;
         
         public Observable<ContractDataResult> DataStream => _dataStream;
-
-        public ReadOnlyReactiveProperty<ConnectionState> State => _defaultMetaProvider.State;
 
         public bool AddContractHandler(IMetaContractHandler handler)
         {
@@ -158,9 +157,6 @@
         {
             var meta = FindMetaData(contract);
             
-            if (meta == RemoteMetaData.Empty) 
-                return ContractDataResult.Empty;
-
             var provider = SelectProvider(meta,contract);
             
             var contractData = new MetaContractData()
@@ -169,14 +165,16 @@
                 metaData = meta,
                 contract = contract,
                 provider = provider,
-                contractName = meta.method,
+                contractName = contract.Path,
             };
             
             return await ExecuteAsync(contractData, cancellation)
                 .AttachExternalCancellation(LifeTime.Token);
         }
 
-        public async UniTask<ContractDataResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellation = default)
+        public async UniTask<ContractDataResult> ExecuteAsync(
+            MetaContractData contractData,
+            CancellationToken cancellation = default)
         {
             try
             {
@@ -199,7 +197,8 @@
                     contractValue = contractHandler.UpdateContract(contractValue); 
                 
                 contractData.contract = contractValue;
-                var remoteResult = await provider.ExecuteAsync(contractData);
+                
+                var remoteResult = await provider.ExecuteAsync(contractData,cancellation);
 
                 await UniTask.SwitchToMainThread();
                 
@@ -229,11 +228,11 @@
                 if (meta.contract == null)
                 {
                     Debug.LogError($"Backend Service: {meta.id} {meta.method} {meta.provider}");
+                    return null;
                 }
 #endif
                 
-                if(meta.contract.OutputType == contract.OutputType && 
-                   meta.contract.InputType == contract.InputType)
+                if(meta.contract.GetType() == contract.GetType())
                     return meta;
             }
             

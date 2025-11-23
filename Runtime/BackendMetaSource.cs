@@ -25,22 +25,22 @@
         [HideLabel]
 #endif
         [FormerlySerializedAs("backendMetaConfiguration")]
-        public RemoteMetaDataConfigAsset configuration;
+        public ContractsConfigurationAsset configuration;
         
         protected override async UniTask<IBackendMetaService> CreateInternalAsync(IContext context)
         {
             var asset = Instantiate(configuration);
             
-            var backend = asset.settings;
+            var settings = asset.settings;
             var remoteMeta = asset.configuration;
 
             context.Publish<IRemoteMetaDataConfiguration>(remoteMeta);
             
-            var backendMetaType = backend.backendType;
+            var backendMetaType = settings.backendType;
             IRemoteMetaProvider defaultProvider = null;
             var providers = new Dictionary<int,IRemoteMetaProvider>();
 
-            foreach (var backendType in backend.backendTypes)
+            foreach (var backendType in settings.backendTypes)
             {
                 var providerSource = Instantiate(backendType.Provider);
                 var metaProvider = await providerSource.CreateAsync(context);
@@ -58,7 +58,9 @@
             }
 
             context.Publish<IRemoteMetaProvider>(defaultProvider);
-            var service = new BackendMetaService(backend.useDefaultBackendFirst,backendMetaType,providers,remoteMeta);
+            var service = new BackendMetaService(settings.useDefaultBackendFirst,
+                settings.historySize,
+                backendMetaType,providers,remoteMeta);
             
             return service;
         }

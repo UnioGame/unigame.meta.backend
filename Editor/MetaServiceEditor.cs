@@ -31,7 +31,7 @@ namespace Game.Modules.Editor
             var source = ScriptableObject.CreateInstance<BackendMetaSource>();
             source = source.SaveAsset(source.GetType().Name,path);
             
-            var metaDataConfig = ScriptableObject.CreateInstance<RemoteMetaDataConfigAsset>();
+            var metaDataConfig = ScriptableObject.CreateInstance<ContractsConfigurationAsset>();
             metaDataConfig = metaDataConfig.SaveAsset(metaDataConfig.GetType().Name,path);
 
             source.configuration = metaDataConfig;
@@ -55,6 +55,7 @@ namespace Game.Modules.Editor
                 .Select(x => new BackendType()
                 {
                     Name = x.GetType().Name,
+                    Id = x.GetType().Name.GetHashCode(),
                     Provider = x
                 }).ToList();
 

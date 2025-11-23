@@ -94,7 +94,8 @@
             return true;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
+        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData
+            ,CancellationToken cancellationToken = default)
         {
             var result = new RemoteMetaResult()
             {
@@ -107,7 +108,7 @@
             try
             {
                 var contract = contractData.contract;
-                var contractResult = await ExecuteContractAsync(_connection, contract, LifeTime.Token);
+                var contractResult = await ExecuteContractAsync(_connection, contract, cancellationToken);
 
                 result.data = contractResult.data;
                 result.success = contractResult.success;

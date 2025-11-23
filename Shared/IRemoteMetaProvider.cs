@@ -1,5 +1,6 @@
 ﻿namespace UniGame.MetaBackend.Shared
 {
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using Runtime;
     using MetaService.Runtime;
@@ -11,7 +12,7 @@
     {
         bool IsContractSupported(IRemoteMetaContract command);
         
-        UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData);
+        UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellationToken = default);
         
         bool TryDequeue(out RemoteMetaResult result);
     }

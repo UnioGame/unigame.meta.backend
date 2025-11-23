@@ -81,7 +81,8 @@
             return containsKey;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract)
+        public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract,
+            CancellationToken cancellationToken = default)
         {
             var contractType = contract.GetType();
             var result = new RemoteMetaResult()
@@ -97,7 +98,7 @@
 
             var requestResult  = _debugMode || endPoint.debugMode
                 ? ExecuteDebugAsync(endPoint) 
-                : await ExecuteWebRequest(contract, endPoint);
+                : await ExecuteWebRequest(contract, endPoint,cancellationToken);
             
 #if UNITY_EDITOR
             if (_settings.enableLogs)
@@ -148,10 +149,14 @@
         }
 
         public async UniTask<WebRequestResult> ExecuteWebRequest(IRemoteMetaContract contract,
-            WebApiEndPoint endPoint)
+            WebApiEndPoint endPoint,
+            CancellationToken cancellationToken = default)
         {
             if (!_isInitialized)
-                await UniTask.WaitWhile(this, x => x._isInitialized == false);
+            {
+                await UniTask.WaitWhile(this, x => x._isInitialized == false,
+                    cancellationToken:cancellationToken);
+            }
             
             var payload = contract.Payload;
             var url = string.IsNullOrEmpty(endPoint.url) 
@@ -195,7 +200,7 @@
             
             do
             {
-                requestResult = await SendEndPointRequestAsync(endPoint, url, payload);
+                requestResult = await SendEndPointRequestAsync(endPoint, url, payload,cancellationToken);
                 if (requestResult.success) return requestResult;
                 
                 var elapsedTime = Time.realtimeSinceStartup - startTime;
@@ -275,9 +280,10 @@
             return result;
         }
         
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data)
+        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data,
+            CancellationToken cancellationToken = default)
         {
-            var result = await ExecuteAsync(data.contract);
+            var result = await ExecuteAsync(data.contract,cancellationToken);
             result.id = data.contractName;
             return result;
         }

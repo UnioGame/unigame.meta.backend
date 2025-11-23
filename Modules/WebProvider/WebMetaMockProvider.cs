@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using WebService;
     using MetaService.Runtime;
@@ -44,7 +45,8 @@
             return _contractsMap.ContainsKey(command.GetType());
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract)
+        public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract,
+            CancellationToken cancellationToken = default)
         {
             var contractType = contract.GetType();
             var result = new RemoteMetaResult()
@@ -83,9 +85,10 @@
         }
 
         
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data)
+        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data,
+            CancellationToken cancellationToken = default)
         {
-            var result = await ExecuteAsync(data.contract);
+            var result = await ExecuteAsync(data.contract,cancellationToken);
             result.id = data.contractName;
             return result;
         }

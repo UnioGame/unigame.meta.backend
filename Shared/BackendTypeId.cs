@@ -29,12 +29,12 @@
 
         #region static editor data
 
-        private static RemoteMetaDataConfigAsset _dataAsset;
+        private static ContractsConfigurationAsset _dataAsset;
 
         public static IEnumerable<ValueDropdownItem<BackendTypeId>> GetBackendTypes()
         {
 #if UNITY_EDITOR
-            _dataAsset ??= AssetEditorTools.GetAsset<RemoteMetaDataConfigAsset>();
+            _dataAsset ??= AssetEditorTools.GetAsset<ContractsConfigurationAsset>();
             var types = _dataAsset.settings.backendTypes;
             
             if (types == null)
