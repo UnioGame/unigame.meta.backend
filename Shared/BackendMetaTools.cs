@@ -1,6 +1,7 @@
 namespace Game.Modules.Meta.Runtime
 {
     using System;
+    using System.Linq;
     using UniGame.MetaBackend.Shared;
 
     public static class BackendMetaTools
@@ -26,11 +27,20 @@ namespace Game.Modules.Meta.Runtime
         
         public static int CalculateMetaId(IRemoteMetaContract contract)
         {
-            var contractType = contract.GetType().Name;
-            var inputType = contract.InputType?.GetHashCode() ?? 0;
-            var outputType = contract.OutputType?.GetHashCode() ?? 0;
-            var id = HashCode.Combine(contractType, inputType, outputType);
-            return id;
+            var contractType = contract.GetType().FullName;
+            var inputType = contract.InputType?.FullName ?? "null";
+            var outputType = contract.OutputType?.FullName ?? "null";
+
+            var key = $"{contractType}|{inputType}|{outputType}";
+            return GetStableHash(key);
+        }
+
+        private static int GetStableHash(string str)
+        {
+            unchecked
+            {
+                return str.Aggregate((int)2166136261, (current, t) => (current ^ t) * 16777619);
+            }
         }
         
     }
