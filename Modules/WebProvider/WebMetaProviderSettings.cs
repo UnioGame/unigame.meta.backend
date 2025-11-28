@@ -23,18 +23,18 @@
 #endif
         public List<WebApiEndPoint> contracts = new();
         
-#if ODIN_INSPECTOR
-        [TabGroup(SettingsKey)]
-#endif
-        public bool enableApiGenerator = false;
+// #if ODIN_INSPECTOR
+//         [TabGroup(SettingsKey)]
+// #endif
+//         public bool enableApiGenerator = false;
         
-#if ODIN_INSPECTOR
-        [TabGroup(SettingsKey)]
-        [ShowIf(nameof(enableApiGenerator))]
-        [InlineProperty]
-        [HideLabel]
-#endif
-        public WebApiSettings apiSettings = new();
+// #if ODIN_INSPECTOR
+//         [TabGroup(SettingsKey)]
+//         [ShowIf(nameof(enableApiGenerator))]
+//         [InlineProperty]
+//         [HideLabel]
+// #endif
+//         public OpenApiSettings apiSettings = new();
         
 #if ODIN_INSPECTOR
         [TabGroup(SettingsKey)]
@@ -45,7 +45,7 @@
 #if ODIN_INSPECTOR
         [TabGroup(SettingsKey)]
 #endif
-        public bool enableLogs = true;
+        public bool enableLogs = false;
         
 #if ODIN_INSPECTOR
         [TabGroup(SettingsKey)]

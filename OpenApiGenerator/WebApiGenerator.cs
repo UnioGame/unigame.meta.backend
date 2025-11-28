@@ -11,7 +11,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// Generate API contracts from the configured Swagger JSON file
         /// </summary>
         /// <param name="settings">Web API settings containing configuration</param>
-        public static void GenerateContracts(WebApiSettings settings)
+        public static void GenerateContracts(OpenApiSettings settings)
         {
             Debug.Log("Starting API contract generation...");
             

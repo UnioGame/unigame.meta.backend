@@ -392,30 +392,68 @@ namespace MetaService.Editor
                 _configDetails.Add(settingsFoldout);
             }
             
+            // Display contracts
             var metaData = _configurationAsset.configuration?.remoteMetaData;
-            if (metaData == null || metaData.Length == 0)
+            
+            // Diagnostic info
+            if (_configurationAsset.configuration == null)
+            {
+                Debug.LogWarning($"ContractsConfigurationAsset.configuration is null for asset: {AssetDatabase.GetAssetPath(_configurationAsset)}");
+            }
+            else if (metaData == null)
+            {
+                Debug.LogWarning($"ContractsConfigurationAsset.configuration.remoteMetaData is null for asset: {AssetDatabase.GetAssetPath(_configurationAsset)}");
+            }
+            
+            var contractCount = metaData?.Length ?? 0;
+            
+            // Add contracts foldout (always show, even if empty)
+            var contractsFoldout = new Foldout { text = $"Contracts ({contractCount})", value = true };
+            contractsFoldout.AddToClassList("config-contracts-foldout");
+            contractsFoldout.style.marginTop = 10;
+            
+            var contractsContainer = new VisualElement();
+            contractsContainer.style.paddingLeft = 5;
+            
+            if (contractCount == 0)
             {
                 _configStatus.text = "Configuration loaded but no contracts found";
                 _configStatus.style.color = new StyleColor(new Color(0.8f, 0.6f, 0.4f));
-                return;
+                
+                var emptyLabel = new Label("No contracts configured. Use 'Update Remote Meta Data' button on the configuration asset.");
+                emptyLabel.style.paddingLeft = 10;
+                emptyLabel.style.paddingTop = 5;
+                emptyLabel.style.paddingBottom = 5;
+                emptyLabel.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
+                emptyLabel.style.whiteSpace = WhiteSpace.Normal;
+                contractsContainer.Add(emptyLabel);
             }
-            
-            _configStatus.text = $"Configuration loaded: {metaData.Length} contracts";
-            _configStatus.style.color = new StyleColor(new Color(0.4f, 0.8f, 0.4f));
-            
-            // Display contracts
-            foreach (var meta in metaData.Take(100)) // Limit to first 100
+            else
             {
-                var item = CreateConfigItem(meta);
-                _configDetails.Add(item);
+                _configStatus.text = $"Configuration loaded: {contractCount} contracts";
+                _configStatus.style.color = new StyleColor(new Color(0.4f, 0.8f, 0.4f));
+                
+                // Display contracts
+                var displayLimit = 100;
+                foreach (var meta in metaData.Take(displayLimit))
+                {
+                    var item = CreateConfigItem(meta);
+                    contractsContainer.Add(item);
+                }
+                
+                if (contractCount > displayLimit)
+                {
+                    var moreLabel = new Label($"... and {contractCount - displayLimit} more contracts");
+                    moreLabel.AddToClassList("status-label");
+                    moreLabel.style.paddingLeft = 10;
+                    moreLabel.style.paddingTop = 5;
+                    moreLabel.style.color = new StyleColor(new Color(0.7f, 0.7f, 0.7f));
+                    contractsContainer.Add(moreLabel);
+                }
             }
             
-            if (metaData.Length > 100)
-            {
-                var moreLabel = new Label($"... and {metaData.Length - 100} more contracts");
-                moreLabel.AddToClassList("status-label");
-                _configDetails.Add(moreLabel);
-            }
+            contractsFoldout.Add(contractsContainer);
+            _configDetails.Add(contractsFoldout);
         }
         
         private void SelectOrCreateConfiguration()
@@ -640,12 +678,28 @@ namespace MetaService.Editor
             var header = new VisualElement();
             header.AddToClassList("stream-item-header");
             
+            var leftHeader = new VisualElement();
+            leftHeader.style.flexDirection = FlexDirection.Row;
+            leftHeader.style.alignItems = Align.Center;
+            
             var contractIdDisplay = !string.IsNullOrEmpty(result.contractId) 
                 ? result.contractId 
                 : result.metaId.ToString();
             var contractIdLabel = new Label($"Contract: {contractIdDisplay}");
             contractIdLabel.AddToClassList("stream-item-meta-id");
-            header.Add(contractIdLabel);
+            leftHeader.Add(contractIdLabel);
+            
+            var copyButton = new Button(() => CopyResultToClipboard(result))
+            {
+                text = "📋"
+            };
+            copyButton.tooltip = "Copy result to clipboard";
+            copyButton.style.marginLeft = 5;
+            copyButton.style.paddingLeft = 5;
+            copyButton.style.paddingRight = 5;
+            leftHeader.Add(copyButton);
+            
+            header.Add(leftHeader);
             
             var timestamp = DateTimeOffset.FromUnixTimeSeconds(result.timestamp).LocalDateTime;
             var timeLabel = new Label(timestamp.ToString("HH:mm:ss.fff"));

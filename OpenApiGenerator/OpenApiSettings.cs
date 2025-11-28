@@ -7,17 +7,11 @@ using UnityEngine;
 
 namespace Game.Modules.unity.meta.service.Modules.WebProvider
 {
-    using global::UniGame.MetaBackend.Runtime;
-
-#if UNITY_EDITOR
-    using UniModules.Editor;
-#endif
-    
     /// <summary>
     /// Settings for web API contract generation
     /// </summary>
     [Serializable]
-    public class WebApiSettings
+    public class OpenApiSettings
     {
         /// <summary>
         /// Path to the Swagger JSON file
@@ -80,16 +74,8 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
 #endif
         public void GenerateContracts()
         {
-            WebApiGenerator.GenerateContracts(this);
-            
 #if UNITY_EDITOR
-            var webProviders = AssetEditorTools
-                .GetAssets<WebMetaProviderAsset>();
-            foreach (var providerAsset in webProviders)
-            {
-                providerAsset.LoadContracts();
-                providerAsset.MarkDirty();
-            }
+            WebApiGenerator.GenerateContracts(this);
 #endif
         }
     }

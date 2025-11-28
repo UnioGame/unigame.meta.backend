@@ -15,7 +15,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
     /// </summary>
     public class SwaggerContractGenerator
     {
-        private readonly WebApiSettings _settings;
+        private readonly OpenApiSettings _settings;
         private readonly SwaggerParser _parser;
         private readonly ContractTemplateGenerator _templateGenerator;
         
@@ -28,7 +28,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         private int _newContractFiles = 0;
         private int _overwrittenContractFiles = 0;
 
-        public SwaggerContractGenerator(WebApiSettings settings)
+        public SwaggerContractGenerator(OpenApiSettings settings)
         {
             _settings = settings;
             _parser = new SwaggerParser();
