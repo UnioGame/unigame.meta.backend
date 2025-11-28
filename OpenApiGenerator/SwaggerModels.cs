@@ -10,8 +10,23 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public string Title { get; set; }
         public string Version { get; set; }
         public string BasePath { get; set; }
+        
+        /// <summary>
+        /// Servers array from OpenAPI 3.0 (contains base URLs)
+        /// </summary>
+        public List<SwaggerServer> Servers { get; set; } = new List<SwaggerServer>();
+        
         public Dictionary<string, SwaggerPathItem> Paths { get; set; } = new Dictionary<string, SwaggerPathItem>();
         public Dictionary<string, SwaggerDefinition> Definitions { get; set; } = new Dictionary<string, SwaggerDefinition>();
+    }
+    
+    /// <summary>
+    /// Represents a server entry from OpenAPI 3.0
+    /// </summary>
+    public class SwaggerServer
+    {
+        public string Url { get; set; }
+        public string Description { get; set; }
     }
 
     /// <summary>
@@ -90,9 +105,45 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public Dictionary<string, SwaggerSchema> Properties { get; set; }
         
         /// <summary>
-        /// Исходное имя свойства в API (для JsonProperty)
+        /// Original name for JsonProperty attribute
         /// </summary>
         public string OriginalName { get; set; }
+        
+        /// <summary>
+        /// allOf composition (inheritance/merge schemas)
+        /// </summary>
+        public List<SwaggerSchema> AllOf { get; set; }
+        
+        /// <summary>
+        /// anyOf composition (union types)
+        /// </summary>
+        public List<SwaggerSchema> AnyOf { get; set; }
+        
+        /// <summary>
+        /// oneOf composition (discriminated union)
+        /// </summary>
+        public List<SwaggerSchema> OneOf { get; set; }
+        
+        /// <summary>
+        /// Discriminator for polymorphic types
+        /// </summary>
+        public SwaggerDiscriminator Discriminator { get; set; }
+    }
+    
+    /// <summary>
+    /// Represents discriminator for polymorphic schema composition
+    /// </summary>
+    public class SwaggerDiscriminator
+    {
+        /// <summary>
+        /// Property name that identifies the type
+        /// </summary>
+        public string PropertyName { get; set; }
+        
+        /// <summary>
+        /// Mapping of property values to schema names
+        /// </summary>
+        public Dictionary<string, string> Mapping { get; set; }
     }
 
     /// <summary>
@@ -119,13 +170,43 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public SwaggerProperty Items { get; set; }
         
         /// <summary>
-        /// Вложенные свойства для объектов
+        /// Nested properties for inline objects
         /// </summary>
         public Dictionary<string, SwaggerProperty> Properties { get; set; }
         
         /// <summary>
-        /// Исходное имя свойства в API (для JsonProperty)
+        /// Original property name for JsonProperty attribute
         /// </summary>
         public string OriginalName { get; set; }
+        
+        /// <summary>
+        /// allOf composition
+        /// </summary>
+        public List<SwaggerProperty> AllOf { get; set; }
+        
+        /// <summary>
+        /// anyOf composition
+        /// </summary>
+        public List<SwaggerProperty> AnyOf { get; set; }
+        
+        /// <summary>
+        /// oneOf composition
+        /// </summary>
+        public List<SwaggerProperty> OneOf { get; set; }
+        
+        /// <summary>
+        /// Enum values if this is an enum property
+        /// </summary>
+        public List<object> Enum { get; set; }
+        
+        /// <summary>
+        /// Indicates if the property is nullable
+        /// </summary>
+        public bool Nullable { get; set; }
+        
+        /// <summary>
+        /// Indicates if the property is deprecated
+        /// </summary>
+        public bool Deprecated { get; set; }
     }
 } 

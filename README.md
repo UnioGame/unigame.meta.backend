@@ -434,7 +434,7 @@ public class WebTexturePath
 
 ## OpenAPI/Swagger Code Generation
 
-Automatically generate C# contracts and DTOs from OpenAPI 3.0 or Swagger 2.0 specifications.
+Automatically generate C# contracts and DTOs from OpenAPI 3.0 or Swagger 2.0 specifications with full support for composition schemas (allOf/anyOf/oneOf), multiple content types, and servers.
 
 ### OpenAPI Generator Editor
 
@@ -444,10 +444,34 @@ Automatically generate C# contracts and DTOs from OpenAPI 3.0 or Swagger 2.0 spe
 
 The visual editor provides:
 - Settings asset management
-- API specification configuration
+- API specification configuration (supports both Swagger 2.0 and OpenAPI 3.0)
 - Output folder configuration
 - Generation options
 - One-click generation
+
+### Features
+
+#### ✅ Full OpenAPI 3.0 Support
+- **Servers Array** - Automatic base URL extraction from servers configuration
+- **Multiple Content Types** - Handles application/json, application/xml, multipart/form-data
+- **requestBody** - Full support for OpenAPI 3.0 request bodies
+- **components/schemas** - Modern schema references
+
+#### ✅ Schema Composition
+- **allOf** - Schema inheritance and merging
+- **anyOf** - Union types
+- **oneOf** - Discriminated unions with discriminator support
+- **Polymorphism** - Type discrimination for complex hierarchies
+
+#### ✅ Advanced Type Support
+- **Extended Formats** - email, uri, hostname, ipv4, ipv6, uuid, date-time
+- **Enum Generation** - C# enums from OpenAPI enum values
+- **Deprecated Attributes** - [Obsolete] for deprecated properties and operations
+- **Nullable Types** - Proper handling of nullable properties
+
+#### ✅ Backward Compatible
+- **Swagger 2.0** - Full support for definitions, basePath, consumes/produces
+- **Automatic Detection** - Seamlessly works with both specifications
 
 ### Settings
 

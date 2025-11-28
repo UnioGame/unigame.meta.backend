@@ -20,7 +20,33 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 // Parse basic info
                 definition.Title = jsonObject["info"]?["title"]?.ToString();
                 definition.Version = jsonObject["info"]?["version"]?.ToString();
+                
+                // Parse basePath (Swagger 2.0)
                 definition.BasePath = jsonObject["basePath"]?.ToString();
+                
+                // Parse servers array (OpenAPI 3.0)
+                var servers = jsonObject["servers"] as JArray;
+                if (servers != null)
+                {
+                    definition.Servers = ParseServers(servers);
+                    // If basePath is not set, try to extract from first server URL
+                    if (string.IsNullOrEmpty(definition.BasePath) && definition.Servers.Count > 0)
+                    {
+                        var firstServerUrl = definition.Servers[0].Url;
+                        if (!string.IsNullOrEmpty(firstServerUrl))
+                        {
+                            var uri = new Uri(firstServerUrl, UriKind.RelativeOrAbsolute);
+                            if (uri.IsAbsoluteUri)
+                            {
+                                definition.BasePath = uri.PathAndQuery;
+                            }
+                            else
+                            {
+                                definition.BasePath = firstServerUrl;
+                            }
+                        }
+                    }
+                }
 
                 // Parse paths
                 var paths = jsonObject["paths"] as JObject;
@@ -66,6 +92,27 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 Debug.LogError($"Error parsing Swagger JSON: {ex.Message}");
                 return new SwaggerApiDefinition();
             }
+        }
+
+        private List<SwaggerServer> ParseServers(JArray servers)
+        {
+            var result = new List<SwaggerServer>();
+            
+            foreach (var serverToken in servers)
+            {
+                var serverObj = serverToken as JObject;
+                if (serverObj != null)
+                {
+                    var server = new SwaggerServer
+                    {
+                        Url = serverObj["url"]?.ToString(),
+                        Description = serverObj["description"]?.ToString()
+                    };
+                    result.Add(server);
+                }
+            }
+            
+            return result;
         }
 
         private Dictionary<string, SwaggerPathItem> ParsePaths(JObject paths)
@@ -135,7 +182,8 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         }
 
         /// <summary>
-        /// Парсит requestBody из OpenAPI 3.0
+        /// Parses requestBody from OpenAPI 3.0
+        /// Handles multiple content types, preferring application/json
         /// </summary>
         private SwaggerRequestBody ParseRequestBody(JObject requestBody)
         {
@@ -145,18 +193,41 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 Required = (bool?)requestBody["required"] ?? false
             };
 
-            // Получаем схему из content.application/json
+            // Get content types
             var content = requestBody["content"] as JObject;
             if (content != null)
             {
-                // Ищем application/json
-                var jsonContent = content["application/json"] as JObject;
-                if (jsonContent != null)
+                // Get all available content types
+                var contentTypes = new List<string>();
+                foreach (var prop in content.Properties())
                 {
-                    var schema = jsonContent["schema"] as JObject;
+                    contentTypes.Add(prop.Name);
+                }
+                
+                // Get preferred content type (prefers application/json)
+                var preferredContentType = OpenApiHelpers.GetPreferredContentType(contentTypes);
+                
+                // Try to parse schema from preferred content type
+                var contentObj = content[preferredContentType] as JObject;
+                if (contentObj != null)
+                {
+                    var schema = contentObj["schema"] as JObject;
                     if (schema != null)
                     {
                         result.Schema = ParseSchema(schema);
+                    }
+                }
+                else
+                {
+                    // Fallback: try application/json directly
+                    var jsonContent = content[OpenApiHelpers.ContentTypes.ApplicationJson] as JObject;
+                    if (jsonContent != null)
+                    {
+                        var schema = jsonContent["schema"] as JObject;
+                        if (schema != null)
+                        {
+                            result.Schema = ParseSchema(schema);
+                        }
                     }
                 }
             }
@@ -210,7 +281,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 {
                     response.Description = responseObj["description"]?.ToString();
                     
-                    // Пробуем получить схему напрямую (Swagger 2.0)
+                    // Try to get schema directly (Swagger 2.0)
                     var schema = responseObj["schema"] as JObject;
                     if (schema != null)
                     {
@@ -218,15 +289,25 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     }
                     else
                     {
-                        // Пробуем получить схему из content (OpenAPI 3.0)
+                        // Try to get schema from content (OpenAPI 3.0)
                         var content = responseObj["content"] as JObject;
                         if (content != null)
                         {
-                            // Ищем application/json
-                            var jsonContent = content["application/json"] as JObject;
-                            if (jsonContent != null)
+                            // Get all available content types
+                            var contentTypes = new List<string>();
+                            foreach (var prop in content.Properties())
                             {
-                                var contentSchema = jsonContent["schema"] as JObject;
+                                contentTypes.Add(prop.Name);
+                            }
+                            
+                            // Get preferred content type (prefers application/json)
+                            var preferredContentType = OpenApiHelpers.GetPreferredContentType(contentTypes);
+                            
+                            // Parse schema from preferred content type
+                            var contentObj = content[preferredContentType] as JObject;
+                            if (contentObj != null)
+                            {
+                                var contentSchema = contentObj["schema"] as JObject;
                                 if (contentSchema != null)
                                 {
                                     response.Schema = ParseSchema(contentSchema);
@@ -250,7 +331,82 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             var reference = schema["$ref"]?.ToString();
             if (!string.IsNullOrEmpty(reference))
             {
-                result.Reference = NormalizeReference(reference);
+                result.Reference = OpenApiHelpers.NormalizeReference(reference);
+                return result;
+            }
+
+            // Handle allOf (schema composition/inheritance)
+            var allOf = schema["allOf"] as JArray;
+            if (allOf != null && allOf.Count > 0)
+            {
+                result.AllOf = new List<SwaggerSchema>();
+                foreach (var item in allOf)
+                {
+                    var itemObj = item as JObject;
+                    if (itemObj != null)
+                    {
+                        result.AllOf.Add(ParseSchema(itemObj));
+                    }
+                }
+                // Set type to object for composition
+                result.Type = "object";
+                return result;
+            }
+
+            // Handle anyOf (union types)
+            var anyOf = schema["anyOf"] as JArray;
+            if (anyOf != null && anyOf.Count > 0)
+            {
+                result.AnyOf = new List<SwaggerSchema>();
+                foreach (var item in anyOf)
+                {
+                    var itemObj = item as JObject;
+                    if (itemObj != null)
+                    {
+                        result.AnyOf.Add(ParseSchema(itemObj));
+                    }
+                }
+                // Default to object for union types
+                result.Type = "object";
+                return result;
+            }
+
+            // Handle oneOf (discriminated union)
+            var oneOf = schema["oneOf"] as JArray;
+            if (oneOf != null && oneOf.Count > 0)
+            {
+                result.OneOf = new List<SwaggerSchema>();
+                foreach (var item in oneOf)
+                {
+                    var itemObj = item as JObject;
+                    if (itemObj != null)
+                    {
+                        result.OneOf.Add(ParseSchema(itemObj));
+                    }
+                }
+                
+                // Parse discriminator if present
+                var discriminator = schema["discriminator"] as JObject;
+                if (discriminator != null)
+                {
+                    result.Discriminator = new SwaggerDiscriminator
+                    {
+                        PropertyName = discriminator["propertyName"]?.ToString(),
+                        Mapping = new Dictionary<string, string>()
+                    };
+                    
+                    var mapping = discriminator["mapping"] as JObject;
+                    if (mapping != null)
+                    {
+                        foreach (var prop in mapping.Properties())
+                        {
+                            result.Discriminator.Mapping[prop.Name] = prop.Value.ToString();
+                        }
+                    }
+                }
+                
+                // Default to object for discriminated union
+                result.Type = "object";
                 return result;
             }
 
@@ -279,7 +435,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                         var propObj = property.Value as JObject;
                         if (propObj != null)
                         {
-                            result.Properties.Add(property.Name, ParseSchema(propObj));
+                            var propSchema = ParseSchema(propObj);
+                            propSchema.OriginalName = property.Name;
+                            result.Properties.Add(property.Name, propSchema);
                         }
                     }
                 }
@@ -342,26 +500,11 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         }
 
         /// <summary>
-        /// Нормализует ссылки на определения, удаляя префиксы
+        /// Normalizes references using shared helper
         /// </summary>
         private string NormalizeReference(string reference)
         {
-            if (string.IsNullOrEmpty(reference))
-                return reference;
-        
-            // Обработка ссылок из Swagger 2.0
-            if (reference.StartsWith("#/definitions/"))
-            {
-                return reference.Substring("#/definitions/".Length);
-            }
-        
-            // Обработка ссылок из OpenAPI 3.0
-            if (reference.StartsWith("#/components/schemas/"))
-            {
-                return reference.Substring("#/components/schemas/".Length);
-            }
-        
-            return reference;
+            return OpenApiHelpers.NormalizeReference(reference);
         }
 
         private SwaggerProperty ParsePropertyObject(JObject propertyObject)
@@ -371,62 +514,117 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             property.Type = (string)propertyObject["type"];
             property.Format = (string)propertyObject["format"];
             property.Description = (string)propertyObject["description"];
+            property.Nullable = (bool?)propertyObject["nullable"] ?? false;
+            property.Deprecated = (bool?)propertyObject["deprecated"] ?? false;
             
-            // Обработка ссылок на объекты
+            // Parse enum values
+            var enumValues = propertyObject["enum"] as JArray;
+            if (enumValues != null && enumValues.Count > 0)
+            {
+                property.Enum = new List<object>();
+                foreach (var value in enumValues)
+                {
+                    property.Enum.Add(value.ToObject<object>());
+                }
+            }
+            
+            // Handle $ref
             var reference = (string)propertyObject["$ref"];
             if (!string.IsNullOrEmpty(reference))
             {
                 property.Reference = NormalizeReference(reference);
                 
-                // Особая обработка ErrorCode - превращаем в int
+                // Special handling for ErrorCode enum
                 if (property.Reference.EndsWith("ErrorCode"))
                 {
                     property.Type = "integer";
                     property.Format = "int32";
-                    property.Reference = null; // Очищаем ссылку, чтобы использовался тип из type/format
+                    property.Reference = null;
                 }
             }
             
-            // Обработка oneOf для полиморфных типов
+            // Handle allOf composition
+            var allOf = propertyObject["allOf"] as JArray;
+            if (allOf != null && allOf.Count > 0)
+            {
+                property.AllOf = new List<SwaggerProperty>();
+                foreach (var item in allOf)
+                {
+                    var itemObj = item as JObject;
+                    if (itemObj != null)
+                    {
+                        property.AllOf.Add(ParsePropertyObject(itemObj));
+                    }
+                }
+                property.Type = "object";
+            }
+            
+            // Handle anyOf composition
+            var anyOf = propertyObject["anyOf"] as JArray;
+            if (anyOf != null && anyOf.Count > 0)
+            {
+                property.AnyOf = new List<SwaggerProperty>();
+                foreach (var item in anyOf)
+                {
+                    var itemObj = item as JObject;
+                    if (itemObj != null)
+                    {
+                        property.AnyOf.Add(ParsePropertyObject(itemObj));
+                    }
+                }
+                property.Type = "object";
+            }
+            
+            // Handle oneOf composition
             var oneOf = propertyObject["oneOf"] as JArray;
             if (oneOf != null && oneOf.Count > 0)
             {
-                Debug.Log($"Found oneOf with {oneOf.Count} variants");
-                
-                // По умолчанию используем object
-                property.Type = "object";
-                
-                // Если это "data" свойство в ответе ошибки, делаем его строкой
-                if (propertyObject.Parent != null && 
-                    propertyObject.Parent.Parent != null &&
-                    propertyObject.Parent.Parent["type"]?.ToString() == "object" &&
-                    propertyObject.Path.EndsWith(".data"))
+                property.OneOf = new List<SwaggerProperty>();
+                foreach (var item in oneOf)
                 {
-                    Debug.Log("Found data property in error response, using string type");
-                    property.Type = "string";
+                    var itemObj = item as JObject;
+                    if (itemObj != null)
+                    {
+                        property.OneOf.Add(ParsePropertyObject(itemObj));
+                    }
                 }
                 
-                // Проверяем nullable флаг
-                bool nullable = propertyObject["nullable"] != null && (bool)propertyObject["nullable"];
-                if (nullable)
+                // Default to object, but check for specific patterns
+                property.Type = "object";
+                
+                // Special case: data field in error responses
+                if (propertyObject.Path.EndsWith(".data"))
                 {
-                    Debug.Log("Property is nullable");
+                    property.Type = "string";
                 }
             }
             
-            // Обработка массивов
+            // Handle array types
             if (property.Type == "array")
             {
                 var items = propertyObject["items"] as JObject;
                 if (items != null)
                 {
-                    property.Items = new SwaggerProperty();
-                    property.Items.Type = (string)items["type"];
-                    
-                    var itemsRef = (string)items["$ref"];
-                    if (!string.IsNullOrEmpty(itemsRef))
+                    property.Items = ParsePropertyObject(items);
+                }
+            }
+            
+            // Handle object types with inline properties
+            if (property.Type == "object")
+            {
+                var properties = propertyObject["properties"] as JObject;
+                if (properties != null)
+                {
+                    property.Properties = new Dictionary<string, SwaggerProperty>();
+                    foreach (var prop in properties.Properties())
                     {
-                        property.Items.Reference = NormalizeReference(itemsRef);
+                        var propObj = prop.Value as JObject;
+                        if (propObj != null)
+                        {
+                            var parsedProp = ParsePropertyObject(propObj);
+                            parsedProp.OriginalName = prop.Name;
+                            property.Properties[prop.Name] = parsedProp;
+                        }
                     }
                 }
             }

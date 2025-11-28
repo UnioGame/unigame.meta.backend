@@ -363,8 +363,12 @@ namespace {_settings.contractNamespace}.Dto
                     // Определяем URL запроса
                     string requestUrl = path;
                     
+                    // Экранируем фигурные скобки в path перед string.Format
+                    // чтобы параметры маршрута {id}, {gameId} и т.д. не интерпретировались как placeholders
+                    string pathForTemplate = path.TrimStart('/').Replace("{", "{{").Replace("}", "}}");
+                    
                     // Заменяем на использование apiTemplate
-                    requestUrl = string.Format(_settings.apiTemplate, path.TrimStart('/'));
+                    requestUrl = string.Format(_settings.apiTemplate, pathForTemplate);
                     
                     // Определяем входной и выходной типы на основе операции
                     string inputType = _templateGenerator.GetInputType(operation);

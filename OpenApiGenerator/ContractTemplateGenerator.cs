@@ -12,34 +12,10 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
     /// </summary>
     public class ContractTemplateGenerator
     {
-        private readonly Dictionary<string, string> _typeMapping = new Dictionary<string, string>
-        {
-            { "integer", "int" },
-            { "number", "float" },
-            { "boolean", "bool" },
-            { "string", "string" },
-            { "array", "List<{0}>" },
-            { "object", "object" }
-        };
-
-        private readonly Dictionary<string, string> _formatMapping = new Dictionary<string, string>
-        {
-            { "int32", "int" },
-            { "int64", "long" },
-            { "float", "float" },
-            { "double", "double" },
-            { "byte", "byte" },
-            { "binary", "byte[]" },
-            { "date", "DateTime" },
-            { "date-time", "DateTime" },
-            { "password", "string" },
-            { "uuid", "Guid" }
-        };
-
-        // Словарь для преобразования имен схем в имена классов DTO (с учетом title)
+        // Dictionary for schema name to DTO class name mapping
         private Dictionary<string, string> _schemaToClassNameMap;
         
-        // Пространство имен для генерируемых DTO классов
+        // Namespace for generated DTO classes
         private readonly string _namespace;
         
         public ContractTemplateGenerator(Dictionary<string, string> schemaMap = null)
@@ -54,23 +30,23 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             _namespace = string.IsNullOrEmpty(dtoNamespace) ? "Game.Modules.WebProvider.Contracts" : dtoNamespace;
         }
         
-        // Метод для получения имени класса по имени схемы
+        // Method to get class name from schema name
         public string GetClassNameForSchema(string schemaName)
         {
             if (_schemaToClassNameMap.TryGetValue(schemaName, out var className))
             {
-                // Если имя уже содержит пространство имён через точку, возвращаем как есть
+                // If name contains namespace separator, return as is
                 if (className.Contains("."))
                 {
                     return className;
                 }
                 
-                // Иначе добавляем пространство имён для DTO
+                // Otherwise add DTO namespace
                 return $"{_namespace}.Dto.{className}";
             }
             
-            // Если для схемы нет маппинга, просто возвращаем имя схемы
-            return $"{_namespace}.Dto.{ToPascalCase(schemaName)}";
+            // If no mapping exists, use PascalCase schema name
+            return $"{_namespace}.Dto.{OpenApiHelpers.ToPascalCase(schemaName)}";
         }
 
         /// <summary>
@@ -79,7 +55,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         public string GenerateContract(string path, string method, SwaggerOperation operation, string requestUrl, string inputType, string outputType, string errorType = null)
         {
             HashSet<string> additionalNamespaces = new HashSet<string>();
-            string contractClassName = GetContractClassName(operation);
+            string contractClassName = OpenApiHelpers.CleanOperationName(operation.OperationId);
             
             // Определяем базовый тип контракта (с errorType или без)
             string baseType;
@@ -105,7 +81,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
         /// <summary>
         /// The type of request
         /// </summary>
-        public override WebRequestType RequestType => WebRequestType.{GetRequestTypeFromMethod(method)};";
+        public override WebRequestType RequestType => WebRequestType.{OpenApiHelpers.GetWebRequestType(method)};";
             
             // Формируем дополнительные импорты пространств имен
             string additionalNamespacesText = string.Join(Environment.NewLine, additionalNamespaces.Select(n => $"using {n};"));
@@ -129,7 +105,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 .Replace("$className$", contractClassName)
                 .Replace("$baseType$", baseType)
                 .Replace("$namespace$", _namespace)
-                .Replace("$description$", FormatDescription(operation.Summary))
+                .Replace("$description$", OpenApiHelpers.FormatXmlDocumentation(operation.Summary))
                 .Replace("$constructor$", constructorText)
                 .Replace("{{ADDITIONAL_NAMESPACES}}", additionalNamespacesText);
             
@@ -219,15 +195,15 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             {
                 if (pathParts[i].StartsWith("{") && pathParts[i].EndsWith("}"))
                 {
-                    pathParts[i] = "By" + ToPascalCase(pathParts[i].Trim('{', '}'));
+                    pathParts[i] = "By" + OpenApiHelpers.ToPascalCase(pathParts[i].Trim('{', '}'));
                 }
             }
             
             // Create a name from the path parts
-            string namePart = string.Join("", pathParts.Select(ToPascalCase));
+            string namePart = string.Join("", pathParts.Select(OpenApiHelpers.ToPascalCase));
             
             // Add method to the name
-            return $"{ToPascalCase(method)}{namePart}Contract";
+            return $"{OpenApiHelpers.ToPascalCase(method)}{namePart}Contract";
         }
 
         /// <summary>
@@ -279,9 +255,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     }
                     else if (bodyParam.Schema.Type == "object" && bodyParam.Schema.Properties != null)
                     {
-                        // Для объектов без прямой ссылки, используем DTO на основе operationId
+                        // For objects without direct reference, use DTO based on operationId
                         string operationId = operation.OperationId ?? $"{operation.Summary}";
-                        return $"{CleanOperationName(operationId)}Input";
+                        return $"{OpenApiHelpers.CleanOperationName(operationId)}Input";
                     }
                 }
             }
@@ -294,7 +270,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 // Use a custom input DTO for the parameters
                 // The actual DTO should be created separately
                 string operationId = operation.OperationId ?? $"{operation.Summary}";
-                return $"{CleanOperationName(operationId)}Input";
+                return $"{OpenApiHelpers.CleanOperationName(operationId)}Input";
             }
             
             return "object";
@@ -325,14 +301,14 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 }
                 else if (successResponse.Schema.Type == "object" && successResponse.Schema.Properties != null)
                 {
-                    // Для объектных типов без прямой ссылки, создаем кастомный DTO
+                    // For object types without direct reference, create custom DTO
                     string operationId = operation.OperationId ?? $"{operation.Summary}";
-                    return $"{CleanOperationName(operationId)}Output";
+                    return $"{OpenApiHelpers.CleanOperationName(operationId)}Output";
                 }
                 else
                 {
                     // For primitive types
-                    return MapSwaggerTypeToCs(successResponse.Schema.Type, successResponse.Schema.Format);
+                    return OpenApiHelpers.MapTypeToCSharp(successResponse.Schema.Type, successResponse.Schema.Format);
                 }
             }
             
@@ -364,9 +340,9 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                     }
                     else if (errorResponse.Value.Schema.Type == "object" && errorResponse.Value.Schema.Properties != null)
                     {
-                        // Для объектных типов без прямой ссылки, создаем кастомный DTO для ошибки
+                        // For object types without direct reference, create custom DTO for error
                         string operationId = operation.OperationId ?? $"{operation.Summary}";
-                        return $"{CleanOperationName(operationId)}ErrorOutput";
+                        return $"{OpenApiHelpers.CleanOperationName(operationId)}ErrorOutput";
                     }
                 }
             }
@@ -391,20 +367,20 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 }
                 else
                 {
-                    string itemTypeName = MapSwaggerTypeToCs(schema.Items.Type, schema.Items.Format);
+                    string itemTypeName = OpenApiHelpers.MapTypeToCSharp(schema.Items.Type, schema.Items.Format);
                     return $"List<{itemTypeName}>";
                 }
             }
             
-            return MapSwaggerTypeToCs(schema.Type, schema.Format);
+            return OpenApiHelpers.MapTypeToCSharp(schema.Type, schema.Format);
         }
 
         private string GetPropertyTypeName(SwaggerProperty property)
         {
-            // Прямая ссылка на другую схему
+            // Direct reference to another schema
             if (!string.IsNullOrEmpty(property.Reference))
             {
-                // Специальная обработка для ErrorCode
+                // Special handling for ErrorCode
                 if (property.Reference.EndsWith("ErrorCode"))
                 {
                     return "ErrorCode";
@@ -413,12 +389,12 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 return GetClassNameFromReference(property.Reference);
             }
             
-            // Массив с элементами, которые ссылаются на другую схему
+            // Array with items that reference another schema
             if (property.Type == "array" && property.Items != null)
             {
                 if (!string.IsNullOrEmpty(property.Items.Reference))
                 {
-                    // Специальная обработка для массива ErrorCode
+                    // Special handling for ErrorCode array
                     if (property.Items.Reference.EndsWith("ErrorCode"))
                     {
                         return "List<ErrorCode>";
@@ -429,171 +405,43 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
                 }
                 else
                 {
-                    string itemTypeName = MapSwaggerTypeToCs(property.Items.Type, property.Items.Format);
+                    string itemTypeName = OpenApiHelpers.MapTypeToCSharp(property.Items.Type, property.Items.Format);
                     return $"List<{itemTypeName}>";
                 }
             }
             
-            // Обычный тип
-            return MapSwaggerTypeToCs(property.Type, property.Format);
+            // Regular type
+            return OpenApiHelpers.MapTypeToCSharp(property.Type, property.Format);
         }
         
         /// <summary>
-        /// Получает имя класса из ссылки на схему, учитывая словарь маппинга
+        /// Gets class name from schema reference using mapping dictionary
         /// </summary>
         private string GetClassNameFromReference(string reference)
         {
-            string schemaName = reference;
+            string schemaName = OpenApiHelpers.NormalizeReference(reference);
             
-            // Если это ссылка с префиксом, убираем префикс
-            if (reference.StartsWith("#/definitions/"))
-                schemaName = reference.Substring("#/definitions/".Length);
-            else if (reference.StartsWith("#/components/schemas/"))
-                schemaName = reference.Substring("#/components/schemas/".Length);
-            
-            // Смотрим, есть ли маппинг для этой схемы 
+            // Check if mapping exists for this schema
             if (_schemaToClassNameMap.TryGetValue(schemaName, out var className))
             {
-                // Если имя уже содержит пространство имён через точку, возвращаем как есть
+                // If name contains namespace separator, return as is
                 if (className.Contains("."))
                 {
                     return className;
                 }
                 
-                // Иначе добавляем пространство имён для DTO
+                // Otherwise add DTO namespace
                 return $"{_namespace}.Dto.{className}";
             }
             
-            // Если для схемы нет маппинга, просто возвращаем имя схемы
-            return $"{_namespace}.Dto.{ToPascalCase(schemaName)}";
-        }
-
-        private string MapSwaggerTypeToCs(string type, string format)
-        {
-            if (string.IsNullOrEmpty(type))
-                return "object";
-                
-            if (!string.IsNullOrEmpty(format) && _formatMapping.ContainsKey(format))
-                return _formatMapping[format];
-                
-            if (_typeMapping.ContainsKey(type))
-                return _typeMapping[type];
-                
-            return "object";
-        }
-
-        private string ToPascalCase(string text)
-        {
-            // Handle null or empty strings
-            if (string.IsNullOrEmpty(text))
-                return text;
-                
-            // Replace hyphens and underscores with spaces for splitting
-            text = text.Replace('-', ' ').Replace('_', ' ');
-            
-            // Handle special characters
-            var cleanText = Regex.Replace(text, "[^a-zA-Z0-9 ]", " ");
-            
-            // Split by spaces and make each part pascal case
-            var parts = cleanText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < parts.Length; i++)
-            {
-                if (!string.IsNullOrEmpty(parts[i]))
-                {
-                    parts[i] = char.ToUpper(parts[i][0]) + 
-                             (parts[i].Length > 1 ? parts[i].Substring(1).ToLower() : "");
-                }
-            }
-            
-            return string.Join("", parts);
-        }
-
-        /// <summary>
-        /// Maps HTTP method to WebRequestType enum value
-        /// </summary>
-        private string GetRequestTypeFromMethod(string method)
-        {
-            switch (method.ToUpper())
-            {
-                case "GET":
-                    return "Get";
-                case "POST":
-                    return "Post";
-                case "PUT":
-                    return "Put";
-                case "DELETE":
-                    return "Delete";
-                case "PATCH":
-                    return "Patch";
-                case "HEAD":
-                    return "Head";
-                case "OPTIONS":
-                    return "Options";
-                default:
-                    return "None"; // Default to None if method is unknown
-            }
-        }
-
-        // Вспомогательный метод для очистки имен операций
-        private string CleanOperationName(string operationId)
-        {
-            if (string.IsNullOrEmpty(operationId))
-                return string.Empty;
-            
-            // Для имен с подчеркиванием и дефисами форматируем правильно в PascalCase
-            string pascalCase = ToPascalCase(operationId);
-            
-            // Специальная обработка распространенных префиксов методов
-            string[] commonPrefixes = new[] { "get", "post", "put", "delete", "patch" };
-            
-            foreach (var prefix in commonPrefixes)
-            {
-                // Если operationId начинается с [prefix][rest], например getClientProfile, 
-                // преобразуем в Get[Rest] => GetClientProfile
-                if (pascalCase.Length > prefix.Length && 
-                    pascalCase.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
-                    char.IsUpper(pascalCase[prefix.Length]))
-                {
-                    string prefixProperCase = char.ToUpperInvariant(prefix[0]) + prefix.Substring(1).ToLowerInvariant();
-                    string restOfName = pascalCase.Substring(prefix.Length);
-                    
-                    // Убедимся, что первая буква restOfName уже заглавная
-                    if (char.IsUpper(restOfName[0]))
-                    {
-                        pascalCase = prefixProperCase + restOfName;
-                    }
-                }
-            }
-            
-            // Удалить потенциальные суффиксы "Get", "Post" и т.д.
-            // Например, ClientProfileGet => ClientProfile
-            foreach (var suffix in commonPrefixes)
-            {
-                string suffixProperCase = char.ToUpperInvariant(suffix[0]) + suffix.Substring(1).ToLowerInvariant();
-                if (pascalCase.EndsWith(suffixProperCase))
-                {
-                    // Не удаляем суффикс, если после удаления получается пустая строка
-                    string withoutSuffix = pascalCase.Substring(0, pascalCase.Length - suffixProperCase.Length);
-                    if (!string.IsNullOrEmpty(withoutSuffix))
-                    {
-                        pascalCase = withoutSuffix;
-                    }
-                }
-            }
-            
-            // Гарантируем, что первая буква заглавная
-            if (pascalCase.Length > 0 && !char.IsUpper(pascalCase[0]))
-            {
-                pascalCase = char.ToUpperInvariant(pascalCase[0]) + pascalCase.Substring(1);
-            }
-            
-            return pascalCase;
+            // If no mapping exists, use PascalCase schema name
+            return $"{_namespace}.Dto.{OpenApiHelpers.ToPascalCase(schemaName)}";
         }
 
         private string GenerateProperty(string propertyName, SwaggerProperty property, Dictionary<string, string> schemaToClassName)
         {
             string typeName = GetPropertyTypeName(property);
-            string pascalCaseName = ToPascalCase(propertyName);
+            string pascalCaseName = OpenApiHelpers.ToPascalCase(propertyName);
             
             var sb = new StringBuilder();
             
@@ -647,7 +495,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             sb.AppendLine($"        /// </summary>");
             sb.AppendLine($"        [JsonProperty(\"{responseDataField}\")]");
             sb.AppendLine($"        [field: SerializeField]");
-            sb.AppendLine($"        public T {ToPascalCase(responseDataField)} {{ get; set; }}");
+            sb.AppendLine($"        public T {OpenApiHelpers.ToPascalCase(responseDataField)} {{ get; set; }}");
             sb.AppendLine();
             
             sb.AppendLine("    }");
@@ -674,7 +522,7 @@ namespace Game.Modules.unity.meta.service.Modules.WebProvider
             string propertyType = GetPropertyTypeName(property);
             
             // Конвертируем имя свойства в PascalCase для C#
-            string csharpPropertyName = ToPascalCase(propertyName);
+            string csharpPropertyName = OpenApiHelpers.ToPascalCase(propertyName);
             
             // Добавляем JsonProperty атрибут, если оригинальное имя отличается от C# имени
             if (!string.IsNullOrEmpty(property.OriginalName) && property.OriginalName != csharpPropertyName)
@@ -721,37 +569,6 @@ namespace $namespace$
         $constructor$
     }
 }";
-        }
-        
-        private string FormatDescription(string description)
-        {
-            if (string.IsNullOrEmpty(description))
-            {
-                return "Contract for REST API endpoint";
-            }
-            
-            // Заменяем переносы строк на пробелы
-            return description.Replace("\n", " ").Replace("\r", "");
-        }
-        
-        private string GetContractClassName(SwaggerOperation operation)
-        {
-            if (string.IsNullOrEmpty(operation.OperationId))
-            {
-                return "UnnamedContract";
-            }
-            
-            // Очищаем имя операции, удаляя ненужные суффиксы методов
-            string className = CleanOperationName(operation.OperationId);
-            
-            // Добавляем суффикс "Contract", если его еще нет
-            if (!className.EndsWith("Contract"))
-            {
-                className += "Contract";
-            }
-            
-            Debug.Log($"GetContractClassName: {operation.OperationId} => {className}");
-            return className;
         }
     }
 } 
