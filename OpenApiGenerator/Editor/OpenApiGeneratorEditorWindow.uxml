@@ -1,0 +1,79 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement name="root" style="flex-grow: 1; padding: 10px;">
+        <!-- Header -->
+        <ui:VisualElement name="header-section" style="margin-bottom: 15px; border-bottom-width: 2px; border-bottom-color: rgba(100, 150, 200, 0.3); padding-bottom: 10px;">
+            <ui:Label text="OpenAPI Contract Generator" name="header-title" class="header-title" />
+            <ui:Label text="Generate C# contracts and DTOs from Swagger/OpenAPI JSON specification" name="header-description" class="header-description" />
+        </ui:VisualElement>
+
+        <!-- Settings Asset Section -->
+        <ui:VisualElement name="settings-asset-section" class="section">
+            <ui:Label text="Settings Asset" class="section-title" />
+            <uie:ObjectField name="settings-asset-field" label="Settings Asset" class="field" />
+            <ui:VisualElement name="settings-buttons" style="flex-direction: row; margin-top: 5px;">
+                <ui:Button name="create-settings-button" text="Create New Settings" class="button" style="flex-grow: 1; margin-right: 5px;" />
+                <ui:Button name="select-settings-button" text="Select Existing" class="button" style="flex-grow: 1;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- API Specification Section -->
+        <ui:VisualElement name="api-spec-section" class="section">
+            <ui:Label text="API Specification" class="section-title" />
+            
+            <!-- API JSON Path -->
+            <ui:VisualElement style="flex-direction: row;">
+                <ui:TextField name="api-json-path-field" label="Swagger/OpenAPI JSON" class="field" style="flex-grow: 1;" />
+                <ui:Button name="browse-json-button" text="Browse" class="browse-button" />
+            </ui:VisualElement>
+            
+            <!-- API Template -->
+            <ui:TextField name="api-template-field" label="API URL Template" class="field" tooltip="Template for API URL path. Use {0} for the path placeholder. Example: api/{0}" />
+            
+            <!-- Allowed Paths -->
+            <ui:TextField name="allowed-paths-field" label="Allowed Paths" class="field multiline-field" multiline="true" tooltip="Only paths containing these strings will be included. Comma or semicolon separated. Leave empty to include all paths." />
+        </ui:VisualElement>
+
+        <!-- Output Configuration Section -->
+        <ui:VisualElement name="output-section" class="section">
+            <ui:Label text="Output Configuration" class="section-title" />
+            
+            <!-- Contracts Output Folder -->
+            <ui:VisualElement style="flex-direction: row;">
+                <ui:TextField name="contracts-out-folder-field" label="Contracts Output Folder" class="field" style="flex-grow: 1;" />
+                <ui:Button name="browse-contracts-button" text="Browse" class="browse-button" />
+            </ui:VisualElement>
+            
+            <!-- DTO Output Folder -->
+            <ui:VisualElement style="flex-direction: row;">
+                <ui:TextField name="dto-out-folder-field" label="DTO Output Folder" class="field" style="flex-grow: 1;" />
+                <ui:Button name="browse-dto-button" text="Browse" class="browse-button" />
+            </ui:VisualElement>
+            
+            <!-- Namespace -->
+            <ui:TextField name="contract-namespace-field" label="Namespace" class="field" tooltip="Namespace for generated contracts and DTOs" />
+        </ui:VisualElement>
+
+        <!-- Generation Options Section -->
+        <ui:VisualElement name="options-section" class="section">
+            <ui:Label text="Generation Options" class="section-title" />
+            
+            <ui:Toggle name="clean-up-toggle" label="Clean Output Folders Before Generation" class="field" tooltip="When enabled, all existing files in output folders will be deleted before generating new contracts" />
+            <ui:Toggle name="use-response-container-toggle" label="Use Response Data Container" class="field" tooltip="Enable if the server wraps all response data in a container object" />
+            <ui:TextField name="response-data-field-field" label="Response Data Field Name" class="field" tooltip="Name of the field containing the actual data in the response (only used if response container is enabled)" />
+        </ui:VisualElement>
+
+        <!-- Actions Section -->
+        <ui:VisualElement name="actions-section" style="margin-top: 20px; margin-bottom: 10px;">
+            <ui:VisualElement style="flex-direction: row;">
+                <ui:Button name="save-settings-button" text="Save Settings" class="action-button" style="flex-grow: 1; margin-right: 5px;" />
+                <ui:Button name="generate-button" text="Generate Contracts" class="action-button generate-button" style="flex-grow: 1;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Status Section -->
+        <ui:VisualElement name="status-section" class="status-section">
+            <ui:Label text="Status" class="status-header" />
+            <ui:Label name="status-label" text="Ready to generate contracts" class="status-label" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
