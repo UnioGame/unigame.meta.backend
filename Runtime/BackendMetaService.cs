@@ -19,6 +19,10 @@
     [Serializable]
     public class BackendMetaService : GameService, IBackendMetaService
     {
+#if UNITY_EDITOR
+        public static BackendMetaService EditorInstance;
+#endif
+
         private readonly bool _useDefaultProvider;
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
@@ -62,6 +66,8 @@
             _dataStream.Subscribe(AddHistoryItem).AddTo(LifeTime);
 
             UpdateMetaCache();
+
+            EditorInstance = this;
         }
         
         public ContractHistoryItem[] ContractHistory => _history;
@@ -287,6 +293,7 @@
             
             var result = new ContractDataResult()
             {
+                contractId = contract.Path,
                 metaId = metaData.id,
                 payload = contract?.Payload,
                 resultType = outputType,

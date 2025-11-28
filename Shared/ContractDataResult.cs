@@ -11,6 +11,7 @@
             resultType = typeof(string),
         };
         
+        public string contractId = string.Empty;
         public int metaId = -1;
         public long timestamp = 0;
         public int hash = 0;

@@ -7,10 +7,9 @@
 #endif
     
     [Serializable]
-    public struct BackendType
+    public class BackendType
     {
         public string Name;
-
         public int Id;
         
 #if ODIN_INSPECTOR

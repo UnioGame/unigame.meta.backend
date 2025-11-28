@@ -566,3 +566,51 @@ webProviderAsset.SaveSettingsToStreamingAsset();
 ## License
 
 This module is licensed under the MIT license.
+
+---
+
+# Meta Backend Contract Monitor
+
+## Editor Window for Runtime Monitoring
+
+The package includes a powerful **Contract Monitor** editor window for debugging and monitoring backend contract execution in real-time.
+
+### Opening the Monitor
+
+Menu: `UniGame > Meta Backend > Meta Editor Window`
+
+### Features
+
+#### 1. Configuration Panel
+- View all registered contracts
+- See contract methods, IDs, and types
+- Filter by enabled/disabled status
+- Provider information
+
+#### 2. Contract History
+- Full execution history with details
+- Success/failure status indicators
+- Search and filter capabilities
+- Export to JSON
+
+#### 3. Real-time Stream
+- Live updates as contracts execute
+- Connection status indicator
+- Last 50 executions
+- Automatic scrolling
+
+### Quick Start
+
+1. Start Play Mode
+2. Open the Monitor window
+3. Enable **Auto Refresh** (enabled by default)
+4. Execute contracts in your game
+5. Watch real-time updates in the Stream panel
+
+### Exporting Data
+
+Click **Export History** to save all contract execution data to JSON for analysis or debugging.
+
+For detailed documentation, see [Editor Monitor Documentation](Editor/README_MONITOR.md).
+
+---

@@ -1,0 +1,57 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <Style src="MetaBackendEditorWindow.uss" />
+    
+    <ui:VisualElement name="root" class="root-container">
+        <!-- Header -->
+        <ui:VisualElement name="header" class="header">
+            <ui:Label text="Meta Backend Contract Monitor" class="header-title" />
+            <ui:VisualElement class="header-controls">
+                <ui:Toggle name="auto-refresh-toggle" label="Auto Refresh" value="true" class="toggle-control" tooltip="Automatically refresh data every 500ms" />
+                <ui:Button name="refresh-button" text="Refresh" class="button-control" tooltip="Manually refresh all panels" />
+                <ui:Button name="clear-history-button" text="Clear Stream" class="button-control" tooltip="Clear real-time stream history" />
+                <ui:Button name="export-button" text="Export History" class="button-control" tooltip="Export contract history to JSON file" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        
+        <!-- Main Content -->
+        <ui:TwoPaneSplitView fixed-pane-initial-dimension="300" name="main-split">
+            <!-- Left Panel: Configuration -->
+            <ui:VisualElement name="left-panel" class="panel">
+                <ui:Label text="Configuration" class="panel-title" />
+                <ui:ScrollView name="config-scroll" class="scroll-view">
+                    <ui:VisualElement name="config-container" class="config-container">
+                        <ui:Label name="config-status" text="No configuration loaded" class="status-label" />
+                        <ui:VisualElement name="config-details" class="config-details" />
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
+            
+            <!-- Right Panel: History and Stream -->
+            <ui:VisualElement name="right-panel" class="panel">
+                <ui:TwoPaneSplitView orientation="Vertical" fixed-pane-initial-dimension="300" name="right-split">
+                    <!-- Contract History -->
+                    <ui:VisualElement name="history-panel" class="sub-panel">
+                        <ui:VisualElement class="panel-header">
+                            <ui:Label text="Contract History" class="panel-title" />
+                            <ui:TextField name="history-search" placeholder-text="Search by Meta ID, Type, or Error..." class="search-field" tooltip="Filter history by Meta ID, result type, or error message" />
+                        </ui:VisualElement>
+                        <ui:ScrollView name="history-scroll" class="scroll-view">
+                            <ui:VisualElement name="history-container" class="history-container" />
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                    
+                    <!-- Real-time Stream -->
+                    <ui:VisualElement name="stream-panel" class="sub-panel">
+                        <ui:VisualElement class="panel-header">
+                            <ui:Label text="Real-time Stream" class="panel-title" />
+                            <ui:Label name="stream-status" text="⬤ Disconnected" class="stream-status disconnected" />
+                        </ui:VisualElement>
+                        <ui:ScrollView name="stream-scroll" class="scroll-view">
+                            <ui:VisualElement name="stream-container" class="stream-container" />
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                </ui:TwoPaneSplitView>
+            </ui:VisualElement>
+        </ui:TwoPaneSplitView>
+    </ui:VisualElement>
+</ui:UXML>
