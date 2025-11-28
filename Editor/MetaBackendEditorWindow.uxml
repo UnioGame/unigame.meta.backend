@@ -10,6 +10,7 @@
                 <ui:Button name="refresh-button" text="Refresh" class="button-control" tooltip="Manually refresh all panels" />
                 <ui:Button name="clear-history-button" text="Clear Stream" class="button-control" tooltip="Clear real-time stream history" />
                 <ui:Button name="export-button" text="Export History" class="button-control" tooltip="Export contract history to JSON file" />
+                <ui:Button name="openapi-generator-button" text="OpenAPI Generator" class="button-control button-generator" tooltip="Open OpenAPI Contract Generator" />
             </ui:VisualElement>
         </ui:VisualElement>
         

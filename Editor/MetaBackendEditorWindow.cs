@@ -43,6 +43,7 @@ namespace MetaService.Editor
         private Button _refreshButton;
         private Button _clearHistoryButton;
         private Button _exportButton;
+        private Button _openApiGeneratorButton;
         private Label _configStatus;
         private VisualElement _configDetails;
         private TextField _historySearch;
@@ -122,6 +123,7 @@ namespace MetaService.Editor
             _refreshButton = _root.Q<Button>("refresh-button");
             _clearHistoryButton = _root.Q<Button>("clear-history-button");
             _exportButton = _root.Q<Button>("export-button");
+            _openApiGeneratorButton = _root.Q<Button>("openapi-generator-button");
             _configStatus = _root.Q<Label>("config-status");
             _configDetails = _root.Q<VisualElement>("config-details");
             _historySearch = _root.Q<TextField>("history-search");
@@ -152,6 +154,11 @@ namespace MetaService.Editor
             if (_exportButton != null)
             {
                 _exportButton.clicked += ExportHistory;
+            }
+
+            if (_openApiGeneratorButton != null)
+            {
+                _openApiGeneratorButton.clicked += OpenApiGenerator;
             }
 
             if (_historySearch != null)
@@ -750,6 +757,28 @@ namespace MetaService.Editor
         {
             _streamResults.Clear();
             RefreshStream();
+        }
+
+        private void OpenApiGenerator()
+        {
+            // Open OpenAPI Generator window
+            var windowType = System.Type.GetType("Game.Modules.unity.meta.service.Modules.WebProvider.Editor.OpenApiGeneratorEditorWindow, unigame.meta.openapi.editor");
+            if (windowType != null)
+            {
+                var method = windowType.GetMethod("ShowWindow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                if (method != null)
+                {
+                    method.Invoke(null, null);
+                }
+                else
+                {
+                    Debug.LogWarning("OpenApiGeneratorEditorWindow.ShowWindow method not found");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("OpenApiGeneratorEditorWindow class not found. Make sure the OpenAPI Generator package is installed.");
+            }
         }
 
         private void ExportHistory()

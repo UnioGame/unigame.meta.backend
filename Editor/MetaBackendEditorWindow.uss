@@ -35,6 +35,19 @@
     padding: 5px 10px;
 }
 
+.button-generator {
+    background-color: rgb(60, 100, 140);
+    border-color: rgb(80, 120, 160);
+}
+
+.button-generator:hover {
+    background-color: rgb(70, 110, 150);
+}
+
+.button-generator:active {
+    background-color: rgb(50, 90, 130);
+}
+
 /* Panels */
 .panel {
     flex-grow: 1;
