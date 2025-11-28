@@ -35,6 +35,37 @@ Universal contract-based backend communication system for Unity supporting REST 
 }
 ```
 
+## Architecture
+
+```mermaid
+graph TB
+    A[Your Game Code] --> B[IBackendMetaService]
+    B --> C[Contract Registry]
+    B --> D[Provider Manager]
+    
+    D --> E[Web Provider]
+    D --> F[Nakama Provider]
+    D --> G[Mock Provider]
+    D --> H[JS Bridge Provider]
+    D --> I[Web Texture Provider]
+    
+    E --> J[REST API]
+    F --> K[Nakama Server]
+    G --> L[Local Mock Data]
+    H --> M[Browser JavaScript]
+    I --> N[CDN/Web Images]
+    
+    C --> O[Contract Metadata]
+    O --> P[ContractsConfigurationAsset]
+    
+    style B fill:#4a9eff
+    style E fill:#66bb6a
+    style F fill:#66bb6a
+    style G fill:#66bb6a
+    style H fill:#66bb6a
+    style I fill:#66bb6a
+```
+
 ## Quick Start
 
 ### 1. Create Configuration
@@ -663,37 +694,6 @@ Both windows work together seamlessly:
 - Generate contracts with OpenAPI Generator
 - Monitor execution in Contract Monitor
 - Update contract list in `ContractsConfigurationAsset`
-
-## Architecture
-
-```mermaid
-graph TB
-    A[Your Game Code] --> B[IBackendMetaService]
-    B --> C[Contract Registry]
-    B --> D[Provider Manager]
-    
-    D --> E[Web Provider]
-    D --> F[Nakama Provider]
-    D --> G[Mock Provider]
-    D --> H[JS Bridge Provider]
-    D --> I[Web Texture Provider]
-    
-    E --> J[REST API]
-    F --> K[Nakama Server]
-    G --> L[Local Mock Data]
-    H --> M[Browser JavaScript]
-    I --> N[CDN/Web Images]
-    
-    C --> O[Contract Metadata]
-    O --> P[ContractsConfigurationAsset]
-    
-    style B fill:#4a9eff
-    style E fill:#66bb6a
-    style F fill:#66bb6a
-    style G fill:#66bb6a
-    style H fill:#66bb6a
-    style I fill:#66bb6a
-```
 
 ## Best Practices
 
