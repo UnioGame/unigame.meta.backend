@@ -94,10 +94,10 @@
             return true;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData
+        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData
             ,CancellationToken cancellationToken = default)
         {
-            var result = new RemoteMetaResult()
+            var result = new ContractMetaResult()
             {
                 success = false,
                 data = null,
@@ -636,9 +636,9 @@
             return contractResult;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public bool TryDequeue(out ContractMetaResult result)
         {
-            result = new RemoteMetaResult()
+            result = new ContractMetaResult()
             {
                 data = null,
                 error = string.Empty,

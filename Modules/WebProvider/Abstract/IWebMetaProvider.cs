@@ -9,6 +9,6 @@
     {
         void SetToken(string token);
         Dictionary<string, string> SerializeToQuery(object payload);
-        UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract, CancellationToken cancellationToken = default);
+        UniTask<ContractMetaResult> ExecuteAsync(IRemoteMetaContract contract, CancellationToken cancellationToken = default);
     }
 }

@@ -8,6 +8,7 @@ namespace Extensions
 
     public static class BackendMetaServiceExtensions
     {
+        public const string MetaServiceNotInitializedError = "MetaService is not initialized";
         public static IBackendMetaService RemoteMetaService;
 
         public static async UniTask<MetaRequestResult<TResult>> 
@@ -19,7 +20,7 @@ namespace Extensions
                 return new MetaRequestResult<TResult>
                 {
                     success = false,
-                    error = "MetaService is not initialized",
+                    error = MetaServiceNotInitializedError,
                 };
             }
             
@@ -44,7 +45,7 @@ namespace Extensions
                 return new MetaRequestResult<TResult,TError>
                 {
                     success = false,
-                    error = "MetaService is not initialized",
+                    error = MetaServiceNotInitializedError,
                 };
             }
             
@@ -97,6 +98,13 @@ namespace Extensions
     [Serializable]
     public struct MetaRequestResult<TResult>
     {
+        public static readonly MetaRequestResult<TResult> FailedResult = new()
+        {
+            success = false,
+            error = "Request failed",
+            data = default
+        };
+        
         public TResult data;
         public bool success;
         public string error;

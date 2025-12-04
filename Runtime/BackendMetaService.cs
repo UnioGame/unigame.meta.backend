@@ -255,7 +255,7 @@
         }
         
 
-        public ContractDataResult ProcessRemoteResponse(MetaContractData contractData, RemoteMetaResult response)
+        public ContractDataResult ProcessRemoteResponse(MetaContractData contractData, ContractMetaResult response)
         {
             var remoteId = contractData.contractName;
             var contract = contractData.contract;

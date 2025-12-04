@@ -4,8 +4,16 @@
     using UnityEngine.Serialization;
 
     [Serializable]
-    public struct RemoteMetaResult
+    public struct ContractMetaResult
     {
+        public static readonly ContractMetaResult FailedResult = new()
+        {
+            id = nameof(ContractMetaResult),
+            data = null,
+            success = false,
+            error = "Request failed",
+        };
+        
         public string id;
         public object data;
         public bool success;
