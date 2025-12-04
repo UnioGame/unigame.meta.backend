@@ -102,12 +102,12 @@
             return false;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData,
+        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,
             CancellationToken cancellationToken = default)
         {
             if (!IsContractSupported(contractData.contractName, out var contractConfig))
             {
-                return new RemoteMetaResult()
+                return new ContractMetaResult()
                 {
                     success = false,
                     error = "contract not supported",
@@ -120,7 +120,7 @@
             var message = JsonConvert.SerializeObject(contractData.contract.Payload);
             var messageResult = _metaAgent.SendMessage(contractId, message);
             
-            var result = new RemoteMetaResult
+            var result = new ContractMetaResult
             {
                 data = messageResult,
                 error = null,
@@ -131,7 +131,7 @@
             return result;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public bool TryDequeue(out ContractMetaResult result)
         {
             if (!(_incomingRequestsQueue.TryDequeue(out var request) && 
                   IsContractSupported(request, out var contract, out var message)))

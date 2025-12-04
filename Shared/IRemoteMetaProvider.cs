@@ -12,8 +12,8 @@
     {
         bool IsContractSupported(IRemoteMetaContract command);
         
-        UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellationToken = default);
+        UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellationToken = default);
         
-        bool TryDequeue(out RemoteMetaResult result);
+        bool TryDequeue(out ContractMetaResult result);
     }
 }

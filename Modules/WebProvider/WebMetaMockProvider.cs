@@ -45,11 +45,11 @@
             return _contractsMap.ContainsKey(command.GetType());
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract,
+        public async UniTask<ContractMetaResult> ExecuteAsync(IRemoteMetaContract contract,
             CancellationToken cancellationToken = default)
         {
             var contractType = contract.GetType();
-            var result = new RemoteMetaResult()
+            var result = new ContractMetaResult()
             {
                 error = NotSupportedError,
                 data = null,
@@ -61,7 +61,7 @@
                 return result;
 
             var debugResult = endPoint.debugResult;
-            result = new RemoteMetaResult()
+            result = new ContractMetaResult()
             {
                 error = debugResult.error,
                 data = null,
@@ -85,7 +85,7 @@
         }
 
         
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data,
+        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData data,
             CancellationToken cancellationToken = default)
         {
             var result = await ExecuteAsync(data.contract,cancellationToken);
@@ -93,7 +93,7 @@
             return result;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;

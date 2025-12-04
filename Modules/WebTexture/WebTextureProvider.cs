@@ -68,10 +68,10 @@
             return command is WebSpriteContract or WebTexture2DContract;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData,
+        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,
             CancellationToken cancellationToken = default)
         {
-            var result = new RemoteMetaResult()
+            var result = new ContractMetaResult()
             {
                 data = null,
                 error = NotSupportedError,
@@ -137,7 +137,7 @@
             return result;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;
