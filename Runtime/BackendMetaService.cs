@@ -66,8 +66,10 @@
             _dataStream.Subscribe(AddHistoryItem).AddTo(LifeTime);
 
             UpdateMetaCache();
-
+            
+#if UNITY_EDITOR
             EditorInstance = this;
+#endif
         }
         
         public ContractHistoryItem[] ContractHistory => _history;
