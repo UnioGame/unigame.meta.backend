@@ -48,7 +48,7 @@ namespace MetaService.Runtime
             {
                 var foundProvider = backendTypes
                     .FirstOrDefault(x => x.Provider.GetType() == provider.GetType());
-                if(foundProvider.Provider!=null) continue;
+                if(foundProvider?.Provider!=null) continue;
                 
                 newProvider.Add(provider);
             }
