@@ -8,6 +8,10 @@
     [CreateAssetMenu(menuName = "UniGame/MetaBackend/Nakama Provider", fileName = "Nakama Provider")]
     public class NakamaServiceAsset : BackendMetaServiceAsset
     {
+#if ODIN_INSPECTOR
+        [Sirenix.OdinInspector.InlineProperty]
+        [Sirenix.OdinInspector.HideLabel]
+#endif
         public NakamaSettings nakamaSettings;
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)

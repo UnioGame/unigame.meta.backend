@@ -144,6 +144,7 @@
             result.data = message;
             result.success = true;
             result.error = null;
+            result.statusCode = 200;
 
             return true;
         }

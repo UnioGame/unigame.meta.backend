@@ -31,6 +31,7 @@ namespace Extensions
                 success = result.success,
                 error = result.error,
                 data = result.model as TResult,
+                statusCode = result.statusCode,
             };
             
             return resultValue;
@@ -57,6 +58,7 @@ namespace Extensions
                 error = result.error,
                 data = result.model as TResult,
                 errorData = result.model as TError,
+                statusCode = result.statusCode,
             };
             
             return resultValue;
@@ -108,6 +110,7 @@ namespace Extensions
         public TResult data;
         public bool success;
         public string error;
+        public int statusCode;
     }
     
     [Serializable]
@@ -117,5 +120,6 @@ namespace Extensions
         public TError errorData;
         public bool success;
         public string error;
+        public int statusCode;
     }
 }

@@ -1,7 +1,6 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
-    using UnityEngine.Serialization;
 
     [Serializable]
     public struct ContractMetaResult
@@ -18,6 +17,7 @@
         public object data;
         public bool success;
         public string error;
+        public int statusCode;
     }
     
     [Serializable]

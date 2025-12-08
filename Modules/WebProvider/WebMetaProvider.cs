@@ -87,6 +87,7 @@
                 data = null,
                 success = true,
                 id = contractType.Name,
+                statusCode = 200,
             };
             
             if (!_contractsMap.TryGetValue(contractType, out var endPoint))
@@ -95,6 +96,8 @@
             var requestResult  = _debugMode || endPoint.debugMode
                 ? ExecuteDebugAsync(endPoint) 
                 : await ExecuteWebRequest(contract, endPoint,cancellationToken);
+
+            result.statusCode = (int)requestResult.responseCode;
             
 #if UNITY_EDITOR
             if (_settings.enableLogs)
@@ -225,6 +228,7 @@
                 success = false,
                 url = endPoint.url,
                 error = string.Empty,
+                responseCode = 0,
             };
 
             var timeout = _settings.requestTimeout;
@@ -268,6 +272,7 @@
                 error = debugResult.error,
                 data = string.Empty,
                 success = debugResult.success,
+                responseCode = debugResult.success ? 200 : 400,
             };
 
             if (!debugResult.success) return result;

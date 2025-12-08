@@ -7,7 +7,6 @@
     public class NakamaSettings
     {
         [Header("Connection Settings")]
-        
         public int maxRetries = 5;
         public int retryDelayMs = 1000;
         public int timeoutSec = 5;
