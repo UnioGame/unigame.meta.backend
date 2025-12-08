@@ -21,5 +21,6 @@
         public object model = null;
         public bool success = false;
         public string error = string.Empty;
+        public int statusCode = 0;
     }
 }

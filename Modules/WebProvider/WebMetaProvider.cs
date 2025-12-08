@@ -20,7 +20,7 @@
     using UnityEngine;
     
     [Serializable]
-    public class WebMetaProvider : IWebMetaProvider
+    public class WebMetaProvider : RemoteMetaProvider, IWebMetaProvider
     {
         public const string NotSupportedError = "Not supported";
         public const int DefaultTimeout = 10;
@@ -63,10 +63,6 @@
             
             InitializeAsync().Forget();
         }
-        
-        public ILifeTime LifeTime => _lifeTime;
-
-        public ReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
 
         public void SetToken(string token)
         {
@@ -74,7 +70,7 @@
             _webRequestBuilder.SetToken(token);
         }
         
-        public bool IsContractSupported(IRemoteMetaContract command)
+        public override bool IsContractSupported(IRemoteMetaContract command)
         {
             var contractType = command.GetType();
             var containsKey = _contractsMap.ContainsKey(contractType);
@@ -91,6 +87,7 @@
                 data = null,
                 success = true,
                 id = contractType.Name,
+                statusCode = 200,
             };
             
             if (!_contractsMap.TryGetValue(contractType, out var endPoint))
@@ -99,6 +96,8 @@
             var requestResult  = _debugMode || endPoint.debugMode
                 ? ExecuteDebugAsync(endPoint) 
                 : await ExecuteWebRequest(contract, endPoint,cancellationToken);
+
+            result.statusCode = (int)requestResult.responseCode;
             
 #if UNITY_EDITOR
             if (_settings.enableLogs)
@@ -229,6 +228,7 @@
                 success = false,
                 url = endPoint.url,
                 error = string.Empty,
+                responseCode = 0,
             };
 
             var timeout = _settings.requestTimeout;
@@ -272,6 +272,7 @@
                 error = debugResult.error,
                 data = string.Empty,
                 success = debugResult.success,
+                responseCode = debugResult.success ? 200 : 400,
             };
 
             if (!debugResult.success) return result;
@@ -280,7 +281,7 @@
             return result;
         }
         
-        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData data,
+        public override async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData data,
             CancellationToken cancellationToken = default)
         {
             var result = await ExecuteAsync(data.contract,cancellationToken);
@@ -288,7 +289,7 @@
             return result;
         }
 
-        public bool TryDequeue(out ContractMetaResult result)
+        public override bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;
@@ -301,7 +302,7 @@
             return JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
         }
         
-        public async UniTask<MetaConnectionResult> ConnectAsync()
+        protected override async UniTask<MetaConnectionResult> ConnectInternalAsync()
         {
             return new MetaConnectionResult()
             {
@@ -311,16 +312,16 @@
             };
         }
 
-        public UniTask DisconnectAsync()
+        protected override async UniTask<MetaConnectionResult> DisconnectInternalAsync()
         {
-            return UniTask.CompletedTask;
+            return new MetaConnectionResult()
+            {
+                Error = string.Empty,
+                Success = true,
+                State = ConnectionState.Disconnected,
+            };
         }
-        
-        public void Dispose()
-        {
-            _lifeTime.Terminate();
-        }
-        
+
         private async UniTask InitializeAsync()
         {
             var multiHostSettings = _settings.multiHostSettings;

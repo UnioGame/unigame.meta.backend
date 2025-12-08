@@ -58,8 +58,8 @@
             }
 
             context.Publish<IRemoteMetaProvider>(defaultProvider);
-            var service = new BackendMetaService(settings.useDefaultBackendFirst,
-                settings.historySize,
+            
+            var service = new BackendMetaService(settings,
                 backendMetaType,providers,remoteMeta);
             
             return service;

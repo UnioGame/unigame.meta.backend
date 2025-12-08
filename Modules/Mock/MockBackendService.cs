@@ -15,7 +15,7 @@
      
 
     [Serializable]
-    public class MockBackendService : IRemoteMetaProvider
+    public class MockBackendService : RemoteMetaProvider
     {
         private MockBackendDataConfig _config;
         private ReactiveValue<ConnectionState> _connectionState;
@@ -34,15 +34,11 @@
             }
         }
 
-        public ILifeTime LifeTime => _lifeTime;
-        
-        public ReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
-        
-        public UniTask<MetaConnectionResult> ConnectAsync()
+        protected override UniTask<MetaConnectionResult> ConnectInternalAsync()
         {
             _connectionState.Value = _config.allowConnect 
-                    ? ConnectionState.Connected
-                    : ConnectionState.Disconnected;
+                ? ConnectionState.Connected
+                : ConnectionState.Disconnected;
             
             var result = new MetaConnectionResult
             {
@@ -54,7 +50,7 @@
             return UniTask.FromResult(result);
         }
 
-        public UniTask DisconnectAsync()
+        protected override UniTask<MetaConnectionResult> DisconnectInternalAsync()
         {
             _connectionState.Value = ConnectionState.Connected;
             var result = new MetaConnectionResult
@@ -66,8 +62,8 @@
             return UniTask.FromResult(result);
         }
 
-        public UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contract,
-            CancellationToken cancellationToken = default)
+
+        public override UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contract, CancellationToken cancellationToken = default)
         {
             var method = contract.contractName;
             var result = _config
@@ -90,7 +86,7 @@
             return UniTask.FromResult(resultValue);
         }
 
-        public bool TryDequeue(out ContractMetaResult result)
+        public override bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;
@@ -107,7 +103,7 @@
             _connectionState.Value = ConnectionState.Closed;
         }
 
-        public bool IsContractSupported(IRemoteMetaContract command)
+        public override bool IsContractSupported(IRemoteMetaContract command)
         {
             return _mockedMethods.Contains(command.Path);
         }

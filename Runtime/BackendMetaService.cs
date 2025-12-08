@@ -6,9 +6,9 @@
     using Cysharp.Threading.Tasks;
     using Extensions;
     using Game.Modules.ModelMapping;
-    using Newtonsoft.Json;
     using R3;
     using Shared;
+    using UniCore.Runtime.ProfilerTools;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Runtime;
     using UniGame.GameFlow.Runtime;
@@ -23,7 +23,8 @@
         public static BackendMetaService EditorInstance;
 #endif
 
-        private readonly bool _useDefaultProvider;
+        private bool _useDefaultProvider;
+        private ContractsProvidersData _settings;
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
         private BackendTypeId _defaultProviderId;
@@ -39,12 +40,18 @@
         private ContractHistoryItem[] _history;
 
         public BackendMetaService(
-            bool useDefaultProvider,
-            int historySize,
+            ContractsProvidersData settings,
             BackendTypeId defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
             IRemoteMetaDataConfiguration metaDataConfiguration)
         {
+            _settings = settings;
+            _metaProviders = metaProviders;
+            _defaultMetaProvider = metaProviders[defaultMetaProvider];
+            _metaDataConfiguration = metaDataConfiguration;
+            _useDefaultProvider = _settings.useDefaultBackendFirst;
+            _defaultProviderId = defaultMetaProvider;
+            
             BackendMetaServiceExtensions.RemoteMetaService = this;
 
             _defaultConverter = metaDataConfiguration.Converter ?? new JsonRemoteDataConverter();
@@ -52,17 +59,8 @@
             _metaIdCache = new Dictionary<int, RemoteMetaData>(64);
             _contractsCache = new Dictionary<Type, IRemoteMetaProvider>(64);
             _dataStream = new Subject<ContractDataResult>().AddTo(LifeTime);
-            _historySize = historySize;
+            _historySize = _settings.historySize;
             _history = new ContractHistoryItem[_historySize];
-
-            _useDefaultProvider = useDefaultProvider;
-            _metaDataConfiguration = metaDataConfiguration;
-            
-            _defaultProviderId = defaultMetaProvider;
-
-            _defaultMetaProvider = metaProviders[defaultMetaProvider];
-            _metaProviders = metaProviders;
-
             _dataStream.Subscribe(AddHistoryItem).AddTo(LifeTime);
 
             UpdateMetaCache();
@@ -307,10 +305,12 @@
                 timestamp = unixTime,
             };
 
-#if GAME_DEBUG && UNITY_EDITOR
-            if (!response.success)
+            
+#if GAME_DEBUG
+            if (_settings.enableLogging)
             {
-                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.Path}");
+                var color = result.success ? Color.green : Color.red;
+                GameLog.Log($"[{remoteId}]:  contract {contract?.GetType().Name} input {contract.InputType.Name} output {contract.OutputType.Name} method: {contract.Path} | payload: {result.payload} | success: {result.success} | result {result.result} {result.result?.GetType().Name} code {result.statusCode}",color);
             }
 #endif
             

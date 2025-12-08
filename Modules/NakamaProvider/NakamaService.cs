@@ -94,7 +94,8 @@
             return true;
         }
 
-        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData
+        public async UniTask<ContractMetaResult> ExecuteAsync(
+            MetaContractData contractData
             ,CancellationToken cancellationToken = default)
         {
             var result = new ContractMetaResult()

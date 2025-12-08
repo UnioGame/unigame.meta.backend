@@ -2,11 +2,8 @@ namespace MetaService.Runtime
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
-    using System.Text;
     using UniGame.MetaBackend.Runtime;
-    using UniModules;
     using UnityEngine;
 
 #if ODIN_INSPECTOR
@@ -20,6 +17,8 @@ namespace MetaService.Runtime
     [Serializable]
     public class ContractsProvidersData
     {
+        public bool enableLogging = false;
+        
         public bool useDefaultBackendFirst = true;
         
         [Tooltip("Number of historical records to keep for backend requests")]
@@ -48,7 +47,7 @@ namespace MetaService.Runtime
             {
                 var foundProvider = backendTypes
                     .FirstOrDefault(x => x.Provider.GetType() == provider.GetType());
-                if(foundProvider.Provider!=null) continue;
+                if(foundProvider?.Provider!=null) continue;
                 
                 newProvider.Add(provider);
             }

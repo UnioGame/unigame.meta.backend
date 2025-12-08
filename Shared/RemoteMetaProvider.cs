@@ -7,6 +7,7 @@
     using MetaService.Runtime;
     using R3;
     using Runtime;
+    using UniGame.Runtime.DataFlow;
     using UniGame.Runtime.Rx;
 
     [Serializable]
@@ -15,13 +16,19 @@
         ILifeTimeContext,
         IRemoteMetaProvider
     {
+        public LifeTime lifeTime = new ();
+        
         public ReactiveValue<ConnectionState> connectionState =
             new (ConnectionState.Disconnected);
         
         
         public ReadOnlyReactiveProperty<ConnectionState> State => connectionState;
         
-        public abstract void Dispose();
+        
+        public ILifeTime LifeTime => lifeTime;
+
+
+        public void Dispose() => lifeTime.Terminate();
         
 
         public async UniTask<MetaConnectionResult> ConnectAsync()
@@ -53,8 +60,6 @@
             
             connectionState.Value = result.State;
         }
-
-        public ILifeTime LifeTime => throw new NotImplementedException();
 
         public abstract bool IsContractSupported(IRemoteMetaContract command);
 

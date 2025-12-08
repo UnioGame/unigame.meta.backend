@@ -64,7 +64,7 @@
         public virtual Type OutputType => typeof(string);
         public virtual string Path => string.Empty;
     }
-    
+
     public interface IRemoteMetaContract
     {
         public object Payload { get; }
