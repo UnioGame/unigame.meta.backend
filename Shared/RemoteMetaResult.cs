@@ -11,6 +11,7 @@
         public object data;
         public bool success;
         public string error;
+        public int statusCode;
     }
     
     [Serializable]

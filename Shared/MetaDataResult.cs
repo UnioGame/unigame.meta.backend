@@ -17,6 +17,7 @@
         public bool success = false;
         [FormerlySerializedAs("Error")]
         public string error = string.Empty;
+        public int statusCode = 200;
         
         public static readonly MetaDataResult Empty = new MetaDataResult()
         {

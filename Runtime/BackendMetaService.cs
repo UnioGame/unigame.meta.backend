@@ -310,6 +310,7 @@
                 hash = responceData.GetHashCode(),
                 error = response.error,
                 timestamp = unixTime,
+                statusCode = response.statusCode,
             };
                 
             if (!response.success)

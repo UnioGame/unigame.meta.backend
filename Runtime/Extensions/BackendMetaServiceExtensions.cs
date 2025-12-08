@@ -38,6 +38,7 @@ namespace Extensions
             resultValue.data = result.model as TResult;
             resultValue.success = result.success;
             resultValue.error = result.error;
+            resultValue.statusCode = result.statusCode;
             
             return resultValue;
         }
@@ -49,5 +50,6 @@ namespace Extensions
         public TResult data;
         public bool success;
         public string error;
+        public int statusCode;
     }
 }

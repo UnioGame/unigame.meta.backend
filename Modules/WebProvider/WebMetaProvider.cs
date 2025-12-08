@@ -122,6 +122,7 @@
             result.data = resultData;
             result.success = requestResult.success;
             result.error = requestResult.error;
+            result.statusCode = (int)requestResult.responseCode;
             
             return result;
         }
