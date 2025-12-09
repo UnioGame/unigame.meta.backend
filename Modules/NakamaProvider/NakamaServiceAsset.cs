@@ -21,7 +21,7 @@
             var service = new NakamaService(settings,nakamaConnection);
 
             context.Publish(settings);
-            context.Publish<INakamaConnection>(nakamaConnection);
+            context.Publish<NakamaConnection>(nakamaConnection);
             context.Publish<INakamaService>(service);
 
             return service;

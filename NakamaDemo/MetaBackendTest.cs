@@ -151,7 +151,7 @@ public class MetaBackendTest : MonoBehaviour
             return;
         }
         
-        GameLog.Log($"Nakama ID {authResult.userId} authentication : {authResult.success}" ,Color.green);
+        GameLog.Log($"Nakama ID {clientId} authentication : {authResult.success}" ,Color.green);
         
     }
 
