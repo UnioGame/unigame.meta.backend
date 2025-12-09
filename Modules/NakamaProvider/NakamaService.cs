@@ -717,22 +717,25 @@
             INakamaAuthenticateData authenticateData,
             CancellationToken cancellation = default)
         {
-            var restoreResult = await RestoreSessionAsync(authenticateData.AuthTypeName, client);
-            if (restoreResult.success) return restoreResult;
-
-            ISession nakamaSession = null;
+            var session = _connection.session.CurrentValue;
+            var restoreResult = session != null
+                ? await RefreshSessionAsync(session, client)
+                : await RefreshSessionAsync(client);
+            
+            if (restoreResult.success && restoreResult.session.IsExpired == false) 
+                return restoreResult;
 
             if (authenticateData is NakamaDeviceIdAuthenticateData idData)
             {
                 // get a new refresh token
-                nakamaSession = await client.AuthenticateDeviceAsync(idData.clientId,
+                session = await client.AuthenticateDeviceAsync(idData.clientId,
                     idData.userName,
                     idData.create, idData.vars,
                     idData.retryConfiguration,
                     canceller:cancellation);
             }
 
-            if (nakamaSession == null)
+            if (session == null)
             {
                 return new NakamaSessionResult()
                 {
@@ -741,22 +744,13 @@
                     success = false
                 };
             }
-
-            var nakamaSessionData = new NakamaSessionData()
-            {
-                authToken = nakamaSession.AuthToken,
-                authType = authenticateData.AuthTypeName,
-                refreshToken = nakamaSession.RefreshToken,
-                timestamp = DateTime.Now.ToUnixTimestamp()
-            };
-
-            var prefsValue = JsonConvert.SerializeObject(nakamaSessionData);
-
-            PlayerPrefs.SetString(NakamaConstants.NakamaAuthenticateKey, prefsValue);
+            
+            PlayerPrefs.SetString(NakamaConstants.NakamaAuthenticateKey, session.AuthToken);
+            PlayerPrefs.SetString(NakamaConstants.NakamaRefreshKey, session.RefreshToken);
 
             var result = new NakamaSessionResult()
             {
-                session = nakamaSession,
+                session = session,
                 error = string.Empty,
                 success = true,
             };
@@ -843,7 +837,8 @@
             var endpoint = hostSettings.endpoint;
 
             var client = new Client(endpoint.scheme, endpoint.host,
-                endpoint.port, endpoint.serverKey, UnityWebRequestAdapter.Instance);
+                endpoint.port, endpoint.serverKey, UnityWebRequestAdapter.Instance,
+                autoRefreshSession:_nakamaSettings.autoRefreshSession);
 
             client.Timeout = _nakamaSettings.timeoutSec;
             client.GlobalRetryConfiguration = _retryConfiguration;
@@ -924,56 +919,65 @@
         }
 
 
-        private async UniTask<NakamaSessionResult> RestoreSessionAsync(string authType, IClient client)
+        private async UniTask<NakamaSessionResult> RefreshSessionAsync(ISession session, IClient client)
         {
-            var result = new NakamaSessionResult()
+            if (session == null)
             {
-                session = null,
-                error = $"cannot restore session by {authType}",
-                success = false,
-            };
-
-            var authData = PlayerPrefs.GetString(NakamaConstants.NakamaAuthenticateKey, string.Empty);
-
-            if (string.IsNullOrEmpty(authData)) return result;
-
-            var restoreData = JsonConvert.DeserializeObject<NakamaSessionData>(authData);
-            if (!restoreData.authType.Equals(authType))
-                return result;
-
-            var session = await RestoreSessionAsync(restoreData.authToken, restoreData.refreshToken, client);
-
-            if (session == null) return result;
-
-            return new NakamaSessionResult()
-            {
-                session = session,
-                error = string.Empty,
-                success = true,
-            };
-        }
-
-        private async UniTask<ISession> RestoreSessionAsync(string authToken, string refreshToken, IClient client)
-        {
-            var session = Session.Restore(authToken, refreshToken);
-
-            // Check whether a session is close to expiry.
-            if (!session.HasExpired(DateTime.UtcNow.AddSeconds(_nakamaSettings.refreshTokenInterval)))
-                return session;
-
+                return new NakamaSessionResult()
+                {
+                    session = session,
+                    error = "Session is null",
+                    success = false,
+                };
+            }
+            
             try
             {
-                // get a new access token
-                session = await client.SessionRefreshAsync(session, canceller: LifeTime.Token);
-                return session;
+                // Check whether a session is close to expiry.
+                if (session.IsExpired ||
+                    session.HasExpired(DateTime.UtcNow.AddSeconds(_nakamaSettings.refreshTokenInterval)))
+                {
+                    // get a new access token
+                    session = await client
+                        .SessionRefreshAsync(session, canceller: LifeTime.Token)
+                        .AsUniTask();
+                }
+                
+                PlayerPrefs.SetString(NakamaConstants.NakamaRefreshKey,session.RefreshToken);
+                PlayerPrefs.SetString(NakamaConstants.NakamaAuthenticateKey,session.AuthToken);
+                
+                return new NakamaSessionResult()
+                {
+                    session = session,
+                    error = string.Empty,
+                    success = !session.IsExpired,
+                };
             }
             catch (ApiResponseException ex)
             {
-                GameLog.LogError(
-                    $"Nakama Restore Session Status {ex.StatusCode} GRPC {ex.GrpcStatusCode} Message {ex.Message}");
+                GameLog.LogError($"Nakama Restore Session Status {ex.StatusCode} GRPC {ex.GrpcStatusCode} Message {ex.Message}");
+                return new NakamaSessionResult()
+                {
+                    session = session,
+                    error = ex.Message,
+                    success = false,
+                };
             }
+        }
 
-            return null;
+        private async UniTask<NakamaSessionResult> RefreshSessionAsync(IClient client)
+        {
+            var refreshToken = PlayerPrefs.GetString(NakamaConstants.NakamaRefreshKey,null);
+            var authToken = PlayerPrefs.GetString(NakamaConstants.NakamaAuthenticateKey,null);
+            var result = await RefreshSessionAsync(authToken, refreshToken, client);
+            return result;
+        }
+
+        private async UniTask<NakamaSessionResult> RefreshSessionAsync(string authToken, string refreshToken, IClient client)
+        {
+            var session = Session.Restore(authToken, refreshToken);
+            var result = await RefreshSessionAsync(session, client);
+            return result;
         }
     }
 }

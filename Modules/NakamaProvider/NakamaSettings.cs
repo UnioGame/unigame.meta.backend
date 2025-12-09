@@ -12,6 +12,7 @@
         public int timeoutSec = 5;
         public string healthCheckPath = "/healthcheck";
         public int refreshTokenInterval = 60 * 60 * 6;
+        public int autoRefreshIntervalSec = 60;
         public bool autoRefreshSession = true;
         public bool useSocketMainThread = true;
         

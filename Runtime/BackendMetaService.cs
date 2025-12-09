@@ -310,7 +310,9 @@
             if (_settings.enableLogging)
             {
                 var color = result.success ? Color.green : Color.red;
-                GameLog.Log($"[{remoteId}]:  contract {contract?.GetType().Name} input {contract.InputType.Name} output {contract.OutputType.Name} method: {contract.Path} | payload: {result.payload} | success: {result.success} | result {result.result} {result.result?.GetType().Name} code {result.statusCode}",color);
+                GameLog.Log($"[{remoteId}]:  contract {contract?.GetType().Name} input {contract.InputType.Name} output {contract.OutputType.Name} " +
+                            $"method: {contract.Path} | payload: {result.payload} | success: {result.success} | " +
+                            $"result {result.result} {result.result?.GetType().Name} code {result.statusCode} \nresponse: \n{responseData}",color);
             }
 #endif
             
