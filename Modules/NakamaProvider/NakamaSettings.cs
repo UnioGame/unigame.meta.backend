@@ -16,6 +16,9 @@
         public bool autoRefreshSession = true;
         public bool useSocketMainThread = true;
         
+        [Header("Debug Settings")]
+        public bool enableLogging = false;
+        
         [Header("Server Endpoints")]
         public NakamaEndpoint[] servers = new[] { new NakamaEndpoint() };
     }

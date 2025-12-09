@@ -535,6 +535,11 @@
             var rpcResult = await client
                 .RpcAsync(session, rpcName, payloadValue, _retryConfiguration, cancellation);
 
+#if UNITY_EDITOR
+            if(_nakamaSettings.enableLogging)   
+                GameLog.Log($"[NakamaService] RPC '{rpcName}' executed. Payload: {payloadValue} Result: \n{rpcResult.Payload}",Color.aquamarine);
+#endif
+            
             var resultObject = targetType == typeof(string)
                 ? rpcResult.Payload
                 : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, JsonSettings);
