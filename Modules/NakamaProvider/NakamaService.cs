@@ -536,8 +536,10 @@
                 .RpcAsync(session, rpcName, payloadValue, _retryConfiguration, cancellation);
 
 #if UNITY_EDITOR
-            if(_nakamaSettings.enableLogging)   
-                GameLog.Log($"[NakamaService] RPC '{rpcName}' executed. Payload: {payloadValue} Result: \n{rpcResult.Payload}",Color.aquamarine);
+            if (_nakamaSettings.enableLogging)
+            {
+                GameLog.Log($"[NakamaService] RPC '{rpcName}' executed. Payload: {payloadValue} Result: \n{rpcResult.Payload}",Color.aquamarine );
+            }
 #endif
             
             var resultObject = targetType == typeof(string)
@@ -576,7 +578,7 @@
             if (signInResult.success == false)
             {
                 return contractResult;
-            }
+            } 
 
             var profile = await GetUserProfileAsync();
             
