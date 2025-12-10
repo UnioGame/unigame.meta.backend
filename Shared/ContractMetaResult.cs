@@ -21,11 +21,12 @@
     }
     
     [Serializable]
-    public struct RemoteMetaResult<TResult>
+    public struct ContractMetaResult<TResult>
     {
-        public string Id;
-        public TResult Data;
-        public bool Success;
-        public string Error;
+        public string id;
+        public TResult data;
+        public bool success;
+        public string error;
+        public int statusCode;
     }
 }
