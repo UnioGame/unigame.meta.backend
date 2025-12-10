@@ -143,7 +143,7 @@ public class MetaBackendTest : MonoBehaviour
             retryConfiguration = null,
         };
 
-        var authResult  = await _nakamaService.SignInAsync(idAuth);
+        var authResult  = await _nakamaService.AuthenticateAsync(idAuth);
         
         if (authResult.success == false)
         {

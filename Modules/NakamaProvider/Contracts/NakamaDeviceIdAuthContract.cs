@@ -3,7 +3,7 @@
     using System;
 
     [Serializable]
-    public class NakamaDeviceIdAuthContract : NakamaContract<NakamaDeviceIdAuthenticateData,NakamaConnectionResult>,INakamaAuthContract
+    public class NakamaDeviceIdAuthContract : NakamaContract<NakamaDeviceIdAuthenticateData,NakamaServiceResult>,INakamaAuthContract
     {
         public NakamaDeviceIdAuthenticateData authData = new();
 

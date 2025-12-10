@@ -18,13 +18,8 @@
     using UnityEngine;
 
     [Serializable]
-    public class NakamaService : GameService, INakamaService, INakamaAuthenticate
+    public class NakamaService : GameService, INakamaService
     {
-        public static readonly JsonSerializerSettings JsonSettings = new()
-        {
-            TypeNameHandling = TypeNameHandling.None,
-        };
-
         private NakamaSettings _nakamaSettings;
         private NakamaConnection _connection;
         private List<string> _healthCheckUrls;
@@ -32,7 +27,7 @@
         private RetryConfiguration _retryConfiguration;
         private LifeTime _sessionLifeTime;
 
-        private ReactiveValue<ConnectionState> _state;
+        private ReactiveValue<ConnectionState> _state = new();
 
 
         public NakamaService(NakamaSettings nakamaSettings, NakamaConnection connection)
@@ -42,9 +37,8 @@
             _nakamaServers = new();
             _nakamaSettings = nakamaSettings;
             _connection = connection;
-            _state = connection.state;
-            
             _connection.RestoreSessionData();
+            _state.Value = ConnectionState.Disconnected;
             
             var servers = _nakamaSettings.servers;
 
@@ -70,10 +64,7 @@
         }
 
         public ReadOnlyReactiveProperty<ConnectionState> State => _state;
-
-        public bool IsConnected => _state.Value == ConnectionState.Connected &&
-                                   _connection.socket.Value is { IsConnected: true };
-
+        
         public async UniTask<MetaConnectionResult> ConnectAsync()
         {
             return new MetaConnectionResult()
@@ -174,10 +165,11 @@
             return contractResult;
         }
 
-        public async UniTask<NakamaContractResult> DeviceIdAuthAsync(NakamaDeviceIdAuthContract contract,
+        public async UniTask<NakamaContractResult> DeviceIdAuthAsync(
+            NakamaDeviceIdAuthContract contract,
             CancellationToken cancellation = default)
         {
-            var connectionResult = new NakamaConnectionResult()
+            var connectionResult = new NakamaServiceResult()
             {
                 success = false,
                 error = string.Empty,
@@ -194,7 +186,7 @@
                     userName = authData.userName,
                     vars = authData.vars,
                 };
-                connectionResult = await SignInAsync(loginData,cancellation:cancellation);
+                connectionResult = await AuthenticateAsync(loginData,cancellation:cancellation);
             }
             catch (ApiResponseException ex)
             {
@@ -523,7 +515,7 @@
 
             var payloadValue = string.Empty;
             if (payloadObject != null && payloadObject is not string)
-                payloadValue = JsonConvert.SerializeObject(payloadObject, JsonSettings);
+                payloadValue = JsonConvert.SerializeObject(payloadObject, INakamaService.JsonSettings);
 
             var contractResult = new NakamaContractResult()
             {
@@ -544,13 +536,13 @@
             
             var resultObject = targetType == typeof(string)
                 ? rpcResult.Payload
-                : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, JsonSettings);
+                : JsonConvert.DeserializeObject(rpcResult.Payload, targetType, INakamaService.JsonSettings);
 
             var success = resultObject != null;
             
             if (resultObject == null && contract is IFallbackContract fallbackContract)
             {
-                resultObject = JsonConvert.DeserializeObject(rpcResult.Payload, fallbackContract.FallbackType, JsonSettings);
+                resultObject = JsonConvert.DeserializeObject(rpcResult.Payload, fallbackContract.FallbackType, INakamaService.JsonSettings);
             }
             
             contractResult.success = success;
@@ -560,7 +552,7 @@
             return contractResult;
         }
 
-        public async UniTask<NakamaContractResult> AuthContractAsync(
+        private async UniTask<NakamaContractResult> AuthContractAsync(
             INakamaAuthContract authContract, 
             CancellationToken cancellation = default)
         {
@@ -571,23 +563,103 @@
                 error = string.Empty,
             };
 
-            var signInResult = await SignInAsync(authContract.AuthData,cancellation:cancellation);
-            contractResult.success = signInResult.success;
-            contractResult.error = signInResult.error;
-            
-            if (signInResult.success == false)
-            {
-                return contractResult;
-            } 
-
-            var profile = await GetUserProfileAsync();
-            
-            contractResult.success = profile!=null;
-            contractResult.data = profile;
-            contractResult.error = profile == null ? "Cannot load user profile" : string.Empty;
-
+            var authResult = await AuthenticateAsync(authContract.AuthData,cancellation);
+            contractResult.success = authResult.success;
+            contractResult.error = authResult.error;
+            contractResult.data = _connection.account.Value;
             return contractResult;
         }
+               
+        public async UniTask<NakamaServiceResult> AuthenticateAsync(INakamaAuthenticateData authenticateData, CancellationToken cancellation = default)
+        {
+            var serviceResult = await ConnectToServerAsync(cancellation);
+            if (!serviceResult.success) return serviceResult;
+            
+            var client = _connection.client.Value;
+            var socket = _connection.socket.Value;
+
+            var sessionResult = await AuthenticateAsync(client,authenticateData,cancellation:cancellation);
+
+            if (!sessionResult.success)
+                return sessionResult;
+
+            var session = _connection.session.Value;
+            var connected = await ConnectAsync(socket, session);
+
+            if (connected)
+                await GetUserProfileAsync();
+
+            return new NakamaServiceResult()
+            {
+                success = connected,
+                error = string.Empty,
+            };
+        }
+
+        
+        /// <summary>
+        ///  Authenticate user by custom data. Try to convert authdata into supported type.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="authenticateData"></param>
+        /// <param name="cancellation"></param>
+        /// <returns>NakamaSessionResult</returns>
+        private async UniTask<NakamaServiceResult> AuthenticateAsync(
+            IClient client,
+            INakamaAuthenticateData authenticateData,
+            CancellationToken cancellation = default)
+        {
+            var session = _connection.session.CurrentValue;
+            var restoreResult = session != null
+                ? await RefreshSessionAsync(session, client)
+                : await RefreshSessionAsync(client);
+
+            session = _connection.session.Value;
+            
+            if (restoreResult.success && session.IsExpired == false)
+            {
+                _connection.UpdateSessionData(session);
+                return restoreResult;
+            }
+
+            try
+            {
+                if (authenticateData is NakamaDeviceIdAuthenticateData idData)
+                {
+                    // get a new refresh token
+                    session = await client.AuthenticateDeviceAsync(idData.clientId,
+                        idData.userName,
+                        idData.create, idData.vars,
+                        idData.retryConfiguration,
+                        canceller:cancellation);
+                }
+            }
+            catch (ApiResponseException ex)
+            {
+                Debug.LogFormat("Error authenticating device: {0}:{1}", ex.StatusCode, ex.Message);
+            }
+            
+            if (session == null)
+            {
+                return new NakamaServiceResult()
+                {
+                    error = $"Cannot authenticate user by {authenticateData.AuthTypeName}",
+                    success = false
+                };
+            }
+            
+            _connection.authType.Value = authenticateData.AuthTypeName;
+            _connection.UpdateSessionData(session);
+            
+            var result = new NakamaServiceResult()
+            {
+                error = string.Empty,
+                success = true,
+            };
+
+            return result;
+        }
+
         
         public async UniTask<NakamaContractResult> LoadUsersAsync(
             NakamaUsersContract usersContract,
@@ -661,110 +733,40 @@
 
             if (!isConnected) return false;
 
+            var client = _connection.client.Value;
+            var session = _connection.session.Value;
+            var socket = _connection.socket.Value;
+            
+            if (client != null && session != null)
+            {
+                try
+                {
+                    client.SessionLogoutAsync(session)
+                        .AsUniTask()
+                        .Forget();
+                }
+                catch (Exception e)
+                {
+                    GameLog.LogException(e);
+                }
+            }
+            
             try
             {
-                var socket = _connection.socket.Value;
                 if (socket is { IsConnected: true })
-                {
-                    await socket.CloseAsync();
-                }
+                    socket.CloseAsync().AsUniTask().Forget();
             }
             catch (Exception e)
             {
                 GameLog.LogException(e);
             }
             
+            _state.Value = ConnectionState.Disconnected;
             _connection.Reset();
 
             return true;
         }
-
-        /// <summary>
-        /// sign to Namaka server with provided authentication data for start executing contracts
-        /// </summary>
-        public async UniTask<NakamaConnectionResult> SignInAsync(
-            INakamaAuthenticateData authenticateData,
-            CancellationToken cancellation = default)
-        {
-            var stateValue = _state.Value;
-            if (stateValue is ConnectionState.Connected or ConnectionState.Connecting)
-            {
-                return new NakamaConnectionResult()
-                {
-                    success = true,
-                    error = "already connected to nakama server.",
-                };
-            }
-
-            _state.Value = ConnectionState.Connecting;
-
-            var connectionResult = await ConnectToServerAsync(authenticateData, cancellation);
-
-            _state.Value = connectionResult.success
-                ? ConnectionState.Connected
-                : ConnectionState.Disconnected;
-
-            return connectionResult;
-        }
-        
-        /// <summary>
-        ///  Authenticate user by custom data. Try to convert authdata into supported type.
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="authenticateData"></param>
-        /// <param name="cancellation"></param>
-        /// <returns>NakamaSessionResult</returns>
-        public async UniTask<NakamaSessionResult> AuthenticateAsync(
-            IClient client,
-            INakamaAuthenticateData authenticateData,
-            CancellationToken cancellation = default)
-        {
-            var session = _connection.session.CurrentValue;
-            var restoreResult = session != null
-                ? await RefreshSessionAsync(session, client)
-                : await RefreshSessionAsync(client);
-
-            session = restoreResult.session;
-            
-            if (restoreResult.success && session.IsExpired == false)
-            {
-                _connection.UpdateSessionData(session);
-                return restoreResult;
-            }
-
-            if (authenticateData is NakamaDeviceIdAuthenticateData idData)
-            {
-                // get a new refresh token
-                session = await client.AuthenticateDeviceAsync(idData.clientId,
-                    idData.userName,
-                    idData.create, idData.vars,
-                    idData.retryConfiguration,
-                    canceller:cancellation);
-            }
-
-            if (session == null)
-            {
-                return new NakamaSessionResult()
-                {
-                    session = null,
-                    error = $"Cannot authenticate user by {authenticateData.AuthTypeName}",
-                    success = false
-                };
-            }
-            
-            _connection.authType.Value = authenticateData.AuthTypeName;
-            _connection.UpdateSessionData(session);
-            
-            var result = new NakamaSessionResult()
-            {
-                session = session,
-                error = string.Empty,
-                success = true,
-            };
-
-            return result;
-        }
-
+ 
         public async UniTask<IApiAccount> GetUserProfileAsync()
         {
             try
@@ -786,60 +788,26 @@
             }
         }
 
-        private async UniTask<NakamaConnectionResult> ConnectToServerAsync(
-            INakamaAuthenticateData authenticateData,
-            CancellationToken cancellation = default)
-        {
-            var connectionInitResult = await InitializeConnectionAsync(cancellation);
-            if (connectionInitResult.success == false)
-                return connectionInitResult;
-
-            var client = _connection.client.Value;
-            var socket = _connection.socket.Value;
-
-            var sessionResult = await AuthenticateAsync(client, authenticateData,cancellation:cancellation);
-
-            if (sessionResult.success == false)
-            {
-                return new NakamaConnectionResult()
-                {
-                    success = false,
-                    error = sessionResult.error,
-                };
-            }
-
-            var session = sessionResult.session;
-            var connected = await ConnectAsync(socket, session);
-
-            if (connected)
-            {
-                _connection.account.Value = await GetUserProfileAsync();
-            }
-
-            return new NakamaConnectionResult()
-            {
-                success = connected,
-                error = string.Empty,
-            };
-        }
-
-        private async UniTask<NakamaConnectionResult> InitializeConnectionAsync(CancellationToken cancellation = default)
+        public async UniTask<NakamaServiceResult> ConnectToServerAsync(CancellationToken cancellation = default)
         {
             var client = _connection.client.Value;
             var socket = _connection.socket.Value;
+            
             if (client != null && socket != null && (socket.IsConnected || socket.IsConnecting))
             {
-                return new NakamaConnectionResult()
+                return new NakamaServiceResult()
                 {
                     error = string.Empty,
                     success = true,
                 };
             }
             
+            _state.Value = ConnectionState.Connecting;
+            
             var hostSettings = await SelectServerAsync(cancellation);
             if (hostSettings == null)
             {
-                return new NakamaConnectionResult()
+                return new NakamaServiceResult()
                 {
                     success = false,
                     error = "No available Nakama server found. Try again later.",
@@ -859,7 +827,6 @@
 #if UNITY_WEBGL
             useMainThread = true; // WebGL does not support multithreading for sockets
 #endif
-
             socket = client.NewSocket(useMainThread: useMainThread);
 
             var disposable = Observable
@@ -872,14 +839,16 @@
             {
                 disposable.Dispose();
                 socket.Closed -= ReconnectNakamaSocket;
-                socket.CloseAsync();
+                socket.CloseAsync()
+                    .AsUniTask()
+                    .Forget();
             });
 
             _connection.client.Value = client;
             _connection.socket.Value = socket;
             _connection.serverData.Value = hostSettings;
 
-            return new NakamaConnectionResult()
+            return new NakamaServiceResult()
             {
                 success = true,
                 error = string.Empty,
@@ -915,8 +884,7 @@
             {
                 if (!socket.IsConnected)
                 {
-                    await socket.ConnectAsync(session)
-                        .AsUniTask();
+                    await socket.ConnectAsync(session).AsUniTask();
                     await UniTask.SwitchToMainThread();
                 }
             }
@@ -930,14 +898,13 @@
         }
 
 
-        private async UniTask<NakamaSessionResult> RefreshSessionAsync(ISession session, IClient client)
+        private async UniTask<NakamaServiceResult> RefreshSessionAsync(ISession session, IClient client)
         {
             if (session == null)
             {
-                return new NakamaSessionResult()
+                return new NakamaServiceResult()
                 {
-                    session = session,
-                    error = "Session is null",
+                    error = "session is null",
                     success = false,
                 };
             }
@@ -956,9 +923,8 @@
                 
                 _connection.UpdateSessionData(session);
                 
-                return new NakamaSessionResult()
+                return new NakamaServiceResult()
                 {
-                    session = session,
                     error = string.Empty,
                     success = !session.IsExpired,
                 };
@@ -966,16 +932,15 @@
             catch (ApiResponseException ex)
             {
                 GameLog.LogError($"Nakama Restore Session Status {ex.StatusCode} GRPC {ex.GrpcStatusCode} Message {ex.Message}");
-                return new NakamaSessionResult()
+                return new NakamaServiceResult()
                 {
-                    session = session,
                     error = ex.Message,
                     success = false,
                 };
             }
         }
 
-        private async UniTask<NakamaSessionResult> RefreshSessionAsync(IClient client)
+        private async UniTask<NakamaServiceResult> RefreshSessionAsync(IClient client)
         {
             var sessionData = _connection.sessionData.Value;
             var refreshToken = sessionData.RefreshToken;
@@ -984,7 +949,7 @@
             return result;
         }
 
-        private async UniTask<NakamaSessionResult> RefreshSessionAsync(string authToken, string refreshToken, IClient client)
+        private async UniTask<NakamaServiceResult> RefreshSessionAsync(string authToken, string refreshToken, IClient client)
         {
             var session = Session.Restore(authToken, refreshToken);
             var result = await RefreshSessionAsync(session, client);

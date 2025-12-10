@@ -8,10 +8,10 @@
 
     public interface IMetaConnection : IDisposable
     {
-        ReadOnlyReactiveProperty<ConnectionState> State { get; }
-        
-        UniTask<MetaConnectionResult> ConnectAsync();
-        
-        UniTask DisconnectAsync();
+        public ReadOnlyReactiveProperty<ConnectionState> State { get; }
+
+        public UniTask<MetaConnectionResult> ConnectAsync();
+
+        public UniTask DisconnectAsync();
     }
 }

@@ -23,11 +23,6 @@
         /// Contains the server data of the currently connected Nakama server.
         /// </summary>
         public ReactiveValue<NakamaServerData> serverData = new();
-        
-        /// <summary>
-        /// Contains the current connection state of the client.
-        /// </summary>
-        public ReactiveValue<ConnectionState> state = new(ConnectionState.Disconnected);
 
         /// <summary>
         /// Used to establish connection between the client and the server.
@@ -122,7 +117,6 @@
             userName.Value = string.Empty;
             sessionData.Value = default;
             serverData.Value = null;
-            state.Value = ConnectionState.Disconnected;
         }
     }
     

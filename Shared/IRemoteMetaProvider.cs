@@ -10,10 +10,10 @@
         IMetaConnection,
         ILifeTimeContext
     {
-        bool IsContractSupported(IRemoteMetaContract command);
-        
-        UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellationToken = default);
-        
-        bool TryDequeue(out ContractMetaResult result);
+        public bool IsContractSupported(IRemoteMetaContract command);
+
+        public UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellationToken = default);
+
+        public bool TryDequeue(out ContractMetaResult result);
     }
 }
