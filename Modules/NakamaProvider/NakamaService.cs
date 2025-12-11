@@ -134,6 +134,7 @@
                 {
                     INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation))
                         .ToContractResult(),
+                    NakamaRestoreSessionContract authContract => (await RestoreSessionAsync(cancellation)).ToContractResult(),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
                     NakamaLeaderboardGetRecordsContract getLeaderboardRecordsContract => await GetLeaderboardAsync(
@@ -582,6 +583,57 @@
             contractResult.data = nakamaAuthResult;
             return contractResult;
         }
+
+        public async UniTask<ContractMetaResult<NakamaAuthResult>> RestoreSessionAsync(CancellationToken cancellation = default)
+        {
+            var result = new ContractMetaResult<NakamaAuthResult>()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+                statusCode = -1,
+                id = nameof(NakamaRestoreSessionContract),
+            };
+            
+            var serviceResult = await ConnectToServerAsync(cancellation);
+            if (!serviceResult.success) return result;
+            
+            var client = _connection.client.Value;
+            var socket = _connection.socket.Value;
+
+            var session = _connection.session.CurrentValue;
+            var restoreResult = session != null
+                ? await RefreshSessionAsync(session, client)
+                : await RefreshSessionAsync(client);
+
+            session = _connection.session.Value;
+
+            result.success = restoreResult.success;
+            result.error = restoreResult.error;
+            result.statusCode = restoreResult.statusCode;
+            
+            if (restoreResult.success && !session.IsExpired)
+            {
+                _connection.UpdateSessionData(session);
+            }
+            else
+            {
+                return result;
+            }
+            
+            var connected = await ConnectAsync(socket, session);
+
+            result.success = connected;
+            result.data = new NakamaAuthResult()
+            {
+                account = _connection.account.Value,
+                created = false,
+                error = string.Empty,
+                success = connected,
+            };
+            
+            return result;
+        }
                
         public async UniTask<NakamaServiceResult> AuthenticateAsync(INakamaAuthenticateData authenticateData, CancellationToken cancellation = default)
         {
@@ -598,8 +650,6 @@
 
             var session = _connection.session.Value;
             var connected = await ConnectAsync(socket, session);
-
-            //if (connected) await GetUserProfileAsync();
 
             return new NakamaServiceResult()
             {
@@ -621,19 +671,9 @@
             INakamaAuthenticateData authenticateData,
             CancellationToken cancellation = default)
         {
-            var session = _connection.session.CurrentValue;
-            var restoreResult = session != null
-                ? await RefreshSessionAsync(session, client)
-                : await RefreshSessionAsync(client);
 
-            session = _connection.session.Value;
+            var session = _connection.session.Value;
             
-            if (restoreResult.success && session.IsExpired == false)
-            {
-                _connection.UpdateSessionData(session);
-                return restoreResult;
-            }
-
             try
             {
                 if (authenticateData is NakamaDeviceIdAuthenticateData idData)
