@@ -3,7 +3,7 @@ using Nakama;
 using UniGame.MetaBackend.Runtime;
 
 [Serializable]
-public class NakamaIdAuthContract : NakamaContract<string,IApiAccount>,INakamaAuthContract
+public class NakamaIdAuthContract : NakamaContract<string,NakamaAuthResult>,INakamaAuthContract
 {
     public NakamaDeviceIdAuthenticateData data = new();
     

@@ -117,11 +117,11 @@
             return result;
         }
 
-        public async UniTask<NakamaContractResult> ExecuteContractAsync(NakamaConnection connection,
+        public async UniTask<ContractMetaResult> ExecuteContractAsync(NakamaConnection connection,
             IRemoteMetaContract contract,
             CancellationToken cancellation = default)
         {
-            var contractResult = new NakamaContractResult()
+            var contractResult = new ContractMetaResult()
             {
                 success = false,
                 data = default,
@@ -132,7 +132,8 @@
             {
                 return contract switch
                 {
-                    INakamaAuthContract authContract => await AuthContractAsync(authContract, cancellation),
+                    INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation))
+                        .ToContractResult(),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
                     NakamaLeaderboardGetRecordsContract getLeaderboardRecordsContract => await GetLeaderboardAsync(
@@ -165,7 +166,7 @@
             return contractResult;
         }
 
-        public async UniTask<NakamaContractResult> DeviceIdAuthAsync(
+        public async UniTask<ContractMetaResult> DeviceIdAuthAsync(
             NakamaDeviceIdAuthContract contract,
             CancellationToken cancellation = default)
         {
@@ -196,7 +197,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = connectionResult,
                 success = connectionResult.success,
@@ -204,7 +205,7 @@
             };
         }
         
-        public async UniTask<NakamaContractResult> WriteLeaderboardAsync(
+        public async UniTask<ContractMetaResult> WriteLeaderboardAsync(
             NakamaConnection connection,
             NakamaLeaderboardWriteRecordContract contract,
             CancellationToken cancellation = default)
@@ -233,7 +234,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = leaderboard,
                 success = leaderboard != null,
@@ -241,7 +242,7 @@
             };
         }
 
-        public async UniTask<NakamaContractResult> GetTournamentsAsync(
+        public async UniTask<ContractMetaResult> GetTournamentsAsync(
             NakamaConnection connection,
             NakamaTournamentsListContract contract,
             CancellationToken cancellation = default)
@@ -272,7 +273,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = leaderboard,
                 success = leaderboard != null,
@@ -280,7 +281,7 @@
             };
         }
 
-        public async UniTask<NakamaContractResult> JoinTournamentAsync(
+        public async UniTask<ContractMetaResult> JoinTournamentAsync(
             NakamaConnection connection,
             NakamaJoinTournamentsContract contract,
             CancellationToken cancellation = default)
@@ -307,7 +308,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = result,
                 success = result != null,
@@ -316,7 +317,7 @@
         }
         
         
-        public async UniTask<NakamaContractResult> ListTournamentRecordsAsync(
+        public async UniTask<ContractMetaResult> ListTournamentRecordsAsync(
             NakamaConnection connection,
             NakamaTournamentRecordsContract contract,
             CancellationToken cancellation = default)
@@ -346,7 +347,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = result,
                 success = result != null,
@@ -354,7 +355,7 @@
             };
         }
         
-        public async UniTask<NakamaContractResult> ListTournamentRecordsAroundAsync(
+        public async UniTask<ContractMetaResult> ListTournamentRecordsAroundAsync(
             NakamaConnection connection,
             NakamaTournamentRecordsAroundContract contract,
             CancellationToken cancellation = default)
@@ -384,7 +385,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = result,
                 success = result != null,
@@ -392,7 +393,7 @@
             };
         }
         
-        public async UniTask<NakamaContractResult> TournamentWriteAsync(
+        public async UniTask<ContractMetaResult> TournamentWriteAsync(
             NakamaConnection connection,
             NakamaTournamentWriteRecordContract contract,
             CancellationToken cancellation = default)
@@ -422,7 +423,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = result,
                 success = result != null,
@@ -430,7 +431,7 @@
             };
         }
         
-        public async UniTask<NakamaContractResult> GetLeaderboardAsync(
+        public async UniTask<ContractMetaResult> GetLeaderboardAsync(
             NakamaConnection connection,
             NakamaLeaderboardGetRecordsContract contract,
             CancellationToken cancellation = default)
@@ -458,7 +459,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = leaderboard,
                 success = leaderboard != null,
@@ -466,7 +467,7 @@
             };
         }
 
-        public async UniTask<NakamaContractResult> GetLeaderboardAroundAsync(
+        public async UniTask<ContractMetaResult> GetLeaderboardAroundAsync(
             NakamaConnection connection,
             NakamaLeaderboardGetRecordsAroundContract contract,
             CancellationToken cancellation = default)
@@ -494,7 +495,7 @@
 
             await UniTask.SwitchToMainThread();
 
-            return new NakamaContractResult()
+            return new ContractMetaResult()
             {
                 data = leaderboard,
                 success = leaderboard != null,
@@ -502,7 +503,7 @@
             };
         }
 
-        public async UniTask<NakamaContractResult> ExecuteRpcContractAsync(
+        public async UniTask<ContractMetaResult> ExecuteRpcContractAsync(
             NakamaConnection connection,
             IRemoteMetaContract contract,
             CancellationToken cancellation = default)
@@ -517,7 +518,7 @@
             if (payloadObject != null && payloadObject is not string)
                 payloadValue = JsonConvert.SerializeObject(payloadObject, INakamaService.JsonSettings);
 
-            var contractResult = new NakamaContractResult()
+            var contractResult = new ContractMetaResult()
             {
                 success = false,
                 data = default,
@@ -552,21 +553,33 @@
             return contractResult;
         }
 
-        private async UniTask<NakamaContractResult> AuthContractAsync(
+        private async UniTask<ContractMetaResult<NakamaAuthResult>> AuthContractAsync(
             INakamaAuthContract authContract, 
             CancellationToken cancellation = default)
         {
-            var contractResult = new NakamaContractResult()
+            var contractResult = new ContractMetaResult<NakamaAuthResult>()
             {
                 success = false,
                 data = default,
                 error = string.Empty,
             };
-
+            
             var authResult = await AuthenticateAsync(authContract.AuthData,cancellation);
+
+            var session = _connection.session.Value;
+            var created = session?.Created ?? false;
+
+            var nakamaAuthResult = new NakamaAuthResult()
+            {
+                account = _connection.account.Value,
+                created = created,
+                error = authResult.error,
+                success = authResult.success,
+            };
+            
             contractResult.success = authResult.success;
             contractResult.error = authResult.error;
-            contractResult.data = _connection.account.Value;
+            contractResult.data = nakamaAuthResult;
             return contractResult;
         }
                
@@ -661,7 +674,7 @@
         }
 
         
-        public async UniTask<NakamaContractResult> LoadUsersAsync(
+        public async UniTask<ContractMetaResult> LoadUsersAsync(
             NakamaUsersContract usersContract,
             NakamaConnection connection,
             CancellationToken cancellation = default)
@@ -669,7 +682,7 @@
             var client = connection.client.Value;
             var session = connection.session.Value;
 
-            var contractResult = new NakamaContractResult()
+            var contractResult = new ContractMetaResult()
             {
                 success = false,
                 data = default,
@@ -688,14 +701,14 @@
             return contractResult;
         }
 
-        public async UniTask<NakamaContractResult> LoadAccountAsync(
+        public async UniTask<ContractMetaResult> LoadAccountAsync(
             NakamaConnection connection,
             CancellationToken cancellation = default)
         {
             var client = connection.client.Value;
             var session = connection.session.Value;
 
-            var contractResult = new NakamaContractResult()
+            var contractResult = new ContractMetaResult()
             {
                 success = false,
                 data = default,

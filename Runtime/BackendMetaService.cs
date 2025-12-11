@@ -52,7 +52,7 @@
             _useDefaultProvider = _settings.useDefaultBackendFirst;
             _defaultProviderId = defaultMetaProvider;
             
-            BackendMetaServiceExtensions.RemoteMetaService = this;
+            MetaContractExtensions.RemoteMetaService = this;
 
             _defaultConverter = metaDataConfiguration.Converter ?? new JsonRemoteDataConverter();
             _responceCache = new Dictionary<int, ContractDataResult>(64);

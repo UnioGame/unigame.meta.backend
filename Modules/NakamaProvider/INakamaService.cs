@@ -26,55 +26,55 @@
             MetaContractData contractData,
             CancellationToken cancellationToken = default);
 
-        UniTask<NakamaContractResult> ExecuteContractAsync(NakamaConnection connection,
+        UniTask<ContractMetaResult> ExecuteContractAsync(NakamaConnection connection,
             IRemoteMetaContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> DeviceIdAuthAsync(
+        UniTask<ContractMetaResult> DeviceIdAuthAsync(
             NakamaDeviceIdAuthContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> WriteLeaderboardAsync(
+        UniTask<ContractMetaResult> WriteLeaderboardAsync(
             NakamaConnection connection,
             NakamaLeaderboardWriteRecordContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> GetTournamentsAsync(
+        UniTask<ContractMetaResult> GetTournamentsAsync(
             NakamaConnection connection,
             NakamaTournamentsListContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> JoinTournamentAsync(
+        UniTask<ContractMetaResult> JoinTournamentAsync(
             NakamaConnection connection,
             NakamaJoinTournamentsContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> ListTournamentRecordsAsync(
+        UniTask<ContractMetaResult> ListTournamentRecordsAsync(
             NakamaConnection connection,
             NakamaTournamentRecordsContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> ListTournamentRecordsAroundAsync(
+        UniTask<ContractMetaResult> ListTournamentRecordsAroundAsync(
             NakamaConnection connection,
             NakamaTournamentRecordsAroundContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> TournamentWriteAsync(
+        UniTask<ContractMetaResult> TournamentWriteAsync(
             NakamaConnection connection,
             NakamaTournamentWriteRecordContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> GetLeaderboardAsync(
+        UniTask<ContractMetaResult> GetLeaderboardAsync(
             NakamaConnection connection,
             NakamaLeaderboardGetRecordsContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> GetLeaderboardAroundAsync(
+        UniTask<ContractMetaResult> GetLeaderboardAroundAsync(
             NakamaConnection connection,
             NakamaLeaderboardGetRecordsAroundContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> ExecuteRpcContractAsync(
+        UniTask<ContractMetaResult> ExecuteRpcContractAsync(
             NakamaConnection connection,
             IRemoteMetaContract contract,
             CancellationToken cancellation = default);
@@ -83,12 +83,12 @@
             INakamaAuthenticateData authenticateData,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> LoadUsersAsync(
+        UniTask<ContractMetaResult> LoadUsersAsync(
             NakamaUsersContract usersContract,
             NakamaConnection connection,
             CancellationToken cancellation = default);
 
-        UniTask<NakamaContractResult> LoadAccountAsync(
+        UniTask<ContractMetaResult> LoadAccountAsync(
             NakamaConnection connection,
             CancellationToken cancellation = default);
 
