@@ -599,8 +599,7 @@
             var session = _connection.session.Value;
             var connected = await ConnectAsync(socket, session);
 
-            if (connected)
-                await GetUserProfileAsync();
+            //if (connected) await GetUserProfileAsync();
 
             return new NakamaServiceResult()
             {
@@ -705,9 +704,6 @@
             NakamaConnection connection,
             CancellationToken cancellation = default)
         {
-            var client = connection.client.Value;
-            var session = connection.session.Value;
-
             var contractResult = new ContractMetaResult()
             {
                 success = false,
@@ -715,13 +711,12 @@
                 error = string.Empty,
             };
 
-            var account = await client
-                .GetAccountAsync(session, _retryConfiguration, cancellation)
-                .AsUniTask();
+            var account = await GetUserProfileAsync();
 
             contractResult.success = account != null;
             contractResult.data = account;
             contractResult.error = string.Empty;
+            
             return contractResult;
         }
 
