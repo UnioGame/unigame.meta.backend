@@ -132,8 +132,8 @@
             {
                 return contract switch
                 {
-                    INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation))
-                        .ToContractResult(),
+                    INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation)).ToContractResult(),
+                    NakamaLogoutContract => (await SignOutContract()).ToContractResult(),
                     NakamaRestoreSessionContract authContract => (await RestoreSessionAsync(cancellation)).ToContractResult(),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
@@ -165,45 +165,6 @@
             }
 
             return contractResult;
-        }
-
-        public async UniTask<ContractMetaResult> DeviceIdAuthAsync(
-            NakamaDeviceIdAuthContract contract,
-            CancellationToken cancellation = default)
-        {
-            var connectionResult = new NakamaServiceResult()
-            {
-                success = false,
-                error = string.Empty,
-            };
-            
-            try
-            {
-                var authData = contract.authData;
-                var loginData = new NakamaDeviceIdAuthenticateData()
-                {
-                    clientId = authData.clientId,
-                    create = authData.create,
-                    retryConfiguration = authData.retryConfiguration ?? _retryConfiguration,
-                    userName = authData.userName,
-                    vars = authData.vars,
-                };
-                connectionResult = await AuthenticateAsync(loginData,cancellation:cancellation);
-            }
-            catch (ApiResponseException ex)
-            {
-                connectionResult.error = ex.Message;
-                connectionResult.success = false;
-            }
-
-            await UniTask.SwitchToMainThread();
-
-            return new ContractMetaResult()
-            {
-                data = connectionResult,
-                success = connectionResult.success,
-                error = connectionResult.error,
-            };
         }
         
         public async UniTask<ContractMetaResult> WriteLeaderboardAsync(
@@ -676,14 +637,35 @@
             
             try
             {
-                if (authenticateData is NakamaDeviceIdAuthenticateData idData)
+                switch (authenticateData)
                 {
-                    // get a new refresh token
-                    session = await client.AuthenticateDeviceAsync(idData.clientId,
-                        idData.userName,
-                        idData.create, idData.vars,
-                        idData.retryConfiguration,
-                        canceller:cancellation);
+                    case NakamaDeviceIdAuthenticateData idData:
+                        // get a new refresh token
+                        session = await client.AuthenticateDeviceAsync(idData.clientId,
+                            idData.userName,
+                            idData.create, idData.vars,
+                            idData.retryConfiguration,
+                            canceller:cancellation);
+                        break;
+                    case NakamaGoogleAuthenticateData googleData:
+
+                        if (googleData.linkAccount)
+                        {
+                            // get a new refresh token
+                            await client.LinkGoogleAsync(session,googleData.token,
+                                googleData.retryConfiguration,
+                                canceller:cancellation);
+                            break;
+                        }
+                        
+                        // get a new refresh token
+                        session = await client.AuthenticateGoogleAsync(googleData.token,
+                            googleData.userName,
+                            googleData.create, 
+                            googleData.vars,
+                            googleData.retryConfiguration,
+                            canceller:cancellation);
+                        break;
                 }
             }
             catch (ApiResponseException ex)
@@ -771,15 +753,27 @@
             };
             return false;
         }
+        
+        public async UniTask<ContractMetaResult<NakamaLogoutResult>> SignOutContract()
+        {
+            var signOutResult = await SignOutAsync();
+            return new ContractMetaResult<NakamaLogoutResult>()
+            {
+                data = signOutResult,
+                success = signOutResult.success,
+                error = string.Empty,
+            };
+        }
+        
 
         /// <summary>
         /// sign out from Namaka server and clear all authentication data
         /// </summary>
-        public async UniTask<bool> SignOutAsync()
+        public async UniTask<NakamaLogoutResult> SignOutAsync()
         {
             var isConnected = _state.Value != ConnectionState.Connected;
 
-            if (!isConnected) return false;
+            if (!isConnected) return NakamaLogoutResult.Success;
 
             var client = _connection.client.Value;
             var session = _connection.session.Value;
@@ -812,7 +806,7 @@
             _state.Value = ConnectionState.Disconnected;
             _connection.Reset();
 
-            return true;
+            return NakamaLogoutResult.Success;;
         }
  
         public async UniTask<IApiAccount> GetUserProfileAsync()

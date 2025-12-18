@@ -30,10 +30,6 @@
             IRemoteMetaContract contract,
             CancellationToken cancellation = default);
 
-        UniTask<ContractMetaResult> DeviceIdAuthAsync(
-            NakamaDeviceIdAuthContract contract,
-            CancellationToken cancellation = default);
-
         UniTask<ContractMetaResult> WriteLeaderboardAsync(
             NakamaConnection connection,
             NakamaLeaderboardWriteRecordContract contract,
@@ -97,7 +93,7 @@
         /// <summary>
         /// sign out from Namaka server and clear all authentication data
         /// </summary>
-        UniTask<bool> SignOutAsync();
+        UniTask<NakamaLogoutResult> SignOutAsync();
 
         UniTask<IApiAccount> GetUserProfileAsync();
         UniTask<NakamaServiceResult> ConnectToServerAsync(CancellationToken cancellation = default);
