@@ -50,8 +50,8 @@
             {
                 yield return new ValueDropdownItem<BackendTypeId>()
                 {
-                    Text = type.Name,
-                    Value = (BackendTypeId)type.Id,
+                    Text = type.name,
+                    Value = (BackendTypeId)type.id,
                 };
             }
 #endif

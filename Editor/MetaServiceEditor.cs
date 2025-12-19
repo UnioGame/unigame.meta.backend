@@ -54,9 +54,9 @@ namespace Game.Modules.Editor
             metaDataConfig.settings.backendTypes = providers
                 .Select(x => new BackendType()
                 {
-                    Name = x.GetType().Name,
-                    Id = x.GetType().Name.GetHashCode(),
-                    Provider = x
+                    name = x.GetType().Name,
+                    id = x.GetType().Name.GetHashCode(),
+                    provider = x
                 }).ToList();
 
             AssetDatabase.SaveAssets();

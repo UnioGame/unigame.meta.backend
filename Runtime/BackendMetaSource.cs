@@ -42,12 +42,15 @@
 
             foreach (var backendType in settings.backendTypes)
             {
-                var providerSource = Instantiate(backendType.Provider);
+                if(!backendType.isEnabled) continue;
+                
+                var provider = backendType.provider;
+                var providerSource = Instantiate(provider);
                 var metaProvider = await providerSource.CreateAsync(context);
                 metaProvider.AddTo(context.LifeTime);
                 
-                providers[backendType.Id] = metaProvider;
-                if (backendType.Id == backendMetaType)
+                providers[backendType.id] = metaProvider;
+                if (backendType.id == backendMetaType)
                     defaultProvider = metaProvider;
             }
 

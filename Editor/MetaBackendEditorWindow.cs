@@ -329,8 +329,8 @@ namespace MetaService.Editor
                 // Backend Type - Dropdown selector
                 if (settings.backendTypes != null && settings.backendTypes.Count > 0)
                 {
-                    var backendNames = settings.backendTypes.Select(bt => bt.Name).ToList();
-                    var currentBackendType = settings.backendTypes.FirstOrDefault(bt => bt.Id == settings.backendType);
+                    var backendNames = settings.backendTypes.Select(bt => bt.name).ToList();
+                    var currentBackendType = settings.backendTypes.FirstOrDefault(bt => bt.id == settings.backendType);
                     var currentIndex = currentBackendType != null 
                         ? settings.backendTypes.IndexOf(currentBackendType) 
                         : 0;
@@ -338,10 +338,10 @@ namespace MetaService.Editor
                     var backendTypeDropdown = new PopupField<string>("Active Backend Type", backendNames, currentIndex);
                     backendTypeDropdown.RegisterValueChangedCallback(evt =>
                     {
-                        var selectedBackend = settings.backendTypes.FirstOrDefault(bt => bt.Name == evt.newValue);
+                        var selectedBackend = settings.backendTypes.FirstOrDefault(bt => bt.name == evt.newValue);
                         if (selectedBackend != null)
                         {
-                            settings.backendType.value = selectedBackend.Id;
+                            settings.backendType.value = selectedBackend.id;
                             EditorUtility.SetDirty(_configurationAsset);
                         }
                     });
@@ -369,22 +369,22 @@ namespace MetaService.Editor
                         backendItem.style.borderBottomWidth = 1;
                         backendItem.style.borderBottomColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f, 0.5f));
                         
-                        var nameLabel = new Label($"Name: {backendType.Name}");
+                        var nameLabel = new Label($"Name: {backendType.name}");
                         nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
                         backendItem.Add(nameLabel);
                         
-                        var idLabel = new Label($"ID: {backendType.Id}");
+                        var idLabel = new Label($"ID: {backendType.id}");
                         idLabel.style.fontSize = 11;
                         backendItem.Add(idLabel);
                         
                         var providerField = new ObjectField("Provider")
                         {
                             objectType = typeof(BackendMetaServiceAsset),
-                            value = backendType.Provider
+                            value = backendType.provider
                         };
                         providerField.RegisterValueChangedCallback(evt => 
                         {
-                            backendType.Provider = evt.newValue as BackendMetaServiceAsset;
+                            backendType.provider = evt.newValue as BackendMetaServiceAsset;
                             EditorUtility.SetDirty(_configurationAsset);
                         });
                         backendItem.Add(providerField);

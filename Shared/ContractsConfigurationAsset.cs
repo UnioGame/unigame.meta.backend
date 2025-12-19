@@ -39,7 +39,7 @@
         public ContractsProvidersData settings = new();
         
         #region IdGenerator
-
+        
 #if UNITY_EDITOR
 
 #if ODIN_INSPECTOR
@@ -188,7 +188,7 @@
             AssetDatabase.Refresh();
             Debug.Log("Partial class with static properties generated successfully.");
         }
-
+        
 #endif
 
         #endregion
