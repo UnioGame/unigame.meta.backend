@@ -18,7 +18,7 @@
     using UnityEngine;
 
     [Serializable]
-    public class NakamaService : GameService, INakamaService
+    public class NakamaContractsService : GameService, INakamaService
     {
         private NakamaSettings _nakamaSettings;
         private NakamaConnection _connection;
@@ -30,7 +30,7 @@
         private ReactiveValue<ConnectionState> _state = new();
 
 
-        public NakamaService(NakamaSettings nakamaSettings, NakamaConnection connection)
+        public NakamaContractsService(NakamaSettings nakamaSettings, NakamaConnection connection)
         {
             _sessionLifeTime = new();
             _healthCheckUrls = new();
@@ -530,13 +530,21 @@
 
             var session = _connection.session.Value;
             var created = session?.Created ?? false;
+            var success = authResult.success;
+            var account = _connection.account.Value;
+            
+            if (success)
+            {
+                account = await GetUserProfileAsync();
+                success = account != null;
+            }
 
             var nakamaAuthResult = new NakamaAuthResult()
             {
-                account = _connection.account.Value,
+                account = account,
                 created = created,
                 error = authResult.error,
-                success = authResult.success,
+                success = success,
             };
             
             contractResult.success = authResult.success;
@@ -616,6 +624,7 @@
             {
                 success = connected,
                 error = string.Empty,
+                statusCode = sessionResult.statusCode,
             };
         }
 
@@ -639,16 +648,25 @@
             {
                 switch (authenticateData)
                 {
-                    case NakamaDeviceIdAuthenticateData idData:
+                    case NakamaDeviceIdAuthData idData:
                         // get a new refresh token
-                        session = await client.AuthenticateDeviceAsync(idData.clientId,
+                        session = await client.AuthenticateDeviceAsync(idData.deviceId,
+                            idData.userName,
+                            idData.create, idData.vars,
+                            idData.retryConfiguration,
+                            canceller:cancellation);
+                        break;
+                    case NakamaIdAuthData idData:
+                        // get a new refresh token
+                        session = await client.AuthenticateCustomAsync(
+                            idData.id,
                             idData.userName,
                             idData.create, idData.vars,
                             idData.retryConfiguration,
                             canceller:cancellation);
                         break;
                     case NakamaGoogleAuthenticateData googleData:
-
+                        
                         if (googleData.linkAccount)
                         {
                             // get a new refresh token
@@ -689,6 +707,7 @@
             {
                 error = string.Empty,
                 success = true,
+                statusCode = 200,
             };
 
             return result;
@@ -737,7 +756,7 @@
 
             contractResult.success = account != null;
             contractResult.data = account;
-            contractResult.error = string.Empty;
+            contractResult.error = account == null ? "failed to load account | unauthorized" : string.Empty;
             
             return contractResult;
         }
@@ -815,6 +834,10 @@
             {
                 var client = _connection.client.Value;
                 var session = _connection.session.Value;
+                
+                if(client == null || session == null)
+                    return null;
+                
                 var account = await client.GetAccountAsync(session);
 
                 _connection.account.Value = account;

@@ -1,6 +1,7 @@
 ﻿using UniGame.MetaBackend.Runtime;
+using UniGame.MetaBackend.Shared;
 
-public interface INakamaAuthContract
+public interface INakamaAuthContract : INakamaContract
 {
-    public INakamaAuthenticateData AuthData { get; }
+    INakamaAuthenticateData AuthData { get; }
 }

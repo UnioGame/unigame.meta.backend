@@ -18,7 +18,7 @@
         {
             var settings = Instantiate(this).nakamaSettings;
             var nakamaConnection = new NakamaConnection();
-            var service = new NakamaService(settings,nakamaConnection);
+            var service = new NakamaContractsService(settings,nakamaConnection);
 
             context.Publish(settings);
             context.Publish<NakamaConnection>(nakamaConnection);

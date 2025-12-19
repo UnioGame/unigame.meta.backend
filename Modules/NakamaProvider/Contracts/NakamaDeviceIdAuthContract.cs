@@ -6,7 +6,7 @@
     using Newtonsoft.Json;
 
     [Serializable]
-    public class NakamaAuthContract : NakamaContract<INakamaAuthenticateData,NakamaServiceResult>,INakamaAuthContract
+    public class NakamaAuthContract : NakamaContract<INakamaAuthenticateData,NakamaAuthResult>,INakamaAuthContract
     {
         public INakamaAuthenticateData authData;
 
@@ -25,14 +25,14 @@
     
     
     [Serializable]
-    public class NakamaDeviceIdAuthenticateData : INakamaAuthenticateData
+    public class NakamaDeviceIdAuthData : INakamaAuthenticateData
     {
-        public string clientId;
+        public string deviceId;
         public string userName;
         public bool create = true;
         public Dictionary<string, string> vars = null;
         public RetryConfiguration retryConfiguration = null;
         
-        public string AuthTypeName => nameof(NakamaDeviceIdAuthenticateData);
+        public string AuthTypeName => nameof(NakamaDeviceIdAuthData);
     }
 }
