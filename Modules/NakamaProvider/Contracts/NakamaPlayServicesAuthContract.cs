@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using UniGame.MetaBackend.Runtime;
 
 [Serializable]
-public class NakamaGoogleAuthContract : NakamaContract<string,NakamaAuthResult>,INakamaAuthContract
+public class NakamaPlayServicesAuthContract : NakamaContract<string,NakamaAuthResult>,INakamaAuthContract
 {
     public NakamaGoogleAuthenticateData data = new();
     
