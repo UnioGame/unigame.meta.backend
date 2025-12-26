@@ -652,7 +652,7 @@
             CancellationToken cancellation = default)
         {
             var session = _connection.session.Value;
-
+            var success = false;
 #if GAME_DEBUG
             Debug.Log($"NAKAMA Auth Data: {authenticateData?.GetType().Name} {JsonConvert.SerializeObject(authenticateData)}");        
 #endif
@@ -685,17 +685,20 @@
                         session = await FacebookAuthenticateAsync(facebookData, cancellation);
                         break;
                 }
+                
+                success = session != null;
             }
             catch (ApiResponseException ex)
             {
+                success = false;
                 Debug.LogFormat("Error authenticating device: {0}:{1}", ex.StatusCode, ex.Message);
             }
 
-            if (session == null)
+            if (success == false)
             {
                 return new NakamaServiceResult()
                 {
-                    error = $"Cannot authenticate user by {authenticateData.AuthTypeName}",
+                    error = $"Cannot authenticate user by {authenticateData?.AuthTypeName}",
                     success = false
                 };
             }
@@ -732,9 +735,10 @@
             else
             {
                 // get a new refresh token
-                session = await client.AuthenticateGoogleAsync(data.token,
+                session = await client.AuthenticateFacebookAsync(data.token,
                     data.userName,
                     data.create,
+                    data.import,
                     data.vars,
                     data.retryConfiguration,
                     canceller: cancellation);

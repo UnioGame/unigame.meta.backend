@@ -10,6 +10,7 @@ public class NakamaFacebookAuthenticateData : INakamaAuthenticateData
     public string token;
     public string userName;
     public bool create = true;
+    public bool import = true;
     public bool linkAccount = false;
     
     public Dictionary<string, string> vars = null;
