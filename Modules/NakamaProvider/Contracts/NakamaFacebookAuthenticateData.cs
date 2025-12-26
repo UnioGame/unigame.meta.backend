@@ -10,7 +10,6 @@ public class NakamaFacebookAuthenticateData : INakamaAuthenticateData
     public string token;
     public string userName;
     public bool create = true;
-    public bool import = true;
     public bool linkAccount = false;
     
     public Dictionary<string, string> vars = null;
@@ -22,7 +21,7 @@ public class NakamaFacebookAuthenticateData : INakamaAuthenticateData
 [Serializable]
 public class NakamaFacebookAuthContract : NakamaContract<string,NakamaAuthResult>,INakamaAuthContract
 {
-    public NakamaGoogleAuthenticateData data = new();
+    public NakamaFacebookAuthenticateData data = new();
     
     [JsonIgnore]
     public override string Path => nameof(NakamaIdAuthContract);

@@ -64,6 +64,8 @@
         }
 
         public ReadOnlyReactiveProperty<ConnectionState> State => _state;
+        
+        public bool IsAuthenticated => _connection.session.Value is { IsExpired: false };
 
         public async UniTask<MetaConnectionResult> ConnectAsync()
         {
@@ -651,6 +653,10 @@
         {
             var session = _connection.session.Value;
 
+#if GAME_DEBUG
+            Debug.Log($"NAKAMA Auth Data: {authenticateData?.GetType().Name} {JsonConvert.SerializeObject(authenticateData)}");        
+#endif
+            
             try
             {
                 switch (authenticateData)
@@ -673,49 +679,10 @@
                             canceller: cancellation);
                         break;
                     case NakamaGoogleAuthenticateData googleData:
-
-                        if (googleData.linkAccount)
-                        {
-                            // get a new refresh token
-                            await client.LinkGoogleAsync(session, googleData.token,
-                                googleData.retryConfiguration,
-                                canceller: cancellation);
-                        }
-                        else
-                        {
-                            // get a new refresh token
-                            session = await client.AuthenticateGoogleAsync(googleData.token,
-                                googleData.userName,
-                                googleData.create,
-                                googleData.vars,
-                                googleData.retryConfiguration,
-                                canceller: cancellation);
-                        }
+                        session = await PlayServicesAuthenticateAsync(googleData, cancellation);
                         break;
                     case NakamaFacebookAuthenticateData facebookData:
-
-                        if (facebookData.linkAccount)
-                        {
-                            // get a new refresh token
-                            await client.LinkFacebookAsync(session,
-                                facebookData.token,
-                                facebookData.import,
-                                facebookData.retryConfiguration,
-                                canceller: cancellation);
-                        }
-                        else
-                        {
-                            // get a new refresh token
-                            session = await client.AuthenticateFacebookAsync(
-                                facebookData.token,
-                                facebookData.userName,
-                                facebookData.create,
-                                facebookData.import,
-                                facebookData.vars,
-                                facebookData.retryConfiguration,
-                                canceller: cancellation);
-                        }
-
+                        session = await FacebookAuthenticateAsync(facebookData, cancellation);
                         break;
                 }
             }
@@ -744,6 +711,65 @@
             };
 
             return result;
+        }
+        
+        public async UniTask<ISession> FacebookAuthenticateAsync(
+            NakamaFacebookAuthenticateData data,
+            CancellationToken cancellation = default)
+        {
+            var client = _connection.client.Value;
+            var session = _connection.session.Value;
+            
+            //is we should link account, the session must be valid
+            if (data.linkAccount && IsAuthenticated)
+            {
+                // get a new refresh token
+                await client.LinkGoogleAsync(session, 
+                    data.token,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+            else
+            {
+                // get a new refresh token
+                session = await client.AuthenticateGoogleAsync(data.token,
+                    data.userName,
+                    data.create,
+                    data.vars,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+
+            return session;
+        }
+        
+        public async UniTask<ISession> PlayServicesAuthenticateAsync(NakamaGoogleAuthenticateData data,
+            CancellationToken cancellation = default)
+        {
+            var client = _connection.client.Value;
+            var session = _connection.session.Value;
+            
+            //is we should link account, the session must be valid
+            if (data.linkAccount && IsAuthenticated)
+            {
+                // get a new refresh token
+                await client.LinkGoogleAsync(session, 
+                    data.token,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+            else
+            {
+                // get a new refresh token
+                session = await client.AuthenticateGoogleAsync(data.token,
+                    data.userName,
+                    data.create,
+                    data.vars,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+
+            return session;
         }
 
 
