@@ -137,8 +137,7 @@
                     INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation))
                         .ToContractResult(),
                     NakamaLogoutContract => (await SignOutContract()).ToContractResult(),
-                    NakamaRestoreSessionContract authContract => (await RestoreSessionAsync(cancellation))
-                        .ToContractResult(),
+                    NakamaRestoreSessionContract restoreSessionContract => (await RestoreSessionAsync(cancellation)).ToContractResult(),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
                     NakamaLeaderboardGetRecordsContract getLeaderboardRecordsContract => await GetLeaderboardAsync(
