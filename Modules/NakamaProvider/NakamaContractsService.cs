@@ -51,8 +51,10 @@
 
                 nakamaServerRecord.endpoint = serverEndpoint;
                 nakamaServerRecord.url = uriBuilder.ToString();
-                uriBuilder.Path = _nakamaSettings.healthCheckPath;
-                nakamaServerRecord.healthCheckUrl = uriBuilder.ToString();
+     
+                uriBuilder.Path = serverEndpoint.healthCheckPath;
+                uriBuilder.Port = serverEndpoint.healthCheckPort;
+                nakamaServerRecord.healthCheckUrl =  uriBuilder.ToString();
 
                 _nakamaServers.Add(nakamaServerRecord);
                 _healthCheckUrls.Add(nakamaServerRecord.healthCheckUrl);
