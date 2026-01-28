@@ -34,7 +34,7 @@
         
         [Header("Health check settings")]
         [Tooltip("Port used for health check requests, -1 = empty (use main port)")]
-        public int healthCheckPort = 0;
+        public int healthCheckPort = -1;
         public string healthCheckPath = "/healthcheck";
     }
 }
