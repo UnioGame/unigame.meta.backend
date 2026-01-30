@@ -142,6 +142,7 @@
                     NakamaRestoreSessionContract restoreSessionContract => (await RestoreSessionAsync(cancellation)).ToContractResult(),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
+                    NakamaUpdateAccountContract updateAccountContract => await UpdateAccountAsync(updateAccountContract.data,connection, cancellation),
                     NakamaLeaderboardGetRecordsContract getLeaderboardRecordsContract => await GetLeaderboardAsync(
                         connection, getLeaderboardRecordsContract, cancellation),
                     NakamaLeaderboardGetRecordsAroundContract leaderboardRecordsAround => await
@@ -666,7 +667,8 @@
                         // get a new refresh token
                         session = await client.AuthenticateDeviceAsync(idData.deviceId,
                             idData.userName,
-                            idData.create, idData.vars,
+                            idData.create, 
+                            idData.vars,
                             idData.retryConfiguration,
                             canceller: cancellation);
                         break;
@@ -804,6 +806,50 @@
 
             return contractResult;
         }
+        
+        public async UniTask<ContractMetaResult> UpdateAccountAsync(NakamaAccountData data,
+            NakamaConnection connection,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+            var account = connection.account.Value;
+            var user = account?.User;
+            
+            var contractResult = new ContractMetaResult()
+            {
+                success = false,
+                data = default,
+                error = string.Empty,
+            };
+
+            if (account == null)
+            {
+                return contractResult;
+            }
+            
+            var userId = session.UserId;
+            var userName = session.Username;
+            var displayName = string.IsNullOrEmpty(data.displayName) ? user.DisplayName : data.displayName;
+            var avatarUrl = string.IsNullOrEmpty(data.avatarUrl) ? user.AvatarUrl : data.avatarUrl;
+
+            try
+            {
+                await client.UpdateAccountAsync(session, userName, displayName, avatarUrl,canceller: cancellation)
+                    .AsUniTask();
+            }
+            catch (Exception e)
+            {
+                GameLog.LogException(e);
+                contractResult.error = e.Message;
+                return contractResult;
+            }
+  
+            contractResult.success = true;
+            contractResult.data = account;
+
+            return contractResult;
+        }
 
         public async UniTask<ContractMetaResult> LoadAccountAsync(
             NakamaConnection connection,
@@ -817,7 +863,7 @@
             };
 
             var account = await GetUserProfileAsync();
-
+            
             contractResult.success = account != null;
             contractResult.data = account;
             contractResult.error = account == null ? "failed to load account | unauthorized" : string.Empty;

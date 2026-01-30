@@ -54,6 +54,7 @@
                 var metaProviderResponse = await providerSource.CreateAsync(context)
                     .Timeout(TimeSpan.FromSeconds(contractInitTimeout))
                     .SuppressCancellationThrow();
+                
                 var metaProvider = metaProviderResponse.Result;
 
                 if (metaProviderResponse.IsCanceled)
