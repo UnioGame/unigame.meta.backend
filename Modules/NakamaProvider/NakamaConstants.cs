@@ -2,7 +2,6 @@
 {
     public class NakamaConstants
     {
-        public const string NakamaAuthenticateKey = "nakama_authenticate_key";
-        public const string NakamaRefreshKey = "nakama_refresh_key";
+        public const string NakamaSessionDataKey = "nakama_session_data_key";
     }
 }

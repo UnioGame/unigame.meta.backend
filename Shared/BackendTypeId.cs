@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Core.Runtime;
     using Game.Modules.ModelMapping;
 
     using UnityEngine;
@@ -29,12 +28,12 @@
 
         #region static editor data
 
-        private static RemoteMetaDataConfigAsset _dataAsset;
+        private static ContractsConfigurationAsset _dataAsset;
 
         public static IEnumerable<ValueDropdownItem<BackendTypeId>> GetBackendTypes()
         {
 #if UNITY_EDITOR
-            _dataAsset ??= AssetEditorTools.GetAsset<RemoteMetaDataConfigAsset>();
+            _dataAsset ??= AssetEditorTools.GetAsset<ContractsConfigurationAsset>();
             var types = _dataAsset.settings.backendTypes;
             
             if (types == null)
@@ -51,8 +50,8 @@
             {
                 yield return new ValueDropdownItem<BackendTypeId>()
                 {
-                    Text = type.Name,
-                    Value = (BackendTypeId)type.Id,
+                    Text = type.name,
+                    Value = (BackendTypeId)type.id,
                 };
             }
 #endif

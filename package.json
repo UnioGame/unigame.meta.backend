@@ -4,13 +4,15 @@
   "displayName": "UniGame Backend Meta Service",
   "description": "Allow to create and manage game backend api transport and responses",
   "unity": "2023.1",
-  "version": "2025.0.18",
+  "version": "2025.0.22",
   "keywords": [
     "meta",
     "backend",
     "service",
     "server",
-    "nakama"
+    "nakama",
+    "rest",
+    "openapi"
   ],
   "dependencies": {
     "com.unity.addressables": "2.6.0",

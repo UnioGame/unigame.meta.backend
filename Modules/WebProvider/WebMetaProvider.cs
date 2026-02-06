@@ -20,7 +20,7 @@
     using UnityEngine;
     
     [Serializable]
-    public class WebMetaProvider : IWebMetaProvider
+    public class WebMetaProvider : RemoteMetaProvider, IWebMetaProvider
     {
         public const string NotSupportedError = "Not supported";
         public const int DefaultTimeout = 10;
@@ -63,10 +63,6 @@
             
             InitializeAsync().Forget();
         }
-        
-        public ILifeTime LifeTime => _lifeTime;
-
-        public ReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
 
         public void SetToken(string token)
         {
@@ -74,22 +70,24 @@
             _webRequestBuilder.SetToken(token);
         }
         
-        public bool IsContractSupported(IRemoteMetaContract command)
+        public override bool IsContractSupported(IRemoteMetaContract command)
         {
             var contractType = command.GetType();
             var containsKey = _contractsMap.ContainsKey(contractType);
             return containsKey;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract)
+        public async UniTask<ContractMetaResult> ExecuteAsync(IRemoteMetaContract contract,
+            CancellationToken cancellationToken = default)
         {
             var contractType = contract.GetType();
-            var result = new RemoteMetaResult()
+            var result = new ContractMetaResult()
             {
                 error = NotSupportedError,
                 data = null,
                 success = true,
                 id = contractType.Name,
+                statusCode = 200,
             };
             
             if (!_contractsMap.TryGetValue(contractType, out var endPoint))
@@ -97,7 +95,9 @@
 
             var requestResult  = _debugMode || endPoint.debugMode
                 ? ExecuteDebugAsync(endPoint) 
-                : await ExecuteWebRequest(contract, endPoint);
+                : await ExecuteWebRequest(contract, endPoint,cancellationToken);
+
+            result.statusCode = (int)requestResult.responseCode;
             
 #if UNITY_EDITOR
             if (_settings.enableLogs)
@@ -148,10 +148,14 @@
         }
 
         public async UniTask<WebRequestResult> ExecuteWebRequest(IRemoteMetaContract contract,
-            WebApiEndPoint endPoint)
+            WebApiEndPoint endPoint,
+            CancellationToken cancellationToken = default)
         {
             if (!_isInitialized)
-                await UniTask.WaitWhile(this, x => x._isInitialized == false);
+            {
+                await UniTask.WaitWhile(this, x => x._isInitialized == false,
+                    cancellationToken:cancellationToken);
+            }
             
             var payload = contract.Payload;
             var url = string.IsNullOrEmpty(endPoint.url) 
@@ -195,7 +199,7 @@
             
             do
             {
-                requestResult = await SendEndPointRequestAsync(endPoint, url, payload);
+                requestResult = await SendEndPointRequestAsync(endPoint, url, payload,cancellationToken);
                 if (requestResult.success) return requestResult;
                 
                 var elapsedTime = Time.realtimeSinceStartup - startTime;
@@ -224,6 +228,7 @@
                 success = false,
                 url = endPoint.url,
                 error = string.Empty,
+                responseCode = 0,
             };
 
             var timeout = _settings.requestTimeout;
@@ -267,6 +272,7 @@
                 error = debugResult.error,
                 data = string.Empty,
                 success = debugResult.success,
+                responseCode = debugResult.success ? 200 : 400,
             };
 
             if (!debugResult.success) return result;
@@ -275,14 +281,15 @@
             return result;
         }
         
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data)
+        public override async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData data,
+            CancellationToken cancellationToken = default)
         {
-            var result = await ExecuteAsync(data.contract);
+            var result = await ExecuteAsync(data.contract,cancellationToken);
             result.id = data.contractName;
             return result;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public override bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;
@@ -295,7 +302,7 @@
             return JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
         }
         
-        public async UniTask<MetaConnectionResult> ConnectAsync()
+        protected override async UniTask<MetaConnectionResult> ConnectInternalAsync()
         {
             return new MetaConnectionResult()
             {
@@ -305,16 +312,16 @@
             };
         }
 
-        public UniTask DisconnectAsync()
+        protected override async UniTask<MetaConnectionResult> DisconnectInternalAsync()
         {
-            return UniTask.CompletedTask;
+            return new MetaConnectionResult()
+            {
+                Error = string.Empty,
+                Success = true,
+                State = ConnectionState.Disconnected,
+            };
         }
-        
-        public void Dispose()
-        {
-            _lifeTime.Terminate();
-        }
-        
+
         private async UniTask InitializeAsync()
         {
             var multiHostSettings = _settings.multiHostSettings;

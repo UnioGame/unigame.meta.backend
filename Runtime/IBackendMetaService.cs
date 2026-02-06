@@ -14,10 +14,9 @@
         public bool AddContractHandler(IMetaContractHandler handler);
         public bool RemoveContractHandler<T>() where T : IMetaContractHandler;
         IRemoteMetaDataConfiguration MetaDataConfiguration { get; }
-        Observable<MetaDataResult> DataStream { get; }
+        Observable<ContractDataResult> DataStream { get; }
         void SwitchProvider(int providerId);
-        UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract payload, CancellationToken cancellationToken = default);
-        bool TryDequeueMetaRequest(IRemoteMetaContract contract, out MetaDataResult result);
+        UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract payload, CancellationToken cancellationToken = default);
         IRemoteMetaProvider GetProvider(int id);
         RemoteMetaData FindMetaData(IRemoteMetaContract contract);
     }

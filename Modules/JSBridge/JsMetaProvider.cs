@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using MetaService.Runtime;
     using Newtonsoft.Json;
@@ -60,6 +61,7 @@
             
             _metaAgent = Object.Instantiate(_bridgePrefab);
             _metaAgent.gameObject.name = JsBridgeName;
+            
             Object.DontDestroyOnLoad(_metaAgent.gameObject);
             
             _metaAgent.MessageStream
@@ -100,11 +102,12 @@
             return false;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
+        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,
+            CancellationToken cancellationToken = default)
         {
             if (!IsContractSupported(contractData.contractName, out var contractConfig))
             {
-                return new RemoteMetaResult()
+                return new ContractMetaResult()
                 {
                     success = false,
                     error = "contract not supported",
@@ -117,7 +120,7 @@
             var message = JsonConvert.SerializeObject(contractData.contract.Payload);
             var messageResult = _metaAgent.SendMessage(contractId, message);
             
-            var result = new RemoteMetaResult
+            var result = new ContractMetaResult
             {
                 data = messageResult,
                 error = null,
@@ -128,7 +131,7 @@
             return result;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public bool TryDequeue(out ContractMetaResult result)
         {
             if (!(_incomingRequestsQueue.TryDequeue(out var request) && 
                   IsContractSupported(request, out var contract, out var message)))
@@ -141,6 +144,7 @@
             result.data = message;
             result.success = true;
             result.error = null;
+            result.statusCode = 200;
 
             return true;
         }

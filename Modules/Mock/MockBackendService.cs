@@ -1,7 +1,9 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using MetaService.Runtime;
     using R3;
@@ -13,28 +15,30 @@
      
 
     [Serializable]
-    public class MockBackendService : IRemoteMetaProvider
+    public class MockBackendService : RemoteMetaProvider
     {
         private MockBackendDataConfig _config;
         private ReactiveValue<ConnectionState> _connectionState;
         private LifeTime _lifeTime;
+        private HashSet<string> _mockedMethods = new();
 
         public MockBackendService(MockBackendDataConfig config)
         {
             _config = config;
             _connectionState = new ReactiveValue<ConnectionState>(ConnectionState.Disconnected);
             _lifeTime = new LifeTime();
+
+            foreach (var mockBackendData in _config.mockBackendData)
+            {
+                _mockedMethods.Add(mockBackendData.Method);
+            }
         }
 
-        public ILifeTime LifeTime => _lifeTime;
-        
-        public ReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
-        
-        public UniTask<MetaConnectionResult> ConnectAsync()
+        protected override UniTask<MetaConnectionResult> ConnectInternalAsync()
         {
             _connectionState.Value = _config.allowConnect 
-                    ? ConnectionState.Connected
-                    : ConnectionState.Disconnected;
+                ? ConnectionState.Connected
+                : ConnectionState.Disconnected;
             
             var result = new MetaConnectionResult
             {
@@ -46,7 +50,7 @@
             return UniTask.FromResult(result);
         }
 
-        public UniTask DisconnectAsync()
+        protected override UniTask<MetaConnectionResult> DisconnectInternalAsync()
         {
             _connectionState.Value = ConnectionState.Connected;
             var result = new MetaConnectionResult
@@ -58,7 +62,8 @@
             return UniTask.FromResult(result);
         }
 
-        public UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contract)
+
+        public override UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contract, CancellationToken cancellationToken = default)
         {
             var method = contract.contractName;
             var result = _config
@@ -70,7 +75,7 @@
             var resultData = result == null ? string.Empty : result.Result;
             var error = result == null ? string.Empty : result.Error;
             
-            var resultValue = new RemoteMetaResult()
+            var resultValue = new ContractMetaResult()
             {
                 id = method,
                 error = error,
@@ -81,7 +86,7 @@
             return UniTask.FromResult(resultValue);
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public override bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;
@@ -98,9 +103,9 @@
             _connectionState.Value = ConnectionState.Closed;
         }
 
-        public bool IsContractSupported(IRemoteMetaContract command)
+        public override bool IsContractSupported(IRemoteMetaContract command)
         {
-            return true;
+            return _mockedMethods.Contains(command.Path);
         }
     }
 }

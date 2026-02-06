@@ -1,0 +1,175 @@
+/* Header Styles */
+.header-title {
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin-bottom: 5px;
+    color: rgb(200, 220, 255);
+}
+
+.header-description {
+    font-size: 11px;
+    margin-bottom: 10px;
+    color: rgb(180, 180, 180);
+    white-space: normal;
+}
+
+/* Section Styles */
+.section {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(80, 80, 80, 0.5);
+}
+
+.section-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+    color: rgb(230, 230, 230);
+}
+
+/* Field Styles */
+.field {
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+.field Label {
+    min-width: 180px;
+    margin-right: 5px;
+}
+
+.multiline-field {
+    min-height: 60px;
+}
+
+.multiline-field .unity-text-field__input {
+    min-height: 60px;
+}
+
+/* Button Styles */
+.button {
+    height: 25px;
+    margin: 2px;
+    border-radius: 3px;
+    background-color: rgb(60, 60, 60);
+    border-color: rgb(80, 80, 80);
+    border-width: 1px;
+}
+
+.button:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+.button:active {
+    background-color: rgb(50, 50, 50);
+}
+
+.browse-button {
+    width: 70px;
+    height: 20px;
+    margin-left: 5px;
+    align-self: flex-end;
+    margin-bottom: 2px;
+    border-radius: 3px;
+    background-color: rgb(60, 60, 60);
+    border-color: rgb(80, 80, 80);
+    border-width: 1px;
+}
+
+.browse-button:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+/* Action Button Styles */
+.action-button {
+    height: 30px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    background-color: rgb(60, 60, 60);
+    border-color: rgb(100, 100, 100);
+    border-width: 1px;
+}
+
+.action-button:hover {
+    background-color: rgb(70, 70, 70);
+}
+
+.action-button:active {
+    background-color: rgb(50, 50, 50);
+}
+
+.generate-button {
+    background-color: rgb(50, 150, 50);
+    border-color: rgb(70, 170, 70);
+}
+
+.generate-button:hover {
+    background-color: rgb(60, 170, 60);
+}
+
+.generate-button:active {
+    background-color: rgb(40, 130, 40);
+}
+
+/* Status Section Styles */
+.status-section {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(50, 50, 50, 0.5);
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgba(80, 80, 80, 0.5);
+}
+
+.status-header {
+    -unity-font-style: bold;
+    margin-bottom: 5px;
+    color: rgb(200, 200, 200);
+}
+
+.status-label {
+    white-space: normal;
+    color: rgb(180, 180, 180);
+}
+
+.status-error {
+    color: rgb(255, 100, 100);
+}
+
+.status-success {
+    color: rgb(100, 255, 100);
+}
+
+/* ObjectField Styles */
+ObjectField {
+    flex-grow: 1;
+}
+
+/* TextField Styles */
+TextField {
+    flex-grow: 1;
+}
+
+TextField .unity-text-field__input {
+    background-color: rgb(40, 40, 40);
+    border-color: rgb(60, 60, 60);
+    border-width: 1px;
+    border-radius: 3px;
+    padding: 3px;
+}
+
+TextField .unity-text-field__input:focus {
+    border-color: rgb(100, 150, 200);
+}
+
+/* Toggle Styles */
+Toggle {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+Toggle Label {
+    min-width: auto;
+}

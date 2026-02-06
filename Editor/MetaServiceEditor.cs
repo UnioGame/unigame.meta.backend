@@ -13,7 +13,7 @@ namespace Game.Modules.Editor
     public class MetaServiceEditor
     {
         [MenuItem("Assets/UniGame/Meta Service/Create Configuration")]
-        public static void CreateViewSystemPrefab()
+        public static void CreateMetaServiceConfiguration()
         {
             var activeObject = Selection.activeObject;
             if (!activeObject) return;
@@ -31,7 +31,7 @@ namespace Game.Modules.Editor
             var source = ScriptableObject.CreateInstance<BackendMetaSource>();
             source = source.SaveAsset(source.GetType().Name,path);
             
-            var metaDataConfig = ScriptableObject.CreateInstance<RemoteMetaDataConfigAsset>();
+            var metaDataConfig = ScriptableObject.CreateInstance<ContractsConfigurationAsset>();
             metaDataConfig = metaDataConfig.SaveAsset(metaDataConfig.GetType().Name,path);
 
             source.configuration = metaDataConfig;
@@ -54,8 +54,9 @@ namespace Game.Modules.Editor
             metaDataConfig.settings.backendTypes = providers
                 .Select(x => new BackendType()
                 {
-                    Name = x.GetType().Name,
-                    Provider = x
+                    name = x.GetType().Name,
+                    id = x.GetType().Name.GetHashCode(),
+                    provider = x
                 }).ToList();
 
             AssetDatabase.SaveAssets();

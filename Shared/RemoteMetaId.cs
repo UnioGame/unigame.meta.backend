@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using UniGame.Core.Runtime;
     using UnityEngine;
 
 #if ODIN_INSPECTOR
@@ -28,7 +27,7 @@
 
         #region static editor data
 
-        private static RemoteMetaDataConfigAsset _dataAsset;
+        private static ContractsConfigurationAsset _dataAsset;
 
 #if UNITY_EDITOR
 
@@ -40,7 +39,7 @@
         public static IEnumerable<ValueDropdownItem<RemoteMetaId>> GetBackendTypes()
         {
 #if UNITY_EDITOR
-            _dataAsset ??= AssetEditorTools.GetAsset<RemoteMetaDataConfigAsset>();
+            _dataAsset ??= AssetEditorTools.GetAsset<ContractsConfigurationAsset>();
             
             var items = _dataAsset;
             if (items == null)

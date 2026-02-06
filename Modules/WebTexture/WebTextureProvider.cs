@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using UniModules.Runtime.Network;
     using global::UniGame.Runtime.DataFlow;
@@ -67,9 +68,10 @@
             return command is WebSpriteContract or WebTexture2DContract;
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData contractData)
+        public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,
+            CancellationToken cancellationToken = default)
         {
-            var result = new RemoteMetaResult()
+            var result = new ContractMetaResult()
             {
                 data = null,
                 error = NotSupportedError,
@@ -114,7 +116,8 @@
             
             if (outputType == typeof(Sprite))
             {
-                var spriteResult = await LoadWebSpriteAsync(url,name,resourceLifeTime);
+                var spriteResult = await LoadWebSpriteAsync(url,name,resourceLifeTime)
+                    .AttachExternalCancellation(cancellationToken);
                 
                 result.data = spriteResult.sprite;
                 result.success = spriteResult.success;
@@ -123,7 +126,8 @@
 
             if (outputType == typeof(Texture2D))
             {
-                var textureResult = await LoadWebTextureAsync(url,name,resourceLifeTime);
+                var textureResult = await LoadWebTextureAsync(url,name,resourceLifeTime)
+                    .AttachExternalCancellation(cancellationToken);
                 var texture = textureResult.texture;
                 result.data = texture;
                 result.success = textureResult.success;
@@ -133,7 +137,7 @@
             return result;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;

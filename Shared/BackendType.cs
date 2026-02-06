@@ -7,15 +7,15 @@
 #endif
     
     [Serializable]
-    public struct BackendType
+    public class BackendType
     {
-        public string Name;
+        public string name;
+        public int id;
+        public bool isEnabled = true;
         
-        public int Id => string.IsNullOrEmpty(Name) ? 0 : Name.GetHashCode();
-
 #if ODIN_INSPECTOR
         [InlineEditor]
 #endif
-        public BackendMetaServiceAsset Provider;
+        public BackendMetaServiceAsset provider;
     }
 }

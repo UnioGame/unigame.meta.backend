@@ -1,0 +1,212 @@
+using System.Collections.Generic;
+
+namespace Game.Modules.unity.meta.service.Modules.WebProvider
+{
+    /// <summary>
+    /// Represents the entire Swagger API definition
+    /// </summary>
+    public class SwaggerApiDefinition
+    {
+        public string Title { get; set; }
+        public string Version { get; set; }
+        public string BasePath { get; set; }
+        
+        /// <summary>
+        /// Servers array from OpenAPI 3.0 (contains base URLs)
+        /// </summary>
+        public List<SwaggerServer> Servers { get; set; } = new List<SwaggerServer>();
+        
+        public Dictionary<string, SwaggerPathItem> Paths { get; set; } = new Dictionary<string, SwaggerPathItem>();
+        public Dictionary<string, SwaggerDefinition> Definitions { get; set; } = new Dictionary<string, SwaggerDefinition>();
+    }
+    
+    /// <summary>
+    /// Represents a server entry from OpenAPI 3.0
+    /// </summary>
+    public class SwaggerServer
+    {
+        public string Url { get; set; }
+        public string Description { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a path in the Swagger API
+    /// </summary>
+    public class SwaggerPathItem
+    {
+        public Dictionary<string, SwaggerOperation> Methods { get; set; } = new Dictionary<string, SwaggerOperation>();
+    }
+
+    /// <summary>
+    /// Represents an operation (HTTP method) in a path
+    /// </summary>
+    public class SwaggerOperation
+    {
+        public string OperationId { get; set; }
+        public string Summary { get; set; }
+        public string Description { get; set; }
+        public List<string> Tags { get; set; } = new List<string>();
+        public List<SwaggerParameter> Parameters { get; set; } = new List<SwaggerParameter>();
+        public Dictionary<string, SwaggerResponse> Responses { get; set; } = new Dictionary<string, SwaggerResponse>();
+        
+        /// <summary>
+        /// Тело запроса (requestBody) для OpenAPI 3.0
+        /// </summary>
+        public SwaggerRequestBody RequestBody { get; set; }
+    }
+    
+    /// <summary>
+    /// Represents a request body in OpenAPI 3.0
+    /// </summary>
+    public class SwaggerRequestBody
+    {
+        public string Description { get; set; }
+        public bool Required { get; set; }
+        public SwaggerSchema Schema { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a parameter in an operation
+    /// </summary>
+    public class SwaggerParameter
+    {
+        public string Name { get; set; }
+        public string In { get; set; } // path, query, header, body, formData
+        public string Description { get; set; }
+        public bool Required { get; set; }
+        public string Type { get; set; }
+        public string Format { get; set; }
+        public SwaggerSchema Schema { get; set; }
+        
+        /// <summary>
+        /// Исходное имя параметра в API (для JsonProperty)
+        /// </summary>
+        public string OriginalName { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a response in an operation
+    /// </summary>
+    public class SwaggerResponse
+    {
+        public string Description { get; set; }
+        public SwaggerSchema Schema { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a schema (data model)
+    /// </summary>
+    public class SwaggerSchema
+    {
+        public string Type { get; set; }
+        public string Format { get; set; }
+        public string Reference { get; set; }
+        public SwaggerSchema Items { get; set; }
+        public Dictionary<string, SwaggerSchema> Properties { get; set; }
+        
+        /// <summary>
+        /// Original name for JsonProperty attribute
+        /// </summary>
+        public string OriginalName { get; set; }
+        
+        /// <summary>
+        /// allOf composition (inheritance/merge schemas)
+        /// </summary>
+        public List<SwaggerSchema> AllOf { get; set; }
+        
+        /// <summary>
+        /// anyOf composition (union types)
+        /// </summary>
+        public List<SwaggerSchema> AnyOf { get; set; }
+        
+        /// <summary>
+        /// oneOf composition (discriminated union)
+        /// </summary>
+        public List<SwaggerSchema> OneOf { get; set; }
+        
+        /// <summary>
+        /// Discriminator for polymorphic types
+        /// </summary>
+        public SwaggerDiscriminator Discriminator { get; set; }
+    }
+    
+    /// <summary>
+    /// Represents discriminator for polymorphic schema composition
+    /// </summary>
+    public class SwaggerDiscriminator
+    {
+        /// <summary>
+        /// Property name that identifies the type
+        /// </summary>
+        public string PropertyName { get; set; }
+        
+        /// <summary>
+        /// Mapping of property values to schema names
+        /// </summary>
+        public Dictionary<string, string> Mapping { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a definition (model) in the Swagger API
+    /// </summary>
+    public class SwaggerDefinition
+    {
+        public string Type { get; set; }
+        public string Title { get; set; }
+        public string Name { get; set; }
+        public Dictionary<string, SwaggerProperty> Properties { get; set; } = new Dictionary<string, SwaggerProperty>();
+        public List<string> Required { get; set; } = new List<string>();
+    }
+
+    /// <summary>
+    /// Represents a property in a definition
+    /// </summary>
+    public class SwaggerProperty
+    {
+        public string Type { get; set; }
+        public string Format { get; set; }
+        public string Description { get; set; }
+        public string Reference { get; set; }
+        public SwaggerProperty Items { get; set; }
+        
+        /// <summary>
+        /// Nested properties for inline objects
+        /// </summary>
+        public Dictionary<string, SwaggerProperty> Properties { get; set; }
+        
+        /// <summary>
+        /// Original property name for JsonProperty attribute
+        /// </summary>
+        public string OriginalName { get; set; }
+        
+        /// <summary>
+        /// allOf composition
+        /// </summary>
+        public List<SwaggerProperty> AllOf { get; set; }
+        
+        /// <summary>
+        /// anyOf composition
+        /// </summary>
+        public List<SwaggerProperty> AnyOf { get; set; }
+        
+        /// <summary>
+        /// oneOf composition
+        /// </summary>
+        public List<SwaggerProperty> OneOf { get; set; }
+        
+        /// <summary>
+        /// Enum values if this is an enum property
+        /// </summary>
+        public List<object> Enum { get; set; }
+        
+        /// <summary>
+        /// Indicates if the property is nullable
+        /// </summary>
+        public bool Nullable { get; set; }
+        
+        /// <summary>
+        /// Indicates if the property is deprecated
+        /// </summary>
+        public bool Deprecated { get; set; }
+    }
+} 

@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using Cysharp.Threading.Tasks;
     using WebService;
     using MetaService.Runtime;
@@ -17,16 +18,13 @@
     using UnityEngine;
 
     [Serializable]
-    public class WebMetaMockProvider : IRemoteMetaProvider
+    public class WebMetaMockProvider : RemoteMetaProvider
     {
         public const string NotSupportedError = "Not supported";
-
         
         private WebMetaProviderSettings _settings;
         private Dictionary<Type, WebApiEndPoint> _contractsMap;
-        
         private LifeTime _lifeTime = new();
-        private ReactiveValue<ConnectionState> _connectionState = new(ConnectionState.Connected);
 
         public WebMetaMockProvider(WebMetaProviderSettings settings)
         {
@@ -34,20 +32,18 @@
             _contractsMap = settings.contracts
                 .ToDictionary(x => (Type)x.contract);
         }
-        
-        public ILifeTime LifeTime => _lifeTime;
 
-        public ReadOnlyReactiveProperty<ConnectionState> State => _connectionState;
-
-        public bool IsContractSupported(IRemoteMetaContract command)
+        public override bool IsContractSupported(IRemoteMetaContract command)
         {
-            return true;
+            return _contractsMap.ContainsKey(command.GetType());
         }
 
-        public async UniTask<RemoteMetaResult> ExecuteAsync(IRemoteMetaContract contract)
+        public async UniTask<ContractMetaResult> ExecuteAsync(
+            IRemoteMetaContract contract, 
+            CancellationToken cancellationToken = default)
         {
             var contractType = contract.GetType();
-            var result = new RemoteMetaResult()
+            var result = new ContractMetaResult()
             {
                 error = NotSupportedError,
                 data = null,
@@ -59,7 +55,7 @@
                 return result;
 
             var debugResult = endPoint.debugResult;
-            result = new RemoteMetaResult()
+            result = new ContractMetaResult()
             {
                 error = debugResult.error,
                 data = null,
@@ -83,20 +79,21 @@
         }
 
         
-        public async UniTask<RemoteMetaResult> ExecuteAsync(MetaContractData data)
+        public override async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData data,
+            CancellationToken cancellationToken = default)
         {
-            var result = await ExecuteAsync(data.contract);
+            var result = await ExecuteAsync(data.contract,cancellationToken);
             result.id = data.contractName;
             return result;
         }
 
-        public bool TryDequeue(out RemoteMetaResult result)
+        public override bool TryDequeue(out ContractMetaResult result)
         {
             result = default;
             return false;
         }
 
-        public async UniTask<MetaConnectionResult> ConnectAsync()
+        protected override async UniTask<MetaConnectionResult> ConnectInternalAsync()
         {
             return new MetaConnectionResult()
             {
@@ -106,14 +103,14 @@
             };
         }
 
-        public UniTask DisconnectAsync()
+        protected override async UniTask<MetaConnectionResult> DisconnectInternalAsync()
         {
-            return UniTask.CompletedTask;
-        }
-        
-        public void Dispose()
-        {
-            _lifeTime.Terminate();
+            return new MetaConnectionResult()
+            {
+                State = ConnectionState.Disconnected,
+                Success = true,
+                Error = string.Empty,
+            };
         }
 
     }

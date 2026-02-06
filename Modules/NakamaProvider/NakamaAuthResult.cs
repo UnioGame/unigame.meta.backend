@@ -1,10 +1,14 @@
 namespace UniGame.MetaBackend.Runtime
 {
-    public struct NakamaAuthResult
+    using System;
+    using Nakama;
+
+    [Serializable]
+    public class NakamaAuthResult
     {
-        public string token;
+        public bool created;
+        public IApiAccount account;
         public bool success;
         public string error;
-        public NakamaConnection connection;
     }
 }

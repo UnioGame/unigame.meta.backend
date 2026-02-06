@@ -8,16 +8,20 @@
     [CreateAssetMenu(menuName = "UniGame/MetaBackend/Nakama Provider", fileName = "Nakama Provider")]
     public class NakamaServiceAsset : BackendMetaServiceAsset
     {
+#if ODIN_INSPECTOR
+        [Sirenix.OdinInspector.InlineProperty]
+        [Sirenix.OdinInspector.HideLabel]
+#endif
         public NakamaSettings nakamaSettings;
         
         public override async UniTask<IRemoteMetaProvider> CreateAsync(IContext context)
         {
             var settings = Instantiate(this).nakamaSettings;
             var nakamaConnection = new NakamaConnection();
-            var service = new NakamaService(settings,nakamaConnection);
+            var service = new NakamaContractsService(settings,nakamaConnection);
 
             context.Publish(settings);
-            context.Publish<INakamaConnection>(nakamaConnection);
+            context.Publish<NakamaConnection>(nakamaConnection);
             context.Publish<INakamaService>(service);
 
             return service;

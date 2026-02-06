@@ -6,9 +6,9 @@
     using Cysharp.Threading.Tasks;
     using Extensions;
     using Game.Modules.ModelMapping;
-    using Newtonsoft.Json;
     using R3;
     using Shared;
+    using UniCore.Runtime.ProfilerTools;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Runtime;
     using UniGame.GameFlow.Runtime;
@@ -19,46 +19,60 @@
     [Serializable]
     public class BackendMetaService : GameService, IBackendMetaService
     {
-        private readonly bool _useDefaultProvider;
+#if UNITY_EDITOR
+        public static BackendMetaService EditorInstance;
+#endif
+
+        private bool _useDefaultProvider;
+        private ContractsProvidersData _settings;
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
         private BackendTypeId _defaultProviderId;
         private IDictionary<int, IRemoteMetaProvider> _metaProviders;
-        private Dictionary<int,MetaDataResult> _responceCache;
+        private Dictionary<int,ContractDataResult> _responceCache;
         private Dictionary<int,RemoteMetaData> _metaIdCache;
         private Dictionary<Type, IRemoteMetaProvider> _contractsCache;
-        private Subject<MetaDataResult> _dataStream;
+        private Subject<ContractDataResult> _dataStream;
         private List<IMetaContractHandler> _contractHandlers = new();
         private IRemoteDataConverter _defaultConverter;
+        private int _historySize;
+        private int _historyIndex;
+        private ContractHistoryItem[] _history;
 
         public BackendMetaService(
-            bool useDefaultProvider,
+            ContractsProvidersData settings,
             BackendTypeId defaultMetaProvider,
             IDictionary<int,IRemoteMetaProvider> metaProviders,
             IRemoteMetaDataConfiguration metaDataConfiguration)
         {
-            BackendMetaServiceExtensions.RemoteMetaService = this;
+            _settings = settings;
+            _metaProviders = metaProviders;
+            _defaultMetaProvider = metaProviders[defaultMetaProvider];
+            _metaDataConfiguration = metaDataConfiguration;
+            _useDefaultProvider = _settings.useDefaultBackendFirst;
+            _defaultProviderId = defaultMetaProvider;
+            
+            MetaContractExtensions.RemoteMetaService = this;
 
             _defaultConverter = metaDataConfiguration.Converter ?? new JsonRemoteDataConverter();
-            _responceCache = new Dictionary<int, MetaDataResult>(64);
+            _responceCache = new Dictionary<int, ContractDataResult>(64);
             _metaIdCache = new Dictionary<int, RemoteMetaData>(64);
             _contractsCache = new Dictionary<Type, IRemoteMetaProvider>(64);
-            _dataStream = new Subject<MetaDataResult>().AddTo(LifeTime);
-
-            _useDefaultProvider = useDefaultProvider;
-            _metaDataConfiguration = metaDataConfiguration;
-            
-            _defaultProviderId = defaultMetaProvider;
-
-            _defaultMetaProvider = metaProviders[defaultMetaProvider];
-            _metaProviders = metaProviders;
+            _dataStream = new Subject<ContractDataResult>().AddTo(LifeTime);
+            _historySize = _settings.historySize;
+            _history = new ContractHistoryItem[_historySize];
+            _dataStream.Subscribe(AddHistoryItem).AddTo(LifeTime);
 
             UpdateMetaCache();
+            
+#if UNITY_EDITOR
+            EditorInstance = this;
+#endif
         }
-
-        public Observable<MetaDataResult> DataStream => _dataStream;
-
-        public ReadOnlyReactiveProperty<ConnectionState> State => _defaultMetaProvider.State;
+        
+        public ContractHistoryItem[] ContractHistory => _history;
+        
+        public Observable<ContractDataResult> DataStream => _dataStream;
 
         public bool AddContractHandler(IMetaContractHandler handler)
         {
@@ -127,43 +141,6 @@
             _defaultMetaProvider = GetProvider(providerId);
         }
 
-        public bool TryDequeueMetaRequest(IRemoteMetaContract contract, out MetaDataResult result)
-        {
-            try
-            {
-                var meta = FindMetaData(contract);
-                result = null;
-                if (meta == RemoteMetaData.Empty)
-                {
-                    return false;
-                }
-
-                var provider = GetProvider(meta.provider);
-                if (!provider.TryDequeue(out var request))
-                {
-                    return false;
-                }
-
-                request.data = JsonConvert.DeserializeObject((string)request.data, meta.contract.OutputType); 
-                var contractData = new MetaContractData()
-                {
-                    id = meta.id,
-                    metaData = meta,
-                    contract = contract,
-                    provider = provider,
-                    contractName = meta.method,
-                };
-                
-                result = RegisterRemoteResult(contractData, request);
-                return true;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-        }
-
         public IRemoteMetaProvider SelectProvider(RemoteMetaData meta,IRemoteMetaContract contract)
         {
             if (meta.overrideProvider)
@@ -182,13 +159,10 @@
             return _defaultMetaProvider;
         }
 
-        public async UniTask<MetaDataResult> ExecuteAsync(IRemoteMetaContract contract,CancellationToken cancellation = default)
+        public async UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract contract,CancellationToken cancellation = default)
         {
             var meta = FindMetaData(contract);
             
-            if (meta == RemoteMetaData.Empty) 
-                return MetaDataResult.Empty;
-
             var provider = SelectProvider(meta,contract);
             
             var contractData = new MetaContractData()
@@ -197,14 +171,16 @@
                 metaData = meta,
                 contract = contract,
                 provider = provider,
-                contractName = meta.method,
+                contractName = contract.Path,
             };
             
             return await ExecuteAsync(contractData, cancellation)
                 .AttachExternalCancellation(LifeTime.Token);
         }
 
-        private async UniTask<MetaDataResult> ExecuteAsync(MetaContractData contractData,CancellationToken cancellation = default)
+        public async UniTask<ContractDataResult> ExecuteAsync(
+            MetaContractData contractData,
+            CancellationToken cancellation = default)
         {
             try
             {
@@ -215,9 +191,9 @@
                 
                 var contract = contractData.contract;
                 
-                var connectionResult = await ConnectAsync(provider);
+                var connectionResult = await ConnectAsync(provider,cancellation);
                 if(connectionResult.Success == false) 
-                    return MetaDataResult.Empty;
+                    return ContractDataResult.Empty;
                 
                 if(!provider.IsContractSupported(contract))
                     return BackendMetaConstants.UnsupportedContract;
@@ -227,12 +203,15 @@
                     contractValue = contractHandler.UpdateContract(contractValue); 
                 
                 contractData.contract = contractValue;
-                var remoteResult = await provider.ExecuteAsync(contractData);
+                
+                var remoteResult = await provider.ExecuteAsync(contractData,cancellation);
 
-                var result = RegisterRemoteResult(contractData,remoteResult);
+                await UniTask.SwitchToMainThread();
+                
+                var result = ProcessRemoteResponse(contractData,remoteResult);
 
-                _responceCache.TryGetValue(result.id, out var response);
-                _responceCache[result.id] = result;
+                _responceCache.TryGetValue(result.metaId, out var response);
+                _responceCache[result.metaId] = result;
                 
                 var isChanged = response == null || response.hash != result.hash;
                 if(isChanged && result.success) 
@@ -243,7 +222,7 @@
             catch (Exception e)
             {
                 Debug.LogException(e);
-                return MetaDataResult.Empty;
+                return ContractDataResult.Empty;
             }
         }
         
@@ -255,11 +234,11 @@
                 if (meta.contract == null)
                 {
                     Debug.LogError($"Backend Service: {meta.id} {meta.method} {meta.provider}");
+                    return null;
                 }
 #endif
                 
-                if(meta.contract.OutputType == contract.OutputType && 
-                   meta.contract.InputType == contract.InputType)
+                if(meta.contract.GetType() == contract.GetType())
                     return meta;
             }
             
@@ -272,25 +251,9 @@
                 return metaData;
             return RemoteMetaData.Empty;
         }
-
-                
-        private async UniTask<MetaConnectionResult> ConnectAsync(IRemoteMetaProvider provider)
-        {
-            if (provider.State.CurrentValue != ConnectionState.Connected)
-            {
-                var connectionResult = await provider.ConnectAsync();
-                return connectionResult;
-            }
-
-            return new MetaConnectionResult()
-            {
-                Success = true,
-                Error = string.Empty,
-                State = ConnectionState.Connected,
-            };
-        }
         
-        public MetaDataResult RegisterRemoteResult(MetaContractData contractData, RemoteMetaResult response)
+
+        public ContractDataResult ProcessRemoteResponse(MetaContractData contractData, ContractMetaResult response)
         {
             var remoteId = contractData.contractName;
             var contract = contractData.contract;
@@ -328,9 +291,10 @@
                     break;
             }
             
-            var result = new MetaDataResult()
+            var result = new ContractDataResult()
             {
-                id = metaData.id,
+                contractId = contract.Path,
+                metaId = metaData.id,
                 payload = contract?.Payload,
                 resultType = outputType,
                 model = resultObject,
@@ -341,16 +305,37 @@
                 timestamp = unixTime,
             };
 
-#if GAME_DEBUG || UNITY_EDITOR
-            if (!response.success)
+            
+#if GAME_DEBUG
+            if (_settings.enableLogging)
             {
-                Debug.LogError($"Remote Meta Service: remote: {remoteId} payload {contract?.GetType().Name} | error: {response.error} | method: {contract.Path}");
+                var color = result.success ? Color.green : Color.red;
+                GameLog.Log($"[{remoteId}]:  contract {contract?.GetType().Name} input {contract.InputType.Name} output {contract.OutputType.Name} " +
+                            $"method: {contract.Path} | payload: {result.payload} | success: {result.success} | " +
+                            $"result {result.result} {result.result?.GetType().Name} code {result.statusCode} \nresponse: \n{responseData}",color);
             }
 #endif
             
             return result;
         }
         
+        private async UniTask<MetaConnectionResult> ConnectAsync(IRemoteMetaProvider provider, CancellationToken cancellation = default)
+        {
+            if (provider.State.CurrentValue != ConnectionState.Connected)
+            {
+                var connectionResult = await provider.ConnectAsync()
+                    .AttachExternalCancellation(cancellation);
+                return connectionResult;
+            }
+
+            return new MetaConnectionResult()
+            {
+                Success = true,
+                Error = string.Empty,
+                State = ConnectionState.Connected,
+            };
+        }
+
         private void UpdateMetaCache()
         {
             _metaIdCache.Clear();
@@ -362,6 +347,21 @@
                     continue;
                 _metaIdCache[(RemoteMetaId)metaData.id] = metaData;
             }
+        }
+        
+        private void AddHistoryItem(ContractDataResult result)
+        {
+            var id = _historyIndex;
+            _historyIndex++;
+            
+            var historyItem = new ContractHistoryItem()
+            {
+                id =id,
+                result = result,
+            };
+            
+            var index = id % _historySize;
+            _history[index] = historyItem;
         }
 
         private RemoteMetaData CreateNewRemoteMeta(string methodName)

@@ -1,32 +1,29 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
+    using System;
     using Nakama;
-    using R3;
+    using Newtonsoft.Json;
     using UniGame.Runtime.Rx;
+    using UnityEngine;
     using ConnectionState = Shared.ConnectionState;
 
-    public class NakamaConnection : INakamaConnection
+    [Serializable]
+    public class NakamaConnection
     {
         /// <summary>
         /// Contains the user ID of the currently authenticated user.
         /// </summary>
         public ReactiveValue<string> userId = new();
         
+        public ReactiveValue<string> userName = new();
+        
+        public ReactiveValue<string> authType = new();
+
         /// <summary>
         /// Contains the server data of the currently connected Nakama server.
         /// </summary>
         public ReactiveValue<NakamaServerData> serverData = new();
-        
-        /// <summary>
-        /// Contains the current connection state of the client.
-        /// </summary>
-        public ReactiveValue<ConnectionState> state = new(ConnectionState.Disconnected);
-        
-        /// <summary>
-        /// contains the last authentication data used to authenticate the user.
-        /// </summary>
-        public ReactiveValue<INakamaAuthenticateData> authenticateData = new();
-        
+
         /// <summary>
         /// Used to establish connection between the client and the server.
         /// Contains a list of usefull methods required to communicate with Nakama server.
@@ -34,6 +31,7 @@
         /// </summary>
         public ReactiveValue<IClient> client = new();
 
+  
         /// <summary>
         /// Used to communicate with Nakama server.
         ///
@@ -68,34 +66,57 @@
         /// <summary>
         /// Token used to authenticate the user.
         /// </summary>
-        public ReactiveValue<string> token = new();
+        public ReactiveValue<NakamaSessionData> sessionData = new();
 
-        public ReadOnlyReactiveProperty<IClient> Client => client;
-        public ReadOnlyReactiveProperty<ISession> Session => session;
-        public ReadOnlyReactiveProperty<ISocket> Socket => socket;
-        
-        public ReadOnlyReactiveProperty<IApiAccount> Account => account;
-        
-        public ReadOnlyReactiveProperty<string> Token => token;
+        public void UpdateSessionData(ISession newSession)
+        {
+            var userIdValue = newSession?.UserId;
+            var userNameValue = newSession?.Username;
+            
+            session.Value = newSession;
+            userId.Value = userIdValue;
+            userName.Value = userNameValue;
 
-        public ReadOnlyReactiveProperty<ConnectionState> State => state;
-        
-        public ReadOnlyReactiveProperty<INakamaAuthenticateData> AuthenticateData => authenticateData;
+            var sessionValue = new NakamaSessionData()
+            {
+                RefreshToken = newSession?.RefreshToken,
+                AuthToken = newSession?.AuthToken,
+                UserId = userIdValue,
+                Username = userNameValue,
+                AuthType = authType.Value
+            };
 
-        public ReadOnlyReactiveProperty<NakamaServerData> ServerData => serverData;
+            sessionData.Value = sessionValue;
+            
+            PlayerPrefs.SetString(NakamaConstants.NakamaSessionDataKey,JsonConvert.SerializeObject(sessionValue));
+        }
 
+        public void RestoreSessionData()
+        {
+            if (!PlayerPrefs.HasKey(NakamaConstants.NakamaSessionDataKey))
+                return;
+
+            var sessionJson = PlayerPrefs.GetString(NakamaConstants.NakamaSessionDataKey);
+            var sessionValue = JsonConvert.DeserializeObject<NakamaSessionData>(sessionJson);
+            sessionData.Value = sessionValue;
+            authType.Value = sessionValue.AuthType;
+            userId.Value = sessionValue.UserId;
+            userName.Value = sessionValue.Username;
+        }
 
         public void Reset()
         {
+            PlayerPrefs.DeleteKey(NakamaConstants.NakamaSessionDataKey);
+            
             session.Value = null;
             socket.Value = null;
             client.Value = null;
             account.Value = null;
+            authType.Value = string.Empty;
             userId.Value = string.Empty;
-            token.Value = string.Empty;
-            authenticateData.Value = null;
+            userName.Value = string.Empty;
+            sessionData.Value = default;
             serverData.Value = null;
-            state.Value = ConnectionState.Disconnected;
         }
     }
     
