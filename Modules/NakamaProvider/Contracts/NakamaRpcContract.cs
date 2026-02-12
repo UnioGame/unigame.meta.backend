@@ -10,19 +10,16 @@
         [JsonIgnore]
         public string rpcName = string.Empty;
 
-        [JsonIgnore]
         public object payload = string.Empty;
         
         [JsonIgnore]
         public Type inputType;
-        
         [JsonIgnore]
         public Type outputType;
-        
         [JsonIgnore]
         public override string Path => rpcName;
-        
         [JsonIgnore]
+        
         public override object Payload => payload;
         
         [JsonIgnore]
@@ -33,7 +30,6 @@
         public override Type OutputType => outputType;
     }
     
-
     [Serializable]
     public class NakamaRpcContract<TInput,TOutput> : RemoteMetaContract<TInput, TOutput> ,INakamaContract
     {

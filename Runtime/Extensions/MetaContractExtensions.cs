@@ -1,16 +1,22 @@
 namespace Extensions
 {
-    using System.Runtime.CompilerServices;
     using System.Threading;
     using Cysharp.Threading.Tasks;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Runtime;
+    using UnityEngine;
 
     public static class MetaContractExtensions
     {
         public const string MetaServiceNotInitializedError = "MetaService is not initialized";
         public static IBackendMetaService RemoteMetaService;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void ResetData()
+        {
+            RemoteMetaService = null;
+        }
+        
         public static async UniTask<ContractMetaResult<TResult>> ExecuteAsync<TResult>(this IRemoteMetaContract contract, CancellationToken cancellationToken = default) 
             where TResult : class
         {
