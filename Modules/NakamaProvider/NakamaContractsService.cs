@@ -1033,15 +1033,27 @@
 
         private async UniTask<NakamaServerData> SelectServerAsync(CancellationToken cancellation = default)
         {
-            var bestServer = await UrlChecker
-                .SelectFastestEndPoint(_healthCheckUrls, cancellation: cancellation);
+            var checkPointsCount = _healthCheckUrls.Count;
+            if (checkPointsCount == 0) return null;
 
-            if (bestServer.success == false)
-                return null;
+            var urlResult = new UrlResult();
+            
+            if (checkPointsCount == 1)
+            {
+                var url = _healthCheckUrls[0];
+                urlResult.url = url;
+                urlResult.success = true;
+                urlResult.time = 0f;
+            }
+            else
+            {
+                urlResult = await UrlChecker.SelectFastestEndPoint(_healthCheckUrls, cancellation: cancellation);
+            }
+            
 
-            var hostSettings = _nakamaServers
-                .Find(x => x.healthCheckUrl == bestServer.url);
+            if (!urlResult.success) return null;
 
+            var hostSettings = _nakamaServers.Find(x => x.healthCheckUrl == urlResult.url);
             return hostSettings;
         }
 
