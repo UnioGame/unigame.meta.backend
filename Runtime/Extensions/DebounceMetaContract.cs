@@ -10,14 +10,13 @@
 
     public class DebounceMetaContract : IDisposable
     {
-        public static TimeSpan DefaultInterval = TimeSpan.FromMilliseconds(500);
+        public static TimeSpan DefaultInterval = TimeSpan.FromMilliseconds(200);
         
         public TimeSpan interval = DefaultInterval;
         public TimeProvider timeProvider = TimeProvider.System;
         public LifeTime lifeTime;
-        public DateTime lastExecutionTime;
-        public IRemoteMetaContract delayedContract;
         public Subject<ContractDataResult> contractStream;
+        public Subject<DebounceContractData> contractExecutionStream;
 
         public DebounceMetaContract():this(DefaultInterval, TimeProvider.System) { }
 
@@ -28,41 +27,51 @@
             this.interval = interval;
             this.timeProvider = timeProvider;
 
+            contractExecutionStream = new Subject<DebounceContractData>();
+            contractExecutionStream.AddTo(lifeTime);
+            
             contractStream = new Subject<ContractDataResult>();
             contractStream.AddTo(lifeTime);
+
+            contractExecutionStream
+                .Debounce(interval, timeProvider)
+                .Subscribe(this,static (x,y) => y.ExecuteAsync(x)
+                    .AttachExternalCancellation(x.CancellationToken)
+                    .Forget())
+                .AddTo(lifeTime);
         }
 
         public Observable<ContractDataResult> ResultStream => contractStream;
         
-        public async UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract contract, CancellationToken cancellationToken = default)
+        public async UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract contract, CancellationToken cancellationToken)
         {
-            var time = DateTime.UtcNow;
-            var timeSinceLastExecution = time - lastExecutionTime;
-
-            delayedContract = contract;
-
-            if (interval > timeSinceLastExecution)
+            if (interval <= TimeSpan.Zero)
+                return await contract.ExecuteAsync(cancellationToken);
+            
+            contractExecutionStream.OnNext(new DebounceContractData()
             {
-                return await ExecuteAsync(interval, cancellationToken);
-            }
-
-            return await ExecuteAsync(TimeSpan.Zero, cancellationToken);
+                CancellationToken = cancellationToken,
+                Contract = contract
+            });
+            
+            var result = await contractStream.FirstAsync(cancellationToken);
+            return result;
         }
 
         public void Dispose() => lifeTime.Terminate();
 
-        private async UniTask<ContractDataResult> ExecuteAsync(TimeSpan delay,
-            CancellationToken cancellationToken = default)
+        public async UniTask<ContractDataResult> ExecuteAsync(DebounceContractData data)
         {
-            if (delay > TimeSpan.Zero)
-                await UniTask.Delay(delay, true, cancellationToken: cancellationToken);
-
-            if (delayedContract == null) return ContractDataResult.Empty;
-
-            lastExecutionTime = DateTime.UtcNow;
-            var result = await delayedContract.ExecuteAsync(cancellationToken);
+            await UniTask.SwitchToMainThread();
+            var result = await data.Contract.ExecuteAsync(data.CancellationToken);
             contractStream.OnNext(result);
             return result;
         }
+    }
+    
+    public struct DebounceContractData
+    {
+        public IRemoteMetaContract Contract;
+        public CancellationToken CancellationToken;
     }
 }
