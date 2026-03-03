@@ -136,30 +136,20 @@
             {
                 return contract switch
                 {
-                    INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation))
-                        .ToContractResult(),
+                    INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation)).ToContractResult(),
                     NakamaLogoutContract => (await SignOutContract()).ToContractResult(),
                     NakamaRestoreSessionContract restoreSessionContract => (await RestoreSessionAsync(cancellation)).ToContractResult(),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
                     NakamaUpdateAccountContract updateAccountContract => await UpdateAccountAsync(updateAccountContract.data,connection, cancellation),
-                    NakamaLeaderboardGetRecordsContract getLeaderboardRecordsContract => await GetLeaderboardAsync(
-                        connection, getLeaderboardRecordsContract, cancellation),
-                    NakamaLeaderboardGetRecordsAroundContract leaderboardRecordsAround => await
-                        GetLeaderboardAroundAsync(connection, leaderboardRecordsAround, cancellation),
-                    NakamaLeaderboardWriteRecordContract writeLeaderboardRecordContract => await WriteLeaderboardAsync(
-                        connection, writeLeaderboardRecordContract, cancellation),
-                    NakamaTournamentsListContract tournamentsListContract => await GetTournamentsAsync(connection,
-                        tournamentsListContract, cancellation),
-                    NakamaJoinTournamentsContract joinTournament => await JoinTournamentAsync(connection,
-                        joinTournament,
-                        cancellation),
-                    NakamaTournamentRecordsContract tournamentRecords => await ListTournamentRecordsAsync(connection,
-                        tournamentRecords, cancellation),
-                    NakamaTournamentRecordsAroundContract tournamentAroundRecords => await
-                        ListTournamentRecordsAroundAsync(connection, tournamentAroundRecords, cancellation),
-                    NakamaTournamentWriteRecordContract writeTournamentRecord => await TournamentWriteAsync(connection,
-                        writeTournamentRecord, cancellation),
+                    NakamaLeaderboardGetRecordsContract getLeaderboardRecordsContract => await GetLeaderboardAsync(connection, getLeaderboardRecordsContract, cancellation),
+                    NakamaLeaderboardGetRecordsAroundContract leaderboardRecordsAround => await GetLeaderboardAroundAsync(connection, leaderboardRecordsAround, cancellation),
+                    NakamaLeaderboardWriteRecordContract writeLeaderboardRecordContract => await WriteLeaderboardAsync(connection, writeLeaderboardRecordContract, cancellation),
+                    NakamaTournamentsListContract tournamentsListContract => await GetTournamentsAsync(connection, tournamentsListContract, cancellation),
+                    NakamaJoinTournamentsContract joinTournament => await JoinTournamentAsync(connection, joinTournament, cancellation),
+                    NakamaTournamentRecordsContract tournamentRecords => await ListTournamentRecordsAsync(connection, tournamentRecords, cancellation),
+                    NakamaTournamentRecordsAroundContract tournamentAroundRecords => await ListTournamentRecordsAroundAsync(connection, tournamentAroundRecords, cancellation),
+                    NakamaTournamentWriteRecordContract writeTournamentRecord => await TournamentWriteAsync(connection, writeTournamentRecord, cancellation),
                     _ => await ExecuteRpcContractAsync(connection, contract, cancellation)
                 };
             }
@@ -436,8 +426,7 @@
             };
         }
 
-        public async UniTask<ContractMetaResult> GetLeaderboardAroundAsync(
-            NakamaConnection connection,
+        public async UniTask<ContractMetaResult> GetLeaderboardAroundAsync(NakamaConnection connection,
             NakamaLeaderboardGetRecordsAroundContract contract,
             CancellationToken cancellation = default)
         {
@@ -494,8 +483,7 @@
                 error = string.Empty,
             };
 
-            var rpcResult = await client
-                .RpcAsync(session, rpcName, payloadValue, _retryConfiguration, cancellation);
+            var rpcResult = await client.RpcAsync(session, rpcName, payloadValue, _retryConfiguration, cancellation);
 
 #if UNITY_EDITOR
             if (_nakamaSettings.enableLogging)
