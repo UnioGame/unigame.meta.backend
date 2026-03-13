@@ -3,8 +3,10 @@
     using System;
     using System.Collections.Generic;
     using System.Threading;
+    using System.Threading.Tasks;
     using Contracts;
     using Cysharp.Threading.Tasks;
+    using Game.Runtime.Services.Bootstrap;
     using GameFlow.Runtime;
     using MetaService.Runtime;
     using Nakama;
@@ -150,6 +152,7 @@
                     NakamaTournamentRecordsContract tournamentRecords => await ListTournamentRecordsAsync(connection, tournamentRecords, cancellation),
                     NakamaTournamentRecordsAroundContract tournamentAroundRecords => await ListTournamentRecordsAroundAsync(connection, tournamentAroundRecords, cancellation),
                     NakamaTournamentWriteRecordContract writeTournamentRecord => await TournamentWriteAsync(connection, writeTournamentRecord, cancellation),
+                    NakamaDeleteAccountContract deleteAccount => await DeleteAccountAsync(connection, cancellation),
                     _ => await ExecuteRpcContractAsync(connection, contract, cancellation)
                 };
             }
@@ -162,6 +165,32 @@
             }
 
             return contractResult;
+        }
+
+        private async UniTask<ContractMetaResult> DeleteAccountAsync(NakamaConnection connection, CancellationToken token)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+
+            var result = new ContractMetaResult();
+
+            try
+            {
+                await client.DeleteAccountAsync(session, canceller: token);
+                PlayerPrefs.DeleteAll();
+                _connection.Reset();
+            }
+            catch (Exception e)
+            {
+                result.error = e.Message;
+                result.success = false;
+                result.data = false;
+                return result;
+            }
+            
+            result.success = true;
+            result.data = true;
+            return result;
         }
 
         public async UniTask<ContractMetaResult> WriteLeaderboardAsync(
