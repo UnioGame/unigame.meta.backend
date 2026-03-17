@@ -5,7 +5,6 @@
     using Newtonsoft.Json;
     using UniGame.Runtime.Rx;
     using UnityEngine;
-    using ConnectionState = Shared.ConnectionState;
 
     [Serializable]
     public class NakamaConnection
