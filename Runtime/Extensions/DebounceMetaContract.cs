@@ -16,18 +16,18 @@
         public TimeProvider timeProvider = TimeProvider.System;
         public LifeTime lifeTime;
         public Subject<ContractDataResult> contractStream;
-        public Subject<DebounceContractData> contractExecutionStream;
-
+        public Subject<MetaContractCallData> contractExecutionStream;
+        
         public DebounceMetaContract():this(DefaultInterval, TimeProvider.System) { }
 
-        public DebounceMetaContract(TimeSpan interval, TimeProvider timeProvider)
+        public DebounceMetaContract(TimeSpan callInterval, TimeProvider time)
         {
             lifeTime = new();
 
-            this.interval = interval;
-            this.timeProvider = timeProvider;
+            interval = callInterval;
+            timeProvider = time;
 
-            contractExecutionStream = new Subject<DebounceContractData>();
+            contractExecutionStream = new Subject<MetaContractCallData>();
             contractExecutionStream.AddTo(lifeTime);
             
             contractStream = new Subject<ContractDataResult>();
@@ -41,14 +41,12 @@
                 .AddTo(lifeTime);
         }
 
-        public Observable<ContractDataResult> ResultStream => contractStream;
-        
         public async UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract contract, CancellationToken cancellationToken)
         {
             if (interval <= TimeSpan.Zero)
                 return await contract.ExecuteAsync(cancellationToken);
             
-            contractExecutionStream.OnNext(new DebounceContractData()
+            contractExecutionStream.OnNext(new MetaContractCallData()
             {
                 CancellationToken = cancellationToken,
                 Contract = contract
@@ -60,18 +58,12 @@
 
         public void Dispose() => lifeTime.Terminate();
 
-        public async UniTask<ContractDataResult> ExecuteAsync(DebounceContractData data)
+        public async UniTask<ContractDataResult> ExecuteAsync(MetaContractCallData data)
         {
             await UniTask.SwitchToMainThread();
             var result = await data.Contract.ExecuteAsync(data.CancellationToken);
             contractStream.OnNext(result);
             return result;
         }
-    }
-    
-    public struct DebounceContractData
-    {
-        public IRemoteMetaContract Contract;
-        public CancellationToken CancellationToken;
     }
 }
