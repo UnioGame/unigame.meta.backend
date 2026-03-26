@@ -702,6 +702,9 @@
                     case NakamaFacebookAuthenticateData facebookData:
                         session = await FacebookAuthenticateAsync(facebookData, cancellation);
                         break;
+                    case NakamaCustomAuthenticateData customData:
+                        session = await CustomAuthenticateAsync(customData, cancellation);
+                        break;
                 }
                 
                 success = session != null;
@@ -784,6 +787,36 @@
             {
                 // get a new refresh token
                 session = await client.AuthenticateGoogleAsync(data.token,
+                    data.userName,
+                    data.create,
+                    data.vars,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+
+            return session;
+        }
+        
+        public async UniTask<ISession> CustomAuthenticateAsync(NakamaCustomAuthenticateData data,
+            CancellationToken cancellation = default)
+        {
+            var client = _connection.client.Value;
+            var session = _connection.session.Value;
+            
+            //is we should link account, the session must be valid
+            if (data.linkAccount && IsAuthenticated)
+            {
+                // get a new refresh token
+                await client.LinkCustomAsync(session, 
+                    data.userId,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+            else
+            {
+                // get a new refresh token
+                session = await client.AuthenticateCustomAsync(
+                    data.userId,
                     data.userName,
                     data.create,
                     data.vars,

@@ -17,6 +17,20 @@ public class NakamaPlayServicesAuthContract : NakamaContract<string,NakamaAuthRe
 }
 
 
+[Serializable]
+public class NakamaCustomAuthenticateData : INakamaAuthenticateData
+{
+    public string userId;
+    public string userName;
+    public bool create = true;
+    public bool linkAccount = false;
+    
+    public Dictionary<string, string> vars = null;
+    public RetryConfiguration retryConfiguration = null;
+        
+    public string AuthTypeName => nameof(NakamaCustomAuthenticateData);
+}
+
 
 [Serializable]
 public class NakamaGoogleAuthenticateData : INakamaAuthenticateData
