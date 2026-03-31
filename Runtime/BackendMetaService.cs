@@ -9,22 +9,28 @@
     using R3;
     using Shared;
     using UniCore.Runtime.ProfilerTools;
+    using UniGame.Core.Runtime;
     using UniGame.MetaBackend.Shared;
     using UniGame.MetaBackend.Runtime;
     using UniGame.GameFlow.Runtime;
     using UniGame.Runtime.DateTime;
      
     using UnityEngine;
+    using Object = UnityEngine.Object;
 
     [Serializable]
     public class BackendMetaService : GameService, IBackendMetaService
     {
+        public const int ContractInitTimeout = 20;
+        
 #if UNITY_EDITOR
         public static BackendMetaService EditorInstance;
 #endif
 
         private bool _useDefaultProvider;
+        private bool _isInitialized;
         private ContractsProvidersData _settings;
+        private IContext _context;
         private IRemoteMetaDataConfiguration _metaDataConfiguration;
         private IRemoteMetaProvider _defaultMetaProvider;
         private BackendTypeId _defaultProviderId;
@@ -39,18 +45,14 @@
         private int _historyIndex;
         private ContractHistoryItem[] _history;
 
-        public BackendMetaService(
-            ContractsProvidersData settings,
-            BackendTypeId defaultMetaProvider,
-            IDictionary<int,IRemoteMetaProvider> metaProviders,
-            IRemoteMetaDataConfiguration metaDataConfiguration)
+        public BackendMetaService(ContractsProvidersData settings,IContext context, IRemoteMetaDataConfiguration metaDataConfiguration)
         {
+            _isInitialized = false;
             _settings = settings;
-            _metaProviders = metaProviders;
-            _defaultMetaProvider = metaProviders[defaultMetaProvider];
+            _context = context;
             _metaDataConfiguration = metaDataConfiguration;
             _useDefaultProvider = _settings.useDefaultBackendFirst;
-            _defaultProviderId = defaultMetaProvider;
+            _defaultProviderId = _settings.backendType;
             
             MetaContractExtensions.RemoteMetaService = this;
 
@@ -64,10 +66,17 @@
             _dataStream.Subscribe(AddHistoryItem).AddTo(LifeTime);
 
             UpdateMetaCache();
-            
+            InitializeProvidersAsync().Forget();
 #if UNITY_EDITOR
             EditorInstance = this;
 #endif
+        }
+
+        public struct RemoteMetaProviderResult
+        {
+            public int id;
+            public bool success;
+            public IRemoteMetaProvider provider;
         }
         
         public ContractHistoryItem[] ContractHistory => _history;
@@ -161,8 +170,10 @@
 
         public async UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract contract,CancellationToken cancellation = default)
         {
-            var meta = FindMetaData(contract);
+            if (!_isInitialized)
+                await UniTask.WaitWhile(this, static x => x._isInitialized == false,cancellationToken:cancellation);
             
+            var meta = FindMetaData(contract);
             var provider = SelectProvider(meta,contract);
             
             var contractData = new MetaContractData()
@@ -174,14 +185,16 @@
                 contractName = contract.Path,
             };
             
-            return await ExecuteAsync(contractData, cancellation)
-                .AttachExternalCancellation(LifeTime.Token);
+            return await ExecuteAsync(contractData, cancellation).AttachExternalCancellation(LifeTime.Token);
         }
 
         public async UniTask<ContractDataResult> ExecuteAsync(
             MetaContractData contractData,
             CancellationToken cancellation = default)
         {
+            if (!_isInitialized)
+                await UniTask.WaitWhile(this, static x => x._isInitialized == false,cancellationToken:cancellation);
+            
             try
             {
                 var meta = contractData.metaData;
@@ -316,6 +329,71 @@
             }
 #endif
             
+            return result;
+        }
+        
+        private async UniTask InitializeProvidersAsync()
+        {
+            _isInitialized = false;
+            _metaProviders = new Dictionary<int, IRemoteMetaProvider>();
+            _defaultProviderId = _settings.backendType;
+
+            var providersData = _settings.backendTypes;
+            var providerTasks = providersData.Select(x => CreateProvider(x, _context));
+            var providers = await UniTask.WhenAll(providerTasks);
+
+            foreach (var providerResult in providers)
+            {
+                if(providerResult.success == false)
+                    continue;
+
+                var id = providerResult.id;
+                var provider  = providerResult.provider;
+                
+                _metaProviders[id] =provider;
+                
+                if (id == _defaultProviderId)
+                    _defaultMetaProvider =  provider;
+            }
+            
+            if(_defaultMetaProvider!=null)
+                _context.Publish<IRemoteMetaProvider>(_defaultMetaProvider);
+            
+            _isInitialized = true;
+        }
+
+        
+        private async UniTask<RemoteMetaProviderResult> CreateProvider(BackendType providerData, IContext context)
+        {
+            var result = new RemoteMetaProviderResult()
+            {
+                id = providerData.id,
+                success = false,
+                provider = null,
+            };
+            
+            if (!providerData.isEnabled) return result;
+
+            var provider = providerData.provider;
+            var providerSource = Object.Instantiate(provider);
+
+            var metaProviderResponse = await providerSource.CreateAsync(context)
+                .Timeout(TimeSpan.FromSeconds(ContractInitTimeout))
+                .SuppressCancellationThrow();
+
+            var metaProvider = metaProviderResponse.Result;
+
+            if (metaProviderResponse.IsCanceled)
+            {
+                GameLog.LogError($"GameBackendSource: Register MetaProvider - {providerSource.name} TIMEOUT");
+                return result;
+            }
+
+            metaProvider.AddTo(LifeTime);
+            
+            result.success = true;
+            result.provider = metaProvider;
+
             return result;
         }
         
