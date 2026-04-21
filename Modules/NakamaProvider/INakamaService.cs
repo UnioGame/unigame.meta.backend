@@ -1,5 +1,6 @@
 ﻿namespace UniGame.MetaBackend.Runtime
 {
+    using System;
     using System.Threading;
     using Contracts;
     using Cysharp.Threading.Tasks;
@@ -17,12 +18,14 @@
             TypeNameHandling = TypeNameHandling.None,
         };
 
-        ReadOnlyReactiveProperty<ConnectionState> State { get; }
-        UniTask<MetaConnectionResult> ConnectAsync();
-        UniTask DisconnectAsync();
-        bool IsContractSupported(IRemoteMetaContract command);
+        new ReadOnlyReactiveProperty<ConnectionState> State { get; }
+        
+        [Obsolete("ConnectAsync is deprecated for Nakama provider. Use ConnectToServerAsync and explicit authentication or session restore flow instead.")]
+        new UniTask<MetaConnectionResult> ConnectAsync();
+        new UniTask DisconnectAsync();
+        new bool IsContractSupported(IRemoteMetaContract command);
 
-        UniTask<ContractMetaResult> ExecuteAsync(
+        new UniTask<ContractMetaResult> ExecuteAsync(
             MetaContractData contractData,
             CancellationToken cancellationToken = default);
 
@@ -88,7 +91,7 @@
             NakamaConnection connection,
             CancellationToken cancellation = default);
 
-        bool TryDequeue(out ContractMetaResult result);
+        new bool TryDequeue(out ContractMetaResult result);
 
         /// <summary>
         /// sign out from Namaka server and clear all authentication data

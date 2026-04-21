@@ -26,6 +26,7 @@
         private List<NakamaServerData> _nakamaServers;
         private RetryConfiguration _retryConfiguration;
         private LifeTime _sessionLifeTime;
+        private SemaphoreSlim _recoverySemaphore = new(1, 1);
 
         private ReactiveValue<ConnectionState> _state = new();
 
@@ -69,6 +70,7 @@
         
         public bool IsAuthenticated => _connection.session.Value is { IsExpired: false };
 
+        [Obsolete("ConnectAsync is deprecated for Nakama provider. Use ConnectToServerAsync and explicit authentication or session restore flow instead.")]
         public async UniTask<MetaConnectionResult> ConnectAsync()
         {
             return new MetaConnectionResult()
@@ -125,6 +127,43 @@
             IRemoteMetaContract contract,
             CancellationToken cancellation = default)
         {
+            if (IsRecoveryExcludedContract(contract))
+                return await ExecuteContractCoreAsync(connection, contract, cancellation);
+
+            return await ExecuteRecoverableContractAsync(connection, contract, cancellation);
+        }
+
+        private async UniTask<ContractMetaResult> ExecuteRecoverableContractAsync(
+            NakamaConnection connection,
+            IRemoteMetaContract contract,
+            CancellationToken cancellation = default)
+        {
+            var readinessResult = await EnsureSessionAndSocketReadyAsync(cancellation);
+            if (!readinessResult.success)
+                return CreateFailureResult(contract, readinessResult.error, readinessResult.statusCode);
+
+            var contractResult = await ExecuteContractCoreAsync(connection, contract, cancellation);
+            if (!IsUnauthorized(contractResult))
+                return contractResult;
+
+            GameLog.LogError($"[NakamaService] Contract '{contract.Path}' returned 401. Running bounded session recovery.");
+
+            var recoveryResult = await RecoverSessionAndSocketAsync(cancellation);
+            if (!recoveryResult.success)
+                return CreateFailureResult(contract, recoveryResult.error, recoveryResult.statusCode);
+
+            var retryResult = await ExecuteContractCoreAsync(connection, contract, cancellation);
+            if (IsUnauthorized(retryResult))
+                GameLog.LogError($"[NakamaService] Retry after recovery still returned 401 for contract '{contract.Path}'.");
+
+            return retryResult;
+        }
+
+        private async UniTask<ContractMetaResult> ExecuteContractCoreAsync(
+            NakamaConnection connection,
+            IRemoteMetaContract contract,
+            CancellationToken cancellation = default)
+        {
             var contractResult = new ContractMetaResult()
             {
                 success = false,
@@ -154,15 +193,152 @@
                     _ => await ExecuteRpcContractAsync(connection, contract, cancellation)
                 };
             }
+            catch (ApiResponseException ex)
+            {
+                GameLog.LogError($"[NakamaService] Contract '{contract?.Path}' failed with status {ex.StatusCode}: {ex.Message}");
+                return CreateFailureResult(contract, ex.Message, (int)ex.StatusCode);
+            }
             catch (Exception e)
             {
                 GameLog.LogError(e);
                 contractResult.error = e.Message;
                 contractResult.success = false;
+                contractResult.id = contract?.Path ?? string.Empty;
                 contractResult.data = string.Empty;
             }
 
             return contractResult;
+        }
+
+        private bool IsRecoveryExcludedContract(IRemoteMetaContract contract)
+        {
+            return contract is INakamaAuthContract or NakamaRestoreSessionContract or NakamaLogoutContract;
+        }
+
+        private bool HasRestorableSession()
+        {
+            var session = _connection.session.Value;
+            if (session != null)
+                return true;
+
+            var sessionData = _connection.sessionData.Value;
+            return !string.IsNullOrEmpty(sessionData.AuthToken) &&
+                   !string.IsNullOrEmpty(sessionData.RefreshToken);
+        }
+
+        private bool IsSessionValidForUse(ISession session)
+        {
+            if (session == null)
+                return false;
+
+            return !session.IsExpired &&
+                   !session.HasExpired(DateTime.UtcNow.AddSeconds(_nakamaSettings.refreshTokenInterval));
+        }
+
+        private bool HasLiveSessionAndSocket()
+        {
+            var client = _connection.client.Value;
+            var socket = _connection.socket.Value;
+            var session = _connection.session.Value;
+
+            return client != null &&
+                   socket != null &&
+                   IsSessionValidForUse(session) &&
+                   (socket.IsConnected || socket.IsConnecting);
+        }
+
+        private async UniTask<NakamaServiceResult> EnsureSessionAndSocketReadyAsync(CancellationToken cancellation = default)
+        {
+            if (HasLiveSessionAndSocket())
+                return CreateSuccessServiceResult();
+
+            if (!HasRestorableSession())
+            {
+                return new NakamaServiceResult
+                {
+                    success = false,
+                    error = "No active or restorable Nakama session found.",
+                    statusCode = NakamaStatusCodes.InvalidSession,
+                };
+            }
+
+            return await RecoverSessionAndSocketAsync(cancellation);
+        }
+
+        private async UniTask<NakamaServiceResult> RecoverSessionAndSocketAsync(CancellationToken cancellation = default)
+        {
+            await _recoverySemaphore.WaitAsync(cancellation);
+
+            try
+            {
+                if (HasLiveSessionAndSocket())
+                    return CreateSuccessServiceResult();
+
+                if (!HasRestorableSession())
+                {
+                    return new NakamaServiceResult
+                    {
+                        success = false,
+                        error = "No active or restorable Nakama session found.",
+                        statusCode = NakamaStatusCodes.InvalidSession,
+                    };
+                }
+
+                GameLog.Log("[NakamaService] Starting serialized session and socket recovery.");
+
+                var restoreResult = await RestoreSessionAsync(cancellation);
+                var restoreSuccess = restoreResult.success && restoreResult.data.success;
+
+                if (!restoreSuccess)
+                {
+                    var restoreError = string.IsNullOrEmpty(restoreResult.error)
+                        ? "Failed to restore Nakama session."
+                        : restoreResult.error;
+
+                    GameLog.LogError($"[NakamaService] Session recovery failed: {restoreError}");
+
+                    return new NakamaServiceResult
+                    {
+                        success = false,
+                        error = restoreError,
+                        statusCode = restoreResult.statusCode,
+                    };
+                }
+
+                GameLog.Log("[NakamaService] Session and socket recovery completed.", Color.green);
+                return CreateSuccessServiceResult();
+            }
+            finally
+            {
+                _recoverySemaphore.Release();
+            }
+        }
+
+        private static bool IsUnauthorized(ContractMetaResult result)
+        {
+            return !result.success && result.statusCode == 401;
+        }
+
+        private NakamaServiceResult CreateSuccessServiceResult()
+        {
+            return new NakamaServiceResult
+            {
+                success = true,
+                error = string.Empty,
+                statusCode = NakamaStatusCodes.Success,
+            };
+        }
+
+        private ContractMetaResult CreateFailureResult(IRemoteMetaContract contract, string error, int statusCode = -1)
+        {
+            return new ContractMetaResult
+            {
+                id = contract?.Path ?? nameof(NakamaContractsService),
+                data = null,
+                success = false,
+                error = error ?? string.Empty,
+                statusCode = statusCode,
+            };
         }
 
         private async UniTask<ContractMetaResult> DeleteAccountAsync(NakamaConnection connection, CancellationToken token)
@@ -177,6 +353,14 @@
                 await client.DeleteAccountAsync(session, canceller: token);
                 PlayerPrefs.DeleteAll();
                 _connection.Reset();
+            }
+            catch (ApiResponseException ex)
+            {
+                result.error = ex.Message;
+                result.success = false;
+                result.statusCode = (int)ex.StatusCode;
+                result.data = false;
+                return result;
             }
             catch (Exception e)
             {
@@ -201,6 +385,7 @@
 
             IApiLeaderboardRecord leaderboard = null;
             var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
 
             try
             {
@@ -216,6 +401,7 @@
             {
                 leaderboard = null;
                 error = ex.Message;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -225,6 +411,7 @@
                 data = leaderboard,
                 success = leaderboard != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -238,6 +425,7 @@
 
             IApiTournamentList leaderboard = null;
             var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
 
             try
             {
@@ -255,6 +443,7 @@
             {
                 leaderboard = null;
                 error = ex.Message;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -264,6 +453,7 @@
                 data = leaderboard,
                 success = leaderboard != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -277,6 +467,7 @@
 
             var error = string.Empty;
             var result = (string)null;
+            var statusCode = NakamaStatusCodes.Success;
 
             try
             {
@@ -290,6 +481,7 @@
             {
                 error = ex.Message;
                 result = null;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -299,6 +491,7 @@
                 data = result,
                 success = result != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -311,6 +504,7 @@
             var client = connection.client.Value;
             var session = connection.session.Value;
             var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
 
             IApiTournamentRecordList result = null;
 
@@ -329,6 +523,7 @@
             {
                 error = ex.Message;
                 result = null;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -338,6 +533,7 @@
                 data = result,
                 success = result != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -349,6 +545,7 @@
             var client = connection.client.Value;
             var session = connection.session.Value;
             var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
 
             IApiTournamentRecordList result = null;
 
@@ -367,6 +564,7 @@
             {
                 error = ex.Message;
                 result = null;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -376,6 +574,7 @@
                 data = result,
                 success = result != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -387,6 +586,7 @@
             var client = connection.client.Value;
             var session = connection.session.Value;
             var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
 
             IApiLeaderboardRecord result = null;
 
@@ -405,6 +605,7 @@
             {
                 error = ex.Message;
                 result = null;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -414,6 +615,7 @@
                 data = result,
                 success = result != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -427,6 +629,7 @@
 
             IApiLeaderboardRecordList leaderboard = null;
             var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
 
             try
             {
@@ -441,6 +644,7 @@
             {
                 leaderboard = null;
                 error = ex.Message;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -450,6 +654,7 @@
                 data = leaderboard,
                 success = leaderboard != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -462,6 +667,7 @@
 
             IApiLeaderboardRecordList leaderboard = null;
             var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
 
             try
             {
@@ -476,6 +682,7 @@
             {
                 leaderboard = null;
                 error = ex.Message;
+                statusCode = (int)ex.StatusCode;
             }
 
             await UniTask.SwitchToMainThread();
@@ -485,6 +692,7 @@
                 data = leaderboard,
                 success = leaderboard != null,
                 error = error,
+                statusCode = statusCode,
             };
         }
 
@@ -510,7 +718,18 @@
                 error = string.Empty,
             };
 
-            var rpcResult = await client.RpcAsync(session, rpcName, payloadValue, _retryConfiguration, cancellation);
+            IApiRpc rpcResult;
+
+            try
+            {
+                rpcResult = await client.RpcAsync(session, rpcName, payloadValue, _retryConfiguration, cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                contractResult.error = ex.Message;
+                contractResult.statusCode = (int)ex.StatusCode;
+                return contractResult;
+            }
 
 #if UNITY_EDITOR
             if (_nakamaSettings.enableLogging)
@@ -536,6 +755,7 @@
             contractResult.success = success;
             contractResult.data = resultObject;
             contractResult.error = string.Empty;
+            contractResult.statusCode = NakamaStatusCodes.Success;
 
             return contractResult;
         }
@@ -712,7 +932,14 @@
             catch (ApiResponseException ex)
             {
                 success = false;
-                Debug.LogFormat("Error authenticating device: {0}:{1}", ex.StatusCode, ex.Message);
+                GameLog.LogError($"Error authenticating device: {ex.StatusCode}:{ex.Message}");
+
+                return new NakamaServiceResult()
+                {
+                    error = ex.Message,
+                    success = false,
+                    statusCode = (int)ex.StatusCode,
+                };
             }
 
             if (success == false)
@@ -720,7 +947,8 @@
                 return new NakamaServiceResult()
                 {
                     error = $"Cannot authenticate user by {authenticateData?.AuthTypeName}",
-                    success = false
+                    success = false,
+                    statusCode = NakamaStatusCodes.InvalidSession,
                 };
             }
 
@@ -910,11 +1138,37 @@
                 error = string.Empty,
             };
 
-            var account = await GetUserProfileAsync();
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+
+            if (client == null || session == null)
+            {
+                contractResult.error = "failed to load account | unauthorized";
+                contractResult.statusCode = NakamaStatusCodes.InvalidSession;
+                return contractResult;
+            }
+
+            IApiAccount account;
+
+            try
+            {
+                account = await client.GetAccountAsync(session);
+            }
+            catch (ApiResponseException ex)
+            {
+                contractResult.error = ex.Message;
+                contractResult.statusCode = (int)ex.StatusCode;
+                return contractResult;
+            }
+
+            _connection.account.Value = account;
+            _connection.userId.Value = account.User.Id;
+            _connection.userName.Value = account.User.Username;
             
             contractResult.success = account != null;
             contractResult.data = account;
             contractResult.error = account == null ? "failed to load account | unauthorized" : string.Empty;
+            contractResult.statusCode = account == null ? NakamaStatusCodes.InvalidSession : NakamaStatusCodes.Success;
 
             return contractResult;
         }
@@ -1007,7 +1261,7 @@
             }
             catch (ApiResponseException e)
             {
-                Debug.LogError("Error getting user account: " + e.Message);
+                GameLog.LogError("Error getting user account: " + e.Message);
                 return null;
             }
         }
@@ -1019,10 +1273,12 @@
 
             if (client != null && socket != null && (socket.IsConnected || socket.IsConnecting))
             {
+                _state.Value = ConnectionState.Connected;
                 return new NakamaServiceResult()
                 {
                     error = string.Empty,
                     success = true,
+                    statusCode = NakamaStatusCodes.Success,
                 };
             }
 
@@ -1076,6 +1332,7 @@
             {
                 success = true,
                 error = string.Empty,
+                statusCode = NakamaStatusCodes.Success,
             };
         }
 
@@ -1107,14 +1364,33 @@
 
         private void ReconnectNakamaSocket(string reason)
         {
-            var socket = _connection.socket.Value;
-            var session = _connection.session.Value;
-            ConnectAsync(socket, session).Forget();
+            HandleSocketClosedAsync(reason).Forget();
+        }
+
+        private async UniTaskVoid HandleSocketClosedAsync(string reason)
+        {
+            if (_sessionLifeTime.IsTerminated)
+                return;
+
+            if (_state.Value == ConnectionState.Disconnected || !HasRestorableSession())
+                return;
+
+            GameLog.Log($"[NakamaService] Socket closed. Reason: {reason}");
+
+            var recoveryResult = await RecoverSessionAndSocketAsync();
+            if (!recoveryResult.success)
+                GameLog.LogError($"[NakamaService] Closed-socket recovery failed: {recoveryResult.error}");
         }
 
         private async UniTask<bool> ConnectAsync(ISocket socket, ISession session)
         {
             if (_sessionLifeTime.IsTerminated) return false;
+
+            if (socket == null || session == null)
+            {
+                _state.Value = ConnectionState.Disconnected;
+                return false;
+            }
 
             try
             {
@@ -1126,10 +1402,12 @@
             }
             catch (Exception e)
             {
+                _state.Value = ConnectionState.Disconnected;
                 GameLog.LogError("Error connecting socket: " + e.Message);
                 return false;
             }
 
+            _state.Value = socket.IsConnected ? ConnectionState.Connected : ConnectionState.Disconnected;
             return socket.IsConnected;
         }
 
@@ -1142,6 +1420,7 @@
                 {
                     error = "session is null",
                     success = false,
+                    statusCode = NakamaStatusCodes.InvalidSession,
                 };
             }
 
@@ -1163,6 +1442,7 @@
                 {
                     error = string.Empty,
                     success = !session.IsExpired,
+                    statusCode = NakamaStatusCodes.Success,
                 };
             }
             catch (ApiResponseException ex)
@@ -1173,6 +1453,7 @@
                 {
                     error = ex.Message,
                     success = false,
+                    statusCode = (int)ex.StatusCode,
                 };
             }
         }
@@ -1180,6 +1461,16 @@
         private async UniTask<NakamaServiceResult> RefreshSessionAsync(IClient client)
         {
             var sessionData = _connection.sessionData.Value;
+            if (string.IsNullOrEmpty(sessionData.AuthToken) || string.IsNullOrEmpty(sessionData.RefreshToken))
+            {
+                return new NakamaServiceResult()
+                {
+                    success = false,
+                    error = "session data is empty",
+                    statusCode = NakamaStatusCodes.InvalidSession,
+                };
+            }
+
             var refreshToken = sessionData.RefreshToken;
             var authToken = sessionData.AuthToken;
             var result = await RefreshSessionAsync(authToken, refreshToken, client);
