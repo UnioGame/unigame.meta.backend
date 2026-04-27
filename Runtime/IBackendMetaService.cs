@@ -8,9 +8,19 @@
     using R3;
     using UniGame.Core.Runtime;
 
+    public enum BackendMetaServiceState
+    {
+        Uninitialized,
+        Initializing,
+        Ready,
+        Failed,
+    }
+
     public interface IBackendMetaService :
         ILifeTimeContext
     {
+        ReadOnlyReactiveProperty<BackendMetaServiceState> InitializationState { get; }
+        string InitializationError { get; }
         IRemoteMetaDataConfiguration MetaDataConfiguration { get; }
         Observable<ContractDataResult> DataStream { get; }
         
