@@ -338,7 +338,11 @@
 
             try
             {
-                var providersData = _settings.backendTypes;
+                var providersData = _settings.backendTypes ?? new List<BackendType>();
+
+                foreach (var providerData in providersData)
+                    providerData?.Normalize();
+
                 var providerTasks = providersData.Select(x => CreateProvider(x, _context));
                 var providers = await UniTask.WhenAll(providerTasks);
 
@@ -388,12 +392,20 @@
         {
             var result = new RemoteMetaProviderResult()
             {
-                id = providerData.id,
+                id = providerData?.id ?? 0,
                 success = false,
                 provider = null,
             };
             
-            if (!providerData.isEnabled) return result;
+            if (providerData == null || !providerData.isEnabled) return result;
+
+            providerData.Normalize();
+
+            if (providerData.provider == null)
+            {
+                GameLog.LogError($"GameBackendSource: skip backend provider '{providerData.name ?? providerData.id.ToString()}' because provider asset is missing");
+                return result;
+            }
 
             var provider = providerData.provider;
             var providerSource = Object.Instantiate(provider);
