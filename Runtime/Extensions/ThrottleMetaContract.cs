@@ -15,26 +15,25 @@
         
         public int intervalValue;
         public TimeProvider timeProvider = TimeProvider.System;
-        public LifeTime lifeTime;
-        public Subject<ContractDataResult> contractStream;
-        public Subject<MetaContractCallData> contractExecutionStream;
+        
+        private LifeTime _lifeTime;
+        private Subject<MetaContractCallData> _contractStream;
+        private bool _resultReady = false;
+        private ContractDataResult _lastResult;
         
         public ThrottleMetaContract()
             :this(DefaultInterval,DefaultType, TimeProvider.System) { }
 
         public ThrottleMetaContract(int delay,ThrottleType throttleType, TimeProvider time)
         {
-            lifeTime = new();
+            _lifeTime = new();
             intervalValue = delay;
             timeProvider = time;
             
-            contractExecutionStream = new Subject<MetaContractCallData>();
-            contractExecutionStream.AddTo(lifeTime);
-            
-            contractStream = new Subject<ContractDataResult>();
-            contractStream.AddTo(lifeTime);
+            _contractStream = new Subject<MetaContractCallData>();
+            _contractStream.AddTo(_lifeTime);
 
-            var executionObservable = contractExecutionStream.AsObservable();
+            var executionObservable = _contractStream.AsObservable();
             var interval = TimeSpan.FromMilliseconds(delay);
             
             switch (throttleType)
@@ -64,9 +63,8 @@
 
             executionObservable
                 .Subscribe(this,static (x,y) => y.ExecuteAsync(x)
-                    .AttachExternalCancellation(x.CancellationToken)
-                    .Forget())
-                .AddTo(lifeTime);
+                    .AttachExternalCancellation(x.CancellationToken).Forget())
+                .AddTo(_lifeTime);
         }
 
         public async UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract contract, CancellationToken cancellationToken)
@@ -74,23 +72,28 @@
             if (intervalValue <= 0)
                 return await contract.ExecuteAsync(cancellationToken);
             
-            contractExecutionStream.OnNext(new MetaContractCallData()
+            _contractStream.OnNext(new MetaContractCallData()
             {
                 CancellationToken = cancellationToken,
                 Contract = contract
             });
             
-            var result = await contractStream.FirstAsync(cancellationToken);
+            await UniTask.WaitWhile(this,static x => x._resultReady == false, cancellationToken: cancellationToken);
+            _resultReady = false;
+            
+            var result = _lastResult;
             return result;
         }
 
-        public void Dispose() => lifeTime.Terminate();
+        public void Dispose() => _lifeTime.Terminate();
 
         public async UniTask<ContractDataResult> ExecuteAsync(MetaContractCallData data)
         {
-            await UniTask.SwitchToMainThread();
             var result = await data.Contract.ExecuteAsync(data.CancellationToken);
-            contractStream.OnNext(result);
+            
+            _lastResult = result;
+            _resultReady = true;
+            
             return result;
         }
     }

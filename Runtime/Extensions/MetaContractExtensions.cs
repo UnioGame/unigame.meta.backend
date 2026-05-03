@@ -20,8 +20,15 @@ namespace Extensions
         public static void ResetData()
         {
             RemoteMetaService = null;
+            
+            foreach (var contract in DebounceContracts)
+                contract.Value.Dispose();
+            
             ContractDataCache?.Clear();
-            DebounceContracts?.Clear();
+
+            foreach (var contract in ThrottleMetaContracts)
+                contract.Value.Dispose();
+            
             ThrottleMetaContracts?.Clear();
         }
 
