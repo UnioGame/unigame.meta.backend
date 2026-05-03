@@ -175,7 +175,12 @@
             {
                 var initializationFailure = CreateInitializationFailureResult(contractData.contract);
                 if (initializationFailure != null)
+                {
+#if UNITY_EDITOR
+                    GameLog.LogError(initializationFailure.error);                   
+#endif
                     return initializationFailure;
+                }
 
                 var meta = contractData.metaData ?? RemoteMetaData.Empty;
                 contractData.metaData = meta;
@@ -344,17 +349,16 @@
 
                 foreach (var providerResult in providers)
                 {
-                    if(providerResult.success == false)
+                    if(providerResult.success == false) 
                         continue;
 
                     var id = providerResult.id;
                     var provider  = providerResult.provider;
                 
                     _metaProviders[id] =provider;
-                
-                    if (id == _defaultProviderId)
-                        _defaultMetaProvider =  provider;
                 }
+
+                _defaultMetaProvider = GetDefaultProvider();
             
                 if (_metaProviders.Count == 0)
                 {
@@ -367,11 +371,14 @@
                 {
                     _initializationError = BackendMetaConstants.DefaultProviderMissingError;
                     _initializationState.Value = BackendMetaServiceState.Failed;
+                    Debug.LogError($"[MetaBackend] {_initializationError} ID = {_defaultProviderId}");
                     return;
                 }
-
-                _context.Publish<IRemoteMetaProvider>(_defaultMetaProvider);
-            
+                else
+                {
+                    _context.Publish<IRemoteMetaProvider>(_defaultMetaProvider);
+                }
+                
                 _isInitialized = true;
                 _initializationState.Value = BackendMetaServiceState.Ready;
             }
@@ -475,16 +482,15 @@
 
         private ContractDataResult CreateInitializationFailureResult(IRemoteMetaContract contract)
         {
-            if (_initializationState.CurrentValue != BackendMetaServiceState.Failed)
-                return null;
+            if (_initializationState.CurrentValue != BackendMetaServiceState.Failed) return null;
 
             var contractName = NormalizeContractName(contract, RemoteMetaData.Empty);
+            
             var error = string.IsNullOrEmpty(_initializationError)
                 ? BackendMetaConstants.InitializationFailedError
                 : $"{BackendMetaConstants.InitializationFailedError}: {_initializationError}";
 
-            return CreateFailureResult(contract, RemoteMetaData.Empty, contractName, error,
-                BackendMetaConstants.InitializationFailedStatusCode);
+            return CreateFailureResult(contract, RemoteMetaData.Empty, contractName, error, BackendMetaConstants.InitializationFailedStatusCode);
         }
 
         private ContractDataResult CreateFailureResult(
