@@ -30,6 +30,7 @@
 
         private static ContractsConfigurationAsset _dataAsset;
 
+#if ODIN_INSPECTOR
         public static IEnumerable<ValueDropdownItem<BackendTypeId>> GetBackendTypes()
         {
 #if UNITY_EDITOR
@@ -57,10 +58,11 @@
 #endif
             yield break;
         }
+#endif
 
         public static string GetBackendTypeName(BackendTypeId slotId)
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && ODIN_INSPECTOR
             var types = GetBackendTypes();
             var filteredTypes = types
                 .FirstOrDefault(x => x.Value == slotId);
