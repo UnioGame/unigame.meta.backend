@@ -16,7 +16,11 @@
 #endif
     
     [Serializable]
-    public class WebApiEndPoint : ISearchFilterable
+    public class WebApiEndPoint 
+#if ODIN_INSPECTOR
+        : ISearchFilterable
+#endif
+    
     {
         public string name;
         public string url;
@@ -41,6 +45,7 @@
 
         public string Name => string.IsNullOrEmpty(name) ? path : name;
         
+#if ODIN_INSPECTOR
         public static IEnumerable<ValueDropdownItem<SType>> GetContracts()
         {
 #if UNITY_EDITOR
@@ -58,6 +63,7 @@
 #endif
             yield break;
         }
+#endif
 
         public bool IsMatch(string searchString)
         {

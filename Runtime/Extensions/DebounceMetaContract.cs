@@ -13,12 +13,12 @@
         public static TimeSpan DefaultInterval = TimeSpan.FromMilliseconds(200);
         
         public TimeSpan interval = DefaultInterval;
-        public TimeProvider timeProvider = TimeProvider.System;
+        public TimeProvider timeProvider = R3.ObservableSystem.DefaultTimeProvider;
         public LifeTime lifeTime;
         public Subject<ContractDataResult> contractStream;
         public Subject<MetaContractCallData> contractExecutionStream;
         
-        public DebounceMetaContract():this(DefaultInterval, TimeProvider.System) { }
+        public DebounceMetaContract():this(DefaultInterval, R3.ObservableSystem.DefaultTimeProvider) { }
 
         public DebounceMetaContract(TimeSpan callInterval, TimeProvider time)
         {
