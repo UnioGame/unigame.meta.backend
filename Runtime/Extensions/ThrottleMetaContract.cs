@@ -22,13 +22,13 @@
         private ContractDataResult _lastResult;
         
         public ThrottleMetaContract()
-            :this(DefaultInterval,DefaultType, TimeProvider.System) { }
+            :this(DefaultInterval,DefaultType, ObservableSystem.DefaultTimeProvider) { }
 
-        public ThrottleMetaContract(int delay,ThrottleType throttleType, TimeProvider time)
+        public ThrottleMetaContract(int delay,ThrottleType throttleType, TimeProvider time = null)
         {
             _lifeTime = new();
             intervalValue = delay;
-            timeProvider = time;
+            timeProvider = time ?? ObservableSystem.DefaultTimeProvider;
             
             _contractStream = new Subject<MetaContractCallData>();
             _contractStream.AddTo(_lifeTime);

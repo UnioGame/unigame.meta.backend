@@ -147,7 +147,7 @@ namespace Extensions
 
             if (!ThrottleMetaContracts.TryGetValue(contractId, out var throttleMetaContract))
             {
-                throttleMetaContract = new ThrottleMetaContract(delay, throttleType,TimeProvider.System);
+                throttleMetaContract = new ThrottleMetaContract(delay, throttleType,R3.ObservableSystem.DefaultTimeProvider);
                 ThrottleMetaContracts[contractId] = throttleMetaContract;
             }
 
