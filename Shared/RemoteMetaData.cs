@@ -14,7 +14,10 @@
     using UniModules.Editor;
 #endif
     [Serializable]
-    public class RemoteMetaData : ISearchFilterable
+    public class RemoteMetaData 
+#if ODIN_INSPECTOR
+    : ISearchFilterable
+#endif
     {
         public static readonly RemoteMetaData Empty = new()
         {

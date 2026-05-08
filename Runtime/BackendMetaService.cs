@@ -175,7 +175,12 @@
             {
                 var initializationFailure = CreateInitializationFailureResult(contractData.contract);
                 if (initializationFailure != null)
+                {
+#if UNITY_EDITOR
+                    GameLog.LogError(initializationFailure.error);                   
+#endif
                     return initializationFailure;
+                }
 
                 var meta = contractData.metaData ?? RemoteMetaData.Empty;
                 contractData.metaData = meta;
@@ -338,27 +343,22 @@
 
             try
             {
-                var providersData = _settings.backendTypes ?? new List<BackendType>();
-
-                foreach (var providerData in providersData)
-                    providerData?.Normalize();
-
+                var providersData = _settings.backendTypes;
                 var providerTasks = providersData.Select(x => CreateProvider(x, _context));
                 var providers = await UniTask.WhenAll(providerTasks);
 
                 foreach (var providerResult in providers)
                 {
-                    if(providerResult.success == false)
+                    if(providerResult.success == false) 
                         continue;
 
                     var id = providerResult.id;
                     var provider  = providerResult.provider;
                 
                     _metaProviders[id] =provider;
-                
-                    if (id == _defaultProviderId)
-                        _defaultMetaProvider =  provider;
                 }
+
+                _defaultMetaProvider = GetDefaultProvider();
             
                 if (_metaProviders.Count == 0)
                 {
@@ -371,11 +371,14 @@
                 {
                     _initializationError = BackendMetaConstants.DefaultProviderMissingError;
                     _initializationState.Value = BackendMetaServiceState.Failed;
+                    Debug.LogError($"[MetaBackend] {_initializationError} ID = {_defaultProviderId}");
                     return;
                 }
-
-                _context.Publish<IRemoteMetaProvider>(_defaultMetaProvider);
-            
+                else
+                {
+                    _context.Publish<IRemoteMetaProvider>(_defaultMetaProvider);
+                }
+                
                 _isInitialized = true;
                 _initializationState.Value = BackendMetaServiceState.Ready;
             }
@@ -392,20 +395,12 @@
         {
             var result = new RemoteMetaProviderResult()
             {
-                id = providerData?.id ?? 0,
+                id = providerData.id,
                 success = false,
                 provider = null,
             };
             
-            if (providerData == null || !providerData.isEnabled) return result;
-
-            providerData.Normalize();
-
-            if (providerData.provider == null)
-            {
-                GameLog.LogError($"GameBackendSource: skip backend provider '{providerData.name ?? providerData.id.ToString()}' because provider asset is missing");
-                return result;
-            }
+            if (!providerData.isEnabled) return result;
 
             var provider = providerData.provider;
             var providerSource = Object.Instantiate(provider);
@@ -487,16 +482,15 @@
 
         private ContractDataResult CreateInitializationFailureResult(IRemoteMetaContract contract)
         {
-            if (_initializationState.CurrentValue != BackendMetaServiceState.Failed)
-                return null;
+            if (_initializationState.CurrentValue != BackendMetaServiceState.Failed) return null;
 
             var contractName = NormalizeContractName(contract, RemoteMetaData.Empty);
+            
             var error = string.IsNullOrEmpty(_initializationError)
                 ? BackendMetaConstants.InitializationFailedError
                 : $"{BackendMetaConstants.InitializationFailedError}: {_initializationError}";
 
-            return CreateFailureResult(contract, RemoteMetaData.Empty, contractName, error,
-                BackendMetaConstants.InitializationFailedStatusCode);
+            return CreateFailureResult(contract, RemoteMetaData.Empty, contractName, error, BackendMetaConstants.InitializationFailedStatusCode);
         }
 
         private ContractDataResult CreateFailureResult(

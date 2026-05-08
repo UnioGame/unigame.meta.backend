@@ -20,7 +20,7 @@
         IsUniqueList = true, 
         DropdownTitle = "RemoteMetaId")]
 #endif
-    public partial struct RemoteMetaId
+    public struct RemoteMetaId
     {
         [SerializeField]
         public int value;
@@ -36,6 +36,7 @@
         
 #endif
         
+#if ODIN_INSPECTOR
         public static IEnumerable<ValueDropdownItem<RemoteMetaId>> GetBackendTypes()
         {
 #if UNITY_EDITOR
@@ -63,10 +64,11 @@
 #endif
             yield break;
         }
+#endif
 
         public static string GetBackendTypeName(RemoteMetaId slotId)
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && ODIN_INSPECTOR
             var types = GetBackendTypes();
             var filteredTypes = types
                 .FirstOrDefault(x => x.Value == slotId);
