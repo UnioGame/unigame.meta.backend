@@ -27,7 +27,6 @@ namespace MetaService.Runtime
         public BackendTypeId backendType;
         
 #if ODIN_INSPECTOR
-        [InlineProperty]
         [ListDrawerSettings(ListElementLabelName = "@name")]
 #endif
         public List<BackendType> backendTypes = new();
