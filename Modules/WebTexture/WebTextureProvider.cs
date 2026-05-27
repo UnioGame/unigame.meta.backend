@@ -313,15 +313,18 @@
             {
                 remotedIds.Clear();
                 
-                foreach (var item in _cache.Values)
+                foreach (var pair in _cache)
                 {
+                    var item = pair.Value;
                     if (item.counter <= 0 || item.isAlive == false)
-                        remotedIds.Add(item.url);
+                        remotedIds.Add(pair.Key);
                 }
 
                 foreach (var id in remotedIds)
                 {
-                    var item = _cache[id];
+                    if (!_cache.TryGetValue(id, out var item))
+                        continue;
+
                     item.CleanUp();
                     _cache.Remove(id);
                 }
