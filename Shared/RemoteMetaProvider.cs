@@ -11,10 +11,7 @@
     using UniGame.Runtime.Rx;
 
     [Serializable]
-    public abstract class RemoteMetaProvider :
-        IMetaConnection,
-        ILifeTimeContext,
-        IRemoteMetaProvider
+    public abstract class RemoteMetaProvider : IRemoteMetaProvider
     {
         public LifeTime lifeTime = new ();
         

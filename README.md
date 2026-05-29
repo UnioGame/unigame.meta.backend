@@ -185,6 +185,10 @@ Main service interface managing all providers:
 ```csharp
 public interface IBackendMetaService : ILifeTimeContext
 {
+    // Service initialization state
+    ReadOnlyReactiveProperty<BackendMetaServiceState> InitializationState { get; }
+    string InitializationError { get; }
+
     // Execute contract
     UniTask<ContractDataResult> ExecuteAsync(IRemoteMetaContract contract, CancellationToken cancellationToken = default);
     
@@ -194,7 +198,7 @@ public interface IBackendMetaService : ILifeTimeContext
     // Get specific provider
     IRemoteMetaProvider GetProvider(int id);
     
-    // Observable stream of all results
+    // Observable stream of changed successful results
     Observable<ContractDataResult> DataStream { get; }
     
     // Current configuration
@@ -236,6 +240,27 @@ backendService.SwitchProvider(BackendTypeIds.MockProvider);
 // Get specific provider
 var webProvider = backendService.GetProvider(BackendTypeIds.WebProvider);
 ```
+
+`SwitchProvider(...)` also clears cached contract-to-provider bindings so the next contract execution resolves against the new backend selection.
+
+#### Initialization State And Failure Results
+
+`BackendMetaService` now exposes an explicit initialization state separate from provider connection state:
+
+```csharp
+backendService.InitializationState
+    .Subscribe(state => Debug.Log($"Meta backend state: {state}"))
+    .AddTo(lifeTime);
+
+if (backendService.InitializationState.CurrentValue == BackendMetaServiceState.Failed)
+{
+    Debug.LogError(backendService.InitializationError);
+}
+```
+
+If provider initialization fails, `ExecuteAsync(...)` returns a failed `ContractDataResult` with a package-local negative `statusCode` instead of `ContractDataResult.Empty`.
+
+`ContractDataResult.statusCode` now preserves provider transport status from `ContractMetaResult.statusCode`.
 
 ## Providers
 
