@@ -19,6 +19,7 @@
         };
 
         new ReadOnlyReactiveProperty<ConnectionState> State { get; }
+        Observable<IApiNotification> ReceivedNotifications { get; }
         
         [Obsolete("ConnectAsync is deprecated for Nakama provider. Use ConnectToServerAsync and explicit authentication or session restore flow instead.")]
         new UniTask<MetaConnectionResult> ConnectAsync();
@@ -76,6 +77,16 @@
         UniTask<ContractMetaResult> ExecuteRpcContractAsync(
             NakamaConnection connection,
             IRemoteMetaContract contract,
+            CancellationToken cancellation = default);
+
+        UniTask<ContractMetaResult> ListNotificationsAsync(
+            NakamaConnection connection,
+            NakamaNotificationsListContract contract,
+            CancellationToken cancellation = default);
+
+        UniTask<ContractMetaResult> DeleteNotificationsAsync(
+            NakamaConnection connection,
+            NakamaNotificationsDeleteContract contract,
             CancellationToken cancellation = default);
         
         UniTask<NakamaServiceResult> AuthenticateAsync(

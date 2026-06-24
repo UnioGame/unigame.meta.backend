@@ -29,6 +29,7 @@
         private SemaphoreSlim _recoverySemaphore = new(1, 1);
 
         private ReactiveValue<ConnectionState> _state = new();
+        private Subject<IApiNotification> _receivedNotifications = new();
 
 
         public NakamaContractsService(NakamaSettings nakamaSettings, NakamaConnection connection)
@@ -67,6 +68,7 @@
         }
 
         public ReadOnlyReactiveProperty<ConnectionState> State => _state;
+        public Observable<IApiNotification> ReceivedNotifications => _receivedNotifications;
         
         public bool IsAuthenticated => _connection.session.Value is { IsExpired: false };
 
@@ -190,6 +192,8 @@
                     NakamaTournamentRecordsAroundContract tournamentAroundRecords => await ListTournamentRecordsAroundAsync(connection, tournamentAroundRecords, cancellation),
                     NakamaTournamentWriteRecordContract writeTournamentRecord => await TournamentWriteAsync(connection, writeTournamentRecord, cancellation),
                     NakamaDeleteAccountContract deleteAccount => await DeleteAccountAsync(connection, cancellation),
+                    NakamaNotificationsListContract listNotifications => await ListNotificationsAsync(connection, listNotifications, cancellation),
+                    NakamaNotificationsDeleteContract deleteNotifications => await DeleteNotificationsAsync(connection, deleteNotifications, cancellation),
                     _ => await ExecuteRpcContractAsync(connection, contract, cancellation)
                 };
             }
@@ -490,6 +494,81 @@
             {
                 data = result,
                 success = result != null,
+                error = error,
+                statusCode = statusCode,
+            };
+        }
+
+        public async UniTask<ContractMetaResult> ListNotificationsAsync(
+            NakamaConnection connection,
+            NakamaNotificationsListContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+            var error = string.Empty;
+            var statusCode = NakamaStatusCodes.Success;
+            IApiNotificationList result = null;
+
+            try
+            {
+                result = await client.ListNotificationsAsync(
+                    session,
+                    contract.limit,
+                    contract.cursor,
+                    _retryConfiguration,
+                    cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                error = ex.Message;
+                result = null;
+                statusCode = (int)ex.StatusCode;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            return new ContractMetaResult
+            {
+                data = result,
+                success = result != null,
+                error = error,
+                statusCode = statusCode,
+            };
+        }
+
+        public async UniTask<ContractMetaResult> DeleteNotificationsAsync(
+            NakamaConnection connection,
+            NakamaNotificationsDeleteContract contract,
+            CancellationToken cancellation = default)
+        {
+            var client = connection.client.Value;
+            var session = connection.session.Value;
+            var error = string.Empty;
+            var success = true;
+            var statusCode = NakamaStatusCodes.Success;
+
+            try
+            {
+                await client.DeleteNotificationsAsync(
+                    session,
+                    contract.ids,
+                    _retryConfiguration,
+                    cancellation);
+            }
+            catch (ApiResponseException ex)
+            {
+                error = ex.Message;
+                success = false;
+                statusCode = (int)ex.StatusCode;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            return new ContractMetaResult
+            {
+                data = string.Empty,
+                success = success,
                 error = error,
                 statusCode = statusCode,
             };
@@ -1308,6 +1387,7 @@
             useMainThread = true; // WebGL does not support multithreading for sockets
 #endif
             socket = client.NewSocket(useMainThread: useMainThread);
+            socket.ReceivedNotification += PublishNotification;
 
             var disposable = Observable
                 .FromEvent(
@@ -1319,6 +1399,7 @@
             {
                 disposable.Dispose();
                 socket.Closed -= ReconnectNakamaSocket;
+                socket.ReceivedNotification -= PublishNotification;
                 socket.CloseAsync()
                     .AsUniTask()
                     .Forget();
@@ -1334,6 +1415,11 @@
                 error = string.Empty,
                 statusCode = NakamaStatusCodes.Success,
             };
+        }
+
+        private void PublishNotification(IApiNotification notification)
+        {
+            _receivedNotifications.OnNext(notification);
         }
 
         private async UniTask<NakamaServerData> SelectServerAsync(CancellationToken cancellation = default)
