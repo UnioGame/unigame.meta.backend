@@ -1055,8 +1055,9 @@
             if (data.linkAccount && IsAuthenticated)
             {
                 // get a new refresh token
-                await client.LinkGoogleAsync(session, 
+                await client.LinkFacebookAsync(session,
                     data.token,
+                    data.import,
                     data.retryConfiguration,
                     canceller: cancellation);
             }
