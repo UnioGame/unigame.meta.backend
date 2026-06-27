@@ -1011,7 +1011,7 @@
             catch (ApiResponseException ex)
             {
                 success = false;
-                GameLog.LogError($"Error authenticating device: {ex.StatusCode}:{ex.Message}");
+                GameLog.LogRuntime($"Error authenticating device: {ex.StatusCode}:{ex.Message}",Color.red);
 
                 return new NakamaServiceResult()
                 {
