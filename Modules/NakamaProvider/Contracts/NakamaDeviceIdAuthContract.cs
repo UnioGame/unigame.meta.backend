@@ -35,4 +35,16 @@
         
         public string AuthTypeName => nameof(NakamaDeviceIdAuthData);
     }
+
+    [Serializable]
+    public class NakamaLinkDeviceContract : NakamaContract<string,string>
+    {
+        public string deviceId;
+
+        [JsonIgnore]
+        public override string Path => "nakama_link_device";
+
+        [JsonIgnore]
+        public override object Payload => deviceId;
+    }
 }

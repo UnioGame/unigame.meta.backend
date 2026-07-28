@@ -114,6 +114,7 @@
                 result.data = contractResult.data;
                 result.success = contractResult.success;
                 result.error = contractResult.error;
+                result.statusCode = contractResult.statusCode;
             }
             catch (ApiResponseException ex)
             {
@@ -180,6 +181,7 @@
                     INakamaAuthContract authContract => (await AuthContractAsync(authContract, cancellation)).ToContractResult(),
                     NakamaLogoutContract => (await SignOutContract()).ToContractResult(),
                     NakamaRestoreSessionContract restoreSessionContract => (await RestoreSessionAsync(cancellation)).ToContractResult(),
+                    NakamaLinkDeviceContract linkDeviceContract => await LinkDeviceAsync(connection, linkDeviceContract.deviceId, cancellation),
                     NakamaUsersContract usersContract => await LoadUsersAsync(usersContract, connection, cancellation),
                     NakamaAccountContract accountContract => await LoadAccountAsync(connection, cancellation),
                     NakamaUpdateAccountContract updateAccountContract => await UpdateAccountAsync(updateAccountContract.data,connection, cancellation),
@@ -1205,6 +1207,24 @@
             contractResult.data = account;
 
             return contractResult;
+        }
+
+        private static async UniTask<ContractMetaResult> LinkDeviceAsync(
+            NakamaConnection connection,
+            string deviceId,
+            CancellationToken cancellation)
+        {
+            var session = connection.session.Value;
+            await connection.client.Value.LinkDeviceAsync(session, deviceId, canceller: cancellation);
+
+            return new ContractMetaResult
+            {
+                id = "nakama_link_device",
+                success = true,
+                data = deviceId,
+                error = string.Empty,
+                statusCode = 200,
+            };
         }
 
         public async UniTask<ContractMetaResult> LoadAccountAsync(
