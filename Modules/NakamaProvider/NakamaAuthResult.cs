@@ -7,6 +7,7 @@ namespace UniGame.MetaBackend.Runtime
     public class NakamaAuthResult
     {
         public bool created;
+        public string userId;
         public IApiAccount account;
         public bool success;
         public string error;

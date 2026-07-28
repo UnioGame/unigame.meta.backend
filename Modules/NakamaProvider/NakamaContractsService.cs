@@ -856,13 +856,24 @@
 
             var session = _connection.session.Value;
             var created = session?.Created ?? false;
-            var success = authResult.success;
             var account = _connection.account.Value;
-
-            if (success)
+            if (account?.User?.Id != session?.UserId)
             {
-                account = await GetUserProfileAsync();
-                success = account != null;
+                account = null;
+                _connection.account.Value = null;
+            }
+
+            if (authResult.success)
+            {
+                try
+                {
+                    account = await GetUserProfileAsync();
+                }
+                catch (Exception exception)
+                {
+                    GameLog.LogWarning(
+                        $"[NakamaService] Account load failed after successful authentication: {exception}");
+                }
             }
 
             var nakamaAuthResult = new NakamaAuthResult()
@@ -870,7 +881,8 @@
                 account = account,
                 created = created,
                 error = authResult.error,
-                success = success,
+                success = authResult.success,
+                userId = session?.UserId ?? string.Empty,
             };
 
             contractResult.success = authResult.success;
@@ -918,14 +930,21 @@
             }
 
             var connected = await ConnectAsync(socket, session);
+            var account = _connection.account.Value;
+            if (account?.User?.Id != session.UserId)
+            {
+                account = null;
+                _connection.account.Value = null;
+            }
 
             result.success = connected;
             result.data = new NakamaAuthResult()
             {
-                account = _connection.account.Value,
+                account = account,
                 created = false,
                 error = string.Empty,
                 success = connected,
+                userId = session.UserId,
             };
 
             return result;
