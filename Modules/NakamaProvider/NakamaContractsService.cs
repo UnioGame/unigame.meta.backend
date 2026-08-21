@@ -204,6 +204,10 @@
                 GameLog.LogError($"[NakamaService] Contract '{contract?.Path}' failed with status {ex.StatusCode}: {ex.Message}");
                 return CreateFailureResult(contract, ex.Message, (int)ex.StatusCode);
             }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                return CreateFailureResult(contract, "Contract execution was cancelled");
+            }
             catch (Exception e)
             {
                 GameLog.LogError(e);
