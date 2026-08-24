@@ -6,4 +6,11 @@
     {
         
     }
+
+    /// <summary>
+    /// Marks RPC contracts whose request and response payloads must never be logged.
+    /// </summary>
+    public interface ISensitiveNakamaContract : INakamaContract
+    {
+    }
 }

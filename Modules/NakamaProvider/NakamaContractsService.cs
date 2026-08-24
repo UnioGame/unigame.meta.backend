@@ -819,9 +819,10 @@
 #if UNITY_EDITOR
             if (_nakamaSettings.enableLogging)
             {
-                GameLog.Log(
-                    $"[NakamaService] RPC '{rpcName}' executed. Payload: {payloadValue} Result: \n{rpcResult.Payload}",
-                    Color.aquamarine);
+                var logMessage = contract is ISensitiveNakamaContract
+                    ? $"[NakamaService] RPC '{rpcName}' executed. Payload and result are redacted."
+                    : $"[NakamaService] RPC '{rpcName}' executed. Payload: {payloadValue} Result: \n{rpcResult.Payload}";
+                GameLog.Log(logMessage, Color.aquamarine);
             }
 #endif
 
@@ -892,6 +893,7 @@
             contractResult.success = authResult.success;
             contractResult.error = authResult.error;
             contractResult.data = nakamaAuthResult;
+            contractResult.statusCode = authResult.statusCode;
             return contractResult;
         }
 
@@ -995,7 +997,7 @@
             var session = _connection.session.Value;
             var success = false;
 #if GAME_DEBUG
-            Debug.Log($"NAKAMA Auth Data: {authenticateData?.GetType().Name} {JsonConvert.SerializeObject(authenticateData)}");        
+            Debug.Log($"NAKAMA Auth Data: {authenticateData?.GetType().Name}");
 #endif
             
             try
@@ -1022,6 +1024,9 @@
                         break;
                     case NakamaGoogleAuthenticateData googleData:
                         session = await PlayServicesAuthenticateAsync(googleData, cancellation);
+                        break;
+                    case NakamaAppleAuthenticateData appleData:
+                        session = await AppleAuthenticateAsync(appleData, cancellation);
                         break;
                     case NakamaFacebookAuthenticateData facebookData:
                         session = await FacebookAuthenticateAsync(facebookData, cancellation);
@@ -1120,6 +1125,35 @@
             {
                 // get a new refresh token
                 session = await client.AuthenticateGoogleAsync(data.token,
+                    data.userName,
+                    data.create,
+                    data.vars,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+
+            return session;
+        }
+
+        public async UniTask<ISession> AppleAuthenticateAsync(
+            NakamaAppleAuthenticateData data,
+            CancellationToken cancellation = default)
+        {
+            var client = _connection.client.Value;
+            var session = _connection.session.Value;
+
+            if (data.linkAccount && IsAuthenticated)
+            {
+                await client.LinkAppleAsync(
+                    session,
+                    data.identityToken,
+                    data.retryConfiguration,
+                    canceller: cancellation);
+            }
+            else
+            {
+                session = await client.AuthenticateAppleAsync(
+                    data.identityToken,
                     data.userName,
                     data.create,
                     data.vars,
