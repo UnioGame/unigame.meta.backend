@@ -30,11 +30,13 @@
 
         private ReactiveValue<ConnectionState> _state = new();
         private Subject<IApiNotification> _receivedNotifications = new();
+        private readonly Subject<IMatchState> _receivedMatchStates = new();
 
 
         public NakamaContractsService(NakamaSettings nakamaSettings, NakamaConnection connection)
         {
             _sessionLifeTime = new();
+            _receivedMatchStates.AddTo(LifeTime);
             _healthCheckUrls = new();
             _nakamaServers = new();
             _nakamaSettings = nakamaSettings;
@@ -69,6 +71,42 @@
 
         public ReadOnlyReactiveProperty<ConnectionState> State => _state;
         public Observable<IApiNotification> ReceivedNotifications => _receivedNotifications;
+        public Observable<IMatchState> ReceivedMatchStates => _receivedMatchStates;
+
+        public async UniTask<IMatch> JoinMatchAsync(string matchId, CancellationToken cancellation = default)
+        {
+            await RequireMatchConnectionAsync(cancellation);
+            return await _connection.socket.Value.JoinMatchAsync(matchId).AsUniTask().AttachExternalCancellation(cancellation);
+        }
+
+        public async UniTask LeaveMatchAsync(string matchId, CancellationToken cancellation = default)
+        {
+            await RequireMatchConnectionAsync(cancellation);
+            await _connection.socket.Value.LeaveMatchAsync(matchId).AsUniTask().AttachExternalCancellation(cancellation);
+        }
+
+        public async UniTask SendMatchStateAsync(string matchId, long opCode, string json, CancellationToken cancellation = default)
+        {
+            await RequireMatchConnectionAsync(cancellation);
+            await _connection.socket.Value.SendMatchStateAsync(matchId, opCode, json).AsUniTask().AttachExternalCancellation(cancellation);
+        }
+
+        public async UniTask<string> MatchRpcAsync(string name, string json, CancellationToken cancellation = default)
+        {
+            await RequireMatchConnectionAsync(cancellation);
+            var result = await _connection.client.Value.RpcAsync(_connection.session.Value, name, json)
+                .AsUniTask().AttachExternalCancellation(cancellation);
+            return result.Payload;
+        }
+
+        private async UniTask RequireMatchConnectionAsync(CancellationToken cancellation)
+        {
+            var result = await EnsureSessionAndSocketReadyAsync(cancellation);
+            if (!result.success) throw new InvalidOperationException(result.error);
+            var socket = _connection.socket.Value;
+            await UniTask.WaitUntil(() => !socket.IsConnecting, cancellationToken: cancellation);
+            if (!socket.IsConnected) throw new InvalidOperationException("Nakama match socket is not connected.");
+        }
         
         public bool IsAuthenticated => _connection.session.Value is { IsExpired: false };
 
@@ -1466,6 +1504,7 @@
 #endif
             socket = client.NewSocket(useMainThread: useMainThread);
             socket.ReceivedNotification += PublishNotification;
+            socket.ReceivedMatchState += PublishMatchState;
 
             var disposable = Observable
                 .FromEvent(
@@ -1478,6 +1517,7 @@
                 disposable.Dispose();
                 socket.Closed -= ReconnectNakamaSocket;
                 socket.ReceivedNotification -= PublishNotification;
+                socket.ReceivedMatchState -= PublishMatchState;
                 socket.CloseAsync()
                     .AsUniTask()
                     .Forget();
@@ -1499,6 +1539,8 @@
         {
             _receivedNotifications.OnNext(notification);
         }
+
+        private void PublishMatchState(IMatchState state) => _receivedMatchStates.OnNext(state);
 
         private async UniTask<NakamaServerData> SelectServerAsync(CancellationToken cancellation = default)
         {

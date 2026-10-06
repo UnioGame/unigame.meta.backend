@@ -20,6 +20,11 @@
 
         new ReadOnlyReactiveProperty<ConnectionState> State { get; }
         Observable<IApiNotification> ReceivedNotifications { get; }
+        Observable<IMatchState> ReceivedMatchStates { get; }
+        UniTask<IMatch> JoinMatchAsync(string matchId, CancellationToken cancellation = default);
+        UniTask LeaveMatchAsync(string matchId, CancellationToken cancellation = default);
+        UniTask SendMatchStateAsync(string matchId, long opCode, string json, CancellationToken cancellation = default);
+        UniTask<string> MatchRpcAsync(string name, string json, CancellationToken cancellation = default);
         
         [Obsolete("ConnectAsync is deprecated for Nakama provider. Use ConnectToServerAsync and explicit authentication or session restore flow instead.")]
         new UniTask<MetaConnectionResult> ConnectAsync();

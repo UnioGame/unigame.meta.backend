@@ -9,6 +9,20 @@
     [Serializable]
     public class NakamaConnection
     {
+        private static string SessionStorageKey
+        {
+            get
+            {
+#if UNITY_EDITOR
+                // Separate project copies must not restore the same user's Editor session.
+                var profile = Environment.GetEnvironmentVariable("NAKAMA_EDITOR_PROFILE") ?? Application.dataPath;
+                using var hash = System.Security.Cryptography.SHA256.Create();
+                return NakamaConstants.NakamaSessionDataKey + ":" + Convert.ToBase64String(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(profile)));
+#else
+                return NakamaConstants.NakamaSessionDataKey;
+#endif
+            }
+        }
         /// <summary>
         /// Contains the user ID of the currently authenticated user.
         /// </summary>
@@ -87,15 +101,16 @@
 
             sessionData.Value = sessionValue;
             
-            PlayerPrefs.SetString(NakamaConstants.NakamaSessionDataKey,JsonConvert.SerializeObject(sessionValue));
+            PlayerPrefs.SetString(SessionStorageKey,JsonConvert.SerializeObject(sessionValue));
+            PlayerPrefs.Save();
         }
 
         public void RestoreSessionData()
         {
-            if (!PlayerPrefs.HasKey(NakamaConstants.NakamaSessionDataKey))
+            if (!PlayerPrefs.HasKey(SessionStorageKey))
                 return;
 
-            var sessionJson = PlayerPrefs.GetString(NakamaConstants.NakamaSessionDataKey);
+            var sessionJson = PlayerPrefs.GetString(SessionStorageKey);
             var sessionValue = JsonConvert.DeserializeObject<NakamaSessionData>(sessionJson);
             sessionData.Value = sessionValue;
             authType.Value = sessionValue.AuthType;
@@ -105,7 +120,7 @@
 
         public void Reset()
         {
-            PlayerPrefs.DeleteKey(NakamaConstants.NakamaSessionDataKey);
+            PlayerPrefs.DeleteKey(SessionStorageKey);
             
             session.Value = null;
             socket.Value = null;
