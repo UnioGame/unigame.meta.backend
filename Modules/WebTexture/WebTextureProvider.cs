@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Threading;
+    using UniCore.Runtime.ProfilerTools;
     using Cysharp.Threading.Tasks;
     using UniModules.Runtime.Network;
     using global::UniGame.Runtime.DataFlow;
@@ -21,6 +22,7 @@
     {
         public const string NotSupportedError = "Not supported";
         public const string Scheme = "http";
+        private const double FailureRetryDelaySeconds = 60;
         
         private WebTextureSettings _settings;
         private ILifeTime _defaultLifeTime;
@@ -28,6 +30,7 @@
         private ReactiveValue<ConnectionState> _state = new(ConnectionState.Connected);
         private LifeTime _lifeTime = new();
         private Dictionary<string,TextureCacheItem> _cache = new();
+        private readonly Dictionary<string, (string error, double retryAfter)> _failedRequests = new();
 
         public ILifeTime LifeTime => _lifeTime;
         public ReadOnlyReactiveProperty<ConnectionState> State => _state;
@@ -38,9 +41,7 @@
             _settings = settings;
             _defaultLifeTime = defaultLifeTime;
             
-            UpdateCacheAsync()
-                .AttachExternalCancellation(_lifeTime.Token)
-                .Forget();
+            UpdateCacheAsync().Forget();
         }
 
         public void SetToken(string token)
@@ -71,6 +72,7 @@
         public async UniTask<ContractMetaResult> ExecuteAsync(MetaContractData contractData,
             CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var result = new ContractMetaResult()
             {
                 data = null,
@@ -104,13 +106,28 @@
             var resourceLifeTime = lifeTimeContext?.LifeTime ?? _defaultLifeTime;
             var outputType = contract.OutputType;
             
-            var cached = await LoadFromCacheAsync(url,outputType,resourceLifeTime);
+            if (TryGetFailure(url, out var error))
+            {
+                result.error = error;
+                return result;
+            }
+
+            // The download is shared by all consumers; cancelling one waiter must not abort it.
+            var cached = await LoadFromCacheAsync(url,outputType,resourceLifeTime)
+                .AttachExternalCancellation(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             
             if (cached.success)
             {
                 result.data = cached.asset;
                 result.success = true;
                 result.error = string.Empty;
+                return result;
+            }
+
+            if (TryGetFailure(url, out error))
+            {
+                result.error = error;
                 return result;
             }
             
@@ -151,6 +168,12 @@
                 error = string.Empty,
                 success = false,
             };
+
+            if (TryGetFailure(url, out var error))
+            {
+                result.error = error;
+                return result;
+            }
             
             var cacheItem = AddToCache(url,name,lifeTime);
 
@@ -170,10 +193,18 @@
                 return result;
             }
             
-            result = await _webRequestBuilder.GetSpriteAsync(url);
-            var sprite = result.sprite;
-            cacheItem.sprite = sprite;
-            cacheItem.loaded = true;
+            try
+            {
+                result = await _webRequestBuilder.GetSpriteAsync(url, logErrors: false,
+                    cancellation: _lifeTime.Token);
+                cacheItem.sprite = result.sprite;
+                if (!result.success)
+                    RecordFailure(url, result.error);
+            }
+            finally
+            {
+                cacheItem.loaded = true;
+            }
             
             return result;
         }
@@ -186,6 +217,12 @@
                 error = string.Empty,
                 success = false,
             };
+
+            if (TryGetFailure(url, out var error))
+            {
+                result.error = error;
+                return result;
+            }
             
             var cacheItem = AddToCache(url,name,lifeTime);
 
@@ -198,17 +235,55 @@
 
             if (cacheItem.sprite != null)
             {
-                result.texture = cacheItem.texture;
+                result.texture = cacheItem.sprite.texture;
                 result.success = true;
                 return result;
             }
             
-            result = await _webRequestBuilder.GetTextureAsync(url);
-            var texture = result.texture;
-            texture.name = name;
-            cacheItem.texture = texture;
-            cacheItem.loaded = true;
+            try
+            {
+                result = await _webRequestBuilder.GetTextureAsync(url, logErrors: false,
+                    cancellation: _lifeTime.Token);
+                if (result.success)
+                {
+                    result.texture.name = name;
+                    cacheItem.texture = result.texture;
+                }
+                else
+                {
+                    RecordFailure(url, result.error);
+                }
+            }
+            finally
+            {
+                cacheItem.loaded = true;
+            }
             return result;
+        }
+
+        private bool TryGetFailure(string url, out string error)
+        {
+            error = string.Empty;
+            if (!_failedRequests.TryGetValue(url, out var failure))
+                return false;
+            if (Time.realtimeSinceStartupAsDouble >= failure.retryAfter)
+            {
+                _failedRequests.Remove(url);
+                return false;
+            }
+
+            error = failure.error;
+            return true;
+        }
+
+        private void RecordFailure(string url, string error)
+        {
+            if (TryGetFailure(url, out _))
+                return;
+
+            error = string.IsNullOrEmpty(error) ? "Failed to load web image" : error;
+            _failedRequests[url] = (error, Time.realtimeSinceStartupAsDouble + FailureRetryDelaySeconds);
+            GameLog.LogWarning($"Web image unavailable: {url} | {error}");
         }
         
         public TextureCacheItem AddToCache(string url,string name, ILifeTime lifeTime)
@@ -328,8 +403,17 @@
                     item.CleanUp();
                     _cache.Remove(id);
                 }
+
+                remotedIds.Clear();
+                foreach (var pair in _failedRequests)
+                {
+                    if (Time.realtimeSinceStartupAsDouble >= pair.Value.retryAfter)
+                        remotedIds.Add(pair.Key);
+                }
+                foreach (var id in remotedIds)
+                    _failedRequests.Remove(id);
                 
-                await UniTask.Delay(TimeSpan.FromSeconds(1));
+                await UniTask.Delay(TimeSpan.FromSeconds(1), cancellationToken: _lifeTime.Token);
             }
         }
 

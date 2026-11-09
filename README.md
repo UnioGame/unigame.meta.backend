@@ -437,6 +437,13 @@ window.JsBridge_Agent = {
 
 Load textures and sprites from URLs at runtime.
 
+Unavailable images return `success = false` and an error message. Failed URLs are cached for
+60 seconds per provider, with one warning per attempt interval, so callers can keep a default
+or fallback image without generating repeated error logs. Image requests time out after 30 seconds.
+Cancelling a contract propagates `OperationCanceledException` without an error log and only
+cancels that consumer's wait; other consumers can finish the shared download and reuse its cache.
+Dispose the provider to cancel its downloads and cache maintenance.
+
 #### Load Texture2D
 
 ```csharp

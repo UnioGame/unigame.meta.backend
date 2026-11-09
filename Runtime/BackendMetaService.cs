@@ -230,9 +230,13 @@
                 
                 return result;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                GameLog.LogException(e);
                 return ContractDataResult.Empty;
             }
         }
